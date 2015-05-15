@@ -42,7 +42,7 @@ reweight_survey <- function(survey, weight_var = NULL, variables, marginals,
       
       marginal <- marginals[[i]]  %>%
         gather_(variable, "value", names(.)[-1], convert = TRUE) %>% 
-        group_by_("geoid") %>%
+        group_by_("geoid", variable) %>%
         
         # Calculate mariginal contribution
         mutate(m_total = sum(value)) %>%
