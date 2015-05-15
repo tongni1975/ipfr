@@ -76,7 +76,7 @@ reweight_survey <- function(survey, weight_var = NULL, variables, marginals,
     if(verbose){print(gap)}
     
     # check tolerance
-    if(gap < relative_gap){
+    if(max(gap) < relative_gap){
       print(paste("Converged after", iter, "iterations"))
       break
     }
