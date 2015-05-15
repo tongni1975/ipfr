@@ -10,6 +10,7 @@
 #'
 #' @return a data_frame with each requested variable at each requested geography.
 #' 
+#' @export 
 #' @import dplyr
 #' @import httr
 call_census_api <- function(variables_to_get, geoids) {
@@ -37,7 +38,7 @@ call_census_api <- function(variables_to_get, geoids) {
     # Gives back a list of lists; first list has the headers
     response <- httr::content(httr::GET(url))
     header <- response[[1]]
-    values <- response[[2]]
+    values <- as.numeric(response[[2]])
     
     # Build data frame
     values <- lapply(values, function(x) ifelse(is.null(x), NA, x))
@@ -50,7 +51,7 @@ call_census_api <- function(variables_to_get, geoids) {
   # Call hit_api_once for each variable to get
   all_vars <- do.call(
     "rbind",
-    lapply(geoids, function(geoid) call_api_once(variables_to_get, geoid, year))
+    lapply(geoids, function(geoid) call_api_once(variables_to_get, geoid))
   )
   
   # Keep geoid and variable columns (throw out others)
