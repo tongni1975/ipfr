@@ -1,179 +1,98 @@
-# Read the settings file and create variables from it
-settingsTbl <-
-  read.csv(
-    "C:\\Users\\warddk\\Documents\\SAG\\173434E - NCSTM Gen2\\Re-expansion of NHTS\\Input Files\\R Settings 1d.csv", stringsAsFactors = FALSE
-  )
-
-for (i in 1:nrow(settingsTbl)) {
-  assign(settingsTbl$Variable[i], settingsTbl$Value[i])
-}
-
-# Input and Output Directories
-inputDir <- paste(workDir, "Input Files\\", sep = "")
-outputDir <- paste(workDir, "Output Files\\", sep = "")
-
-# Open the survey CSV and create a weight field to be modified
-surveyFile <- paste(inputDir, surveyCSVName, sep = "")
-surveyTbl <- read.csv(surveyFile, stringsAsFactors = FALSE)
-surveyTbl$Weight <- surveyTbl[, surveyWeightField]
-# 4.21.2014 - Remove the weight from records marked as duplicates
-# 7.10.2014 - After studying Erin's scripts,  these should not be removed
-#             The field remains,  but the duplicates were already removed.
-#             To check,  use "remove duplicates",  or search for any
-#surveyTbl$Weight[surveyTbl$Duplicate  =  =  1] <- 0
-
-# If geographies are being combined,  open the equivalence table and add field to the survey
-if (combineGeo == "Yes") {
-  combineFile <- paste(inputDir, combineFile, sep = "")
-  combineTbl <- read.csv(combineFile, stringsAsFactors = FALSE)
-  surveyTbl$CombinedGeo <-
-    combineTbl[, combineNewGeoField][match(surveyTbl[, surveyGeoField], combineTbl[, combineGeoField])]
-}
-# If not combining geographies,  set the CombinedGeo field  =  to surveyGeoField
-if (combineGeo == "No") {
-  surveyTbl$CombinedGeo <- surveyTbl[, surveyGeoField]
-}
-
-# IPF
-
-converge <- "No"
-iter <- 1
-
-while (converge  ==  "No" &  iter <=  as.numeric(maxIterations)) {
-  print(paste("Iteration: ", as.character(iter), sep = ""))
-  flush.console()
+#' Reweight a Survey to Marginal Controls
+#' 
+#' @param survey a \code{data.frame} with survey responses, including
+#'   necessary colums for matching to marginals.
+#'   
+#' @param weight_var existing weights variable. If \code{NULL}, defaults to 1.
+#' 
+#' @param variables a character vector of the variables \code{survey} that will
+#'   match against marginal tables.
+#' @param marginals a list of \code{data.frame} objects, each a marginal table corresponding 
+#'   to \code{variables}. The tables should have rows for each \code{geo_var} and
+#'   columns corresponding to possible values for the appropriate \code{var*}
+#'   variable.
+#' @param verbose Print the maximum expansion factor with each iteration? 
+#'   Default \code{FALSE}. 
+#'   
+#' @return a vector of weights for each row in \code{survey}
+#' 
+#' @export
+#' 
+#' @import dplyr
+reweight_survey <- function(survey, weight_var = NULL, variables, marginals,
+                            relative_gap = 0.01, max_iterations = 50, 
+                            verbose = FALSE){
   
-  maxFactor <- 0
+  # set weights variable ----
+  if(is.null(weight_var)){
+    # if none given, set to 1.
+    survey <- dplyr::mutate(survey, weight = 1)
+  } else {
+    survey <- dplyr::rename_(survey, weight = weight_var)
+  }
   
-  # For each marginal
-  for (i in 1:as.numeric(numMargs)) {
-    # Get the high-level info for the current marginal
-    mName <- get(paste("m", as.character(i), "Name", sep = ""))
-    mTable <-
-      get(paste("m", as.character(i), "Table", sep = ""))
-    mSurvField <-
-      get(paste("m", as.character(i), "SurveyField", sep = ""))
-    mCats <-
-      as.numeric(get(paste("m", as.character(i), "Cats", sep = "")))
+  
+  # IPF ---
+  for(iter in 1:max_iterations){
     
-    # Open the current marginal table
-    mTableFile <- paste(inputDir, mTable, sep = "")
-    mTable <- read.csv(mTableFile, stringsAsFactors = FALSE)
-    
-    # If geographies have been combined for sample size reasons,  create the new geo field
-    # Write out a copy for documentation/checking
-    if (combineGeo  ==  "Yes") {
-      mTable$CombinedGeo <-
-        combineTbl[, combineNewGeoField][match(mTable[, marginalGeoField], combineTbl[, combineGeoField])]
-      write.csv(
-        mTable, paste(
-          outputDir, "Output - ", mName, " Combined Marginal Table.csv", sep = ""
-        ), row.names = FALSE
+    # For each marginal table
+    for (i in length(marginals)) {
+      
+      variable <- variables[i]
+      
+      marginal <- marginals[[i]]  %>%
+        gather_(variable, "value", names(.)[-1], convert = TRUE) %>% 
+        group_by_("geoid") %>%
+        
+        # Calculate mariginal contribution
+        mutate(m_total = sum(value)) %>%
+        select_(variable, "m_total")
+      
+      
+      suppressMessages(
+      survey <- survey %>%
+        # Calculate survey contribution
+        group_by_("geoid", as.name(variable)) %>%
+        mutate(s_total = sum(weight)) %>%
+      
+        # join marginal table
+        left_join(marginal) %>%
+        
+        # calculate new expansion factor
+        mutate(
+          exp_factor = m_total / s_total,
+          weight = weight * exp_factor
+        ) %>%
+        select(-m_total)
       )
+       
+    }
+    
+    gap <- abs(max(survey$exp_factor) - 1)
+    
+    # print statistic
+    if(verbose){print(gap)}
+    
+    # check tolerance
+    if(gap < relative_gap){
+      print(paste("Converged after", iter, "iterations"))
+      break
     }
     
     
-    
-    
-    # For each category in the marginal
-    for (j in 1:mCats) {
-      # Get the current category info for the current marginal
-      cColName <-
-        get(paste(
-          "m", as.character(i), "c", as.character(j),
-          "ColName", sep = ""
-        ))
-      cValue <-
-        as.numeric(get(
-          paste("m", as.character(i), "c",
-                as.character(j), "Value", sep = "")
-        ))
+  }
       
-      # Get the next category's value as the cutoff (if there is a next category)
-      if (j < mCats) {
-        cNextValue <- as.numeric(get(
-          paste(
-            "m", as.character(i), "c",
-            as.character(j + 1), "Value", sep = ""
-          )
-        ))
-      }
-      if (j  ==  mCats) {
-        cNextValue <- 9999999999
-      }
-      
-      # If geographies have been combined for sample size reasons summarize the marginal values
-      if (combineGeo  ==  "Yes") {
-        temp <- tapply(mTable[, cColName], mTable$CombinedGeo, sum)
-        cmTable <- data.frame(rownames(temp), temp)
-        colnames(cmTable) <- c(marginalGeoField, cColName)
-      }
-      # If there is no combining of geographies,  set the cmTable  =  mTable
-      if (combineGeo  ==  "No") {
-        cmTable <- mTable
-      }
-      
-      # For each geographic area (county for NCSTM)
-      for (k in 1:length(cmTable[, marginalGeoField])) {
-        # Get the geographic identifier and marginal total
-        geoID <- cmTable[k, marginalGeoField]
-        mTotal <- cmTable[k, cColName]
-        
-        # Calculate the total weight in the survey for records belonging to the current marginal category and geography
-        survTotWeight <-
-          sum(surveyTbl$Weight[surveyTbl$CombinedGeo == geoID &
-                                 surveyTbl[, mSurvField] >=  cValue &
-                                 surveyTbl[, mSurvField] < cNextValue])
-        
-        if (survTotWeight == 0) {
-          print(
-            paste(
-              "Found no records in geoID ", geoID, " with ", mName, " in category ", cColName, sep = ""
-            )
-          )
-          expFactor <- 1
-        } else {
-          # Calculate the multiplication factor
-          expFactor <- mTotal / survTotWeight
-        }
-        
-        # Determine if this is the largest factor used for this while loop
-        maxFactor <- max(maxFactor, abs(expFactor - 1))
-        
-        
-        # Multiply the weights of the survey records by the expansion factor
-        surveyTbl$Weight[surveyTbl$CombinedGeo  ==  geoID &
-                           surveyTbl[, mSurvField] >=  cValue &
-                           surveyTbl[, mSurvField] < cNextValue] <-
-          surveyTbl$Weight[surveyTbl$CombinedGeo  ==  geoID &
-                             surveyTbl[, mSurvField] >=  cValue &
-                             surveyTbl[, mSurvField] < cNextValue] * expFactor
-        
-      }
-      
-    }
-    
+  # if iterations exceeded, throw a warning.
+  if(iter == max_iterations){
+    warning("Failed to converge after ", iter, " iterations")
   }
   
-  
-  if (maxFactor <=  (relativeGap)) {
-    converge  =  "Yes"
-    print(paste("Iterations: ", as.character(iter), sep = ""))
-  }
-  
-  print(paste("Max Gap: ", maxFactor, sep = ""))
-  flush.console()
-  
-  iter <- iter + 1
+  # return the new weights
+  survey$weight
 }
 
+   
 
-
-
-
-outFile <-
-  paste(outputDir, "Output - Expanded Survey.csv", sep = "")
-write.csv(surveyTbl, outFile, row.names = FALSE)
 
 
 
