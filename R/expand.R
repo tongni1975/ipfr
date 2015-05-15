@@ -31,8 +31,9 @@ reweight_survey <- function(survey, weight_var = NULL, variables, marginals,
     survey <- dplyr::rename_(survey, weight = weight_var)
   }
   
-  
   # IPF ---
+  gap <- vector("numeric", length(marginals))
+  
   for(iter in 1:max_iterations){
     
     # For each marginal table
@@ -65,10 +66,11 @@ reweight_survey <- function(survey, weight_var = NULL, variables, marginals,
         ) %>%
         select(-m_total)
       )
-       
+      
+      # convergence criteria for each marginal
+      gap[i] <- abs(max(survey$exp_factor) - 1)
+      print(gap) 
     }
-    
-    gap <- abs(max(survey$exp_factor) - 1)
     
     # print statistic
     if(verbose){print(gap)}
