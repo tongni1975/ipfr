@@ -2,3 +2,5 @@
 .Rhistory
 .RData
 expandr.Rproj
+inst/doc
+.Rbuildignore

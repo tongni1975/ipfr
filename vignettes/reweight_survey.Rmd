@@ -1,0 +1,91 @@
+---
+title: "Reweight a Survey"
+author: "Greg Macfarlane"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Reweight a Survey}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# Survey
+
+The `expandr` package comes with some 2009 NHTS Survey data from Roanoke, 
+Virginia that has been lightly cleaned.
+
+```{r show_hh}
+library(expandr)
+library(dplyr, warn.conflicts = FALSE)
+library(tidyr)
+hh
+```
+
+We are worried that the existing weight field, `hh_weight` doesn't accurately
+reflect the weight of these households at this geography. 
+
+
+## Get Marginals
+
+The `epxandr` package includes a `call_census_api()` function that can pull
+specified variables at arbitrary geographies directly from the Census. Because
+the NHTS records don't use the full FIPS code, we should update these, and
+then create a geography list of all the geographies we have.
+
+```{r geographies}
+hh <- mutate(hh, geoid = paste("51", county, sep = ""))
+geoids <- names(table(hh$geoid))
+geoids
+```
+
+Now we can request the marginal tables we need from the Census. For this
+vignette, we will reweight on household size and number of vehicles. This 
+information is stored in Census table `B08201`. Specific details are at the
+[API website](http://api.census.gov/data/2013/acs5/variables.html).
+
+```{r get_marginal}
+# household vehicles
+vehicle_variables <- paste("B08201_", sprintf("%03d", 2:6), "E", sep = "")
+vehicle_table <- call_census_api(vehicle_variables, geoids)
+names(vehicle_table) <- c("geoid", 0:4)
+vehicle_table
+
+# housheold size
+size_variables <- paste("B08201_", sprintf("%03d", c(7, 13, 19, 25)), 
+                        "E", sep = "")
+size_table <- call_census_api(size_variables, geoids)
+names(size_table) <- c("geoid", 1:4)
+size_table
+```
+
+How do these tables compare to the ones in `hh`? Not really great. This is why
+we are doing reweighting.
+```{r size_hh}
+hh %>% group_by(geoid, size) %>%
+  summarise(n = sum(hh_weight)) %>% 
+  spread(size, n, fill = 0)
+```
+
+Note that the number of vehicles in our NHTS file is capped at `3`, but in the
+census it is capped at `4`. So we need to sum the last two colums.
+
+```{r cap_vehicles}
+vehicle_table <- vehicle_table %>% 
+  mutate(`3` = `3` + `4`) %>% select(-`4`) %>%
+  print()
+```
+
+
+# Reweight
+```{r reweight}
+variables <- c("size", "vehicles")
+marginals <- list(size_table, vehicle_table)
+
+hh$new_weight <- reweight_survey(hh, weight_var = "hh_weight", 
+                                 variables = variables, marginals = marginals,
+                                 verbose = TRUE)
+hh %>% group_by(geoid, size) %>%
+  summarise(n = sum(new_weight)) %>% 
+  spread(size, n, fill = 0)
+```
+
