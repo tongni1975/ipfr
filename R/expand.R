@@ -37,7 +37,7 @@ reweight_survey <- function(survey, weight_var = NULL, variables, marginals,
   for(iter in 1:max_iterations){
     
     # For each marginal table
-    for (i in length(marginals)) {
+    for (i in 1:length(marginals)) {
       
       variable <- variables[i]
       
