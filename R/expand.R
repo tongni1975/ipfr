@@ -69,7 +69,6 @@ reweight_survey <- function(survey, weight_var = NULL, variables, marginals,
       
       # convergence criteria for each marginal
       gap[i] <- abs(max(survey$exp_factor) - 1)
-      print(gap) 
     }
     
     # print statistic
