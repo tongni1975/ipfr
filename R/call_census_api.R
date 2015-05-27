@@ -37,7 +37,7 @@ call_census_api <- function(variables_to_get, geoids) {
         "&in=state:", st,
         "+county:", co,
         "+tract:", tr,
-        "&key=0eb99606e898c76c0fd80ab7f25b46ccb3bdb587",
+        "&key=1209214b319264ae3163b6d262dda4106e5c77f0",
         sep = ""
       )
     # if using tracts
@@ -48,7 +48,7 @@ call_census_api <- function(variables_to_get, geoids) {
         "&for=tract:", tr,
         "&in=state:", st,
         "+county:", co,
-        "&key=0eb99606e898c76c0fd80ab7f25b46ccb3bdb587",
+        "&key=1209214b319264ae3163b6d262dda4106e5c77f0",
         sep = ""
       )
     # if using counties
@@ -58,7 +58,7 @@ call_census_api <- function(variables_to_get, geoids) {
         paste(variables_to_get, collapse = ","),
         "&for=county:", co,
         "&in=state:", st,
-        "&key=0eb99606e898c76c0fd80ab7f25b46ccb3bdb587",
+        "&key=1209214b319264ae3163b6d262dda4106e5c77f0",
         sep = ""
       )
     }
