@@ -10,7 +10,8 @@ call_census_api(variables_to_get, geoids)
 \item{variables_to_get}{the variable name for the Census API call,
 defined at \url{http://api.census.gov/}}
 
-\item{geoids}{a vector of Census county FIPS codes}
+\item{geoids}{a vector of FIPS codes; must be at least to the county (5-digit)
+level, and can accept down to block groups (12-digit).}
 }
 \value{
 a data_frame with each requested variable at each requested geography.
