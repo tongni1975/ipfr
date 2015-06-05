@@ -18,10 +18,10 @@ call_census_api <- function(variables_to_get, geoids) {
   
   # parse geoid
   split_geo <- function(geoid) {
-    list(st = substr(geoid,1,2), 
+    list(st = substr(geoid,1,2),
          co = substr(geoid,3,5),
-         tr = substr(geoid,6,9),
-         bg = substr(geoid,10,12))
+         tr = substr(geoid,6, 11),
+         bg = substr(geoid,12, 12))
   } 
   
   call_api_once <- function(variables_to_get, geoid) {
