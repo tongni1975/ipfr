@@ -4,7 +4,7 @@
 \alias{ipf}
 \title{Reweight a Seed Table to Marginal Controls}
 \usage{
-ipf(seed, weight_var = NULL, variables, marginals, relative_gap = 0.01,
+ipf(seed, weight_var = NULL, marginals, relative_gap = 0.01,
   max_iterations = 50, verbose = FALSE)
 }
 \arguments{
@@ -14,11 +14,9 @@ marginals and an optional weight field.}
 \item{weight_var}{existing weights column in seed table. 
 If \code{NULL}, defaults to 1.}
 
-\item{variables}{a character vector of the table variable names that will
-match against marginal tables.}
-
-\item{marginals}{a list of \code{data.frame} objects, each a marginal table corresponding 
-to \code{variables}. The tables should have columns corresponding to 
+\item{marginals}{a named list of \code{data.frame} objects. Each name must 
+match a column in the seed table, with each table describing the marginal
+distribution. The tables should have columns corresponding to 
 possible values for the appropriate \code{var*} variable.}
 
 \item{verbose}{Print the maximum expansion factor with each iteration? 

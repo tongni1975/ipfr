@@ -6,12 +6,10 @@
 #' @param weight_var existing weights column in seed table. 
 #' If \code{NULL}, defaults to 1.
 #' 
-#' @param variables a character vector of the table variable names that will
-#'   match against marginal tables.
-#' 
-#' @param marginals a list of \code{data.frame} objects, each a marginal table corresponding 
-#'   to \code{variables}. The tables should have columns corresponding to 
-#'   possible values for the appropriate \code{var*} variable.
+#' @param marginals a named list of \code{data.frame} objects. Each name must 
+#'    match a column in the seed table, with each table describing the marginal
+#'    distribution. The tables should have columns corresponding to 
+#'    possible values for the appropriate \code{var*} variable.
 #'   
 #' @param verbose Print the maximum expansion factor with each iteration? 
 #'   Default \code{FALSE}. 
@@ -22,9 +20,8 @@
 #' 
 #' @importFrom magrittr "%>%"
 #' 
-ipf <- function(seed, weight_var = NULL, variables, marginals,
-                            relative_gap = 0.01, max_iterations = 50, 
-                            verbose = FALSE){
+ipf <- function(seed, weight_var = NULL, marginals, relative_gap = 0.01,
+                max_iterations = 50, verbose = FALSE){
   
   # set weights variable ----
   if(is.null(weight_var)){
@@ -33,6 +30,8 @@ ipf <- function(seed, weight_var = NULL, variables, marginals,
   } else {
     seed <- dplyr::rename_(seed, weight = weight_var)
   }
+  
+  variables <- names(marginals)
   
   # IPF ---
   gap <- vector("numeric", length(marginals))
@@ -44,7 +43,7 @@ ipf <- function(seed, weight_var = NULL, variables, marginals,
       
       variable <- variables[i]
       
-      marginal <- marginals[[i]]  %>%
+      marginal <- marginals[[variable]]  %>%
         tidyr::gather_(variable, "value", colnames(.), convert = TRUE) %>%
         
         # Normalize marginals to percents
