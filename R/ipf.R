@@ -20,7 +20,8 @@
 #' 
 #' @export
 #' 
-#' @import dplyr
+#' @importFrom magrittr "%>%"
+#' 
 ipf <- function(seed, weight_var = NULL, variables, marginals,
                             relative_gap = 0.01, max_iterations = 50, 
                             verbose = FALSE){
@@ -44,27 +45,27 @@ ipf <- function(seed, weight_var = NULL, variables, marginals,
       variable <- variables[i]
       
       marginal <- marginals[[i]]  %>%
-        gather_(variable, "value", colnames(.), convert = TRUE) %>%
+        tidyr::gather_(variable, "value", colnames(.), convert = TRUE) %>%
         
         # Normalize marginals to percents
-        mutate(m_pct = value / sum(value)) %>%
-        select_(variable, "m_pct")
+        dplyr::mutate(m_pct = value / sum(value)) %>%
+        dplyr::select_(variable, "m_pct")
       
       suppressMessages(
         seed_summary <- seed %>%
-          group_by_(variable) %>%
-          summarize(totalweight = sum(weight)) %>%
-          mutate(s_pct = totalweight / sum(totalweight)) %>%
-          left_join(marginal) %>%
-          mutate(factor = m_pct / s_pct) %>%
-          select(persons, factor)
+          dplyr::group_by_(variable) %>%
+          dplyr::summarize(totalweight = sum(weight)) %>%
+          dplyr::mutate(s_pct = totalweight / sum(totalweight)) %>%
+          dplyr::left_join(marginal) %>%
+          dplyr::mutate(factor = m_pct / s_pct) %>%
+          dplyr::select(persons, factor)
       )
       
       suppressMessages(
         seed <- seed %>%
-          left_join(seed_summary) %>%
+          dplyr::left_join(seed_summary) %>%
           # calc new weight while preventing the creation of zeros
-          mutate(
+          dplyr::mutate(
             weight = weight * factor,
             weight = ifelse(weight < .0001, .0001, weight)
             )
