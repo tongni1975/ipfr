@@ -1,0 +1,149 @@
+---
+title: "Using ipfr"
+author: "Kyle Ward"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{ipfr}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache=FALSE,echo=TRUE,
+                      message=FALSE,warning=FALSE,error=FALSE)
+options(scipen=999) # removes sci notation
+```
+
+## Introduction
+
+This package provides a generic implimentation of the iterative proportional 
+fitting algorithm or [IPF](https://en.wikipedia.org/wiki/Iterative_proportional_fitting).
+
+## Example data creation
+
+This section creates a random seed table and fixed marginal values to illustrate 
+how the package is used.
+
+### Seed table creation
+The seed table is the starting point for the IPF procedure.  In this example, 
+we will use a made up summary table of survey data.  This fake table is a count 
+of households by the number persons, workers and vehicles.
+```{r "seed creation"}
+library(dplyr)
+library(ipfr)
+library(htmlTable)
+
+df <- expand.grid(
+  persons = c(1, 2, 3, 4),
+  workers = c(0, 1, 2, 3),
+  vehicles = c(0, 1, 2, 3)
+) %>% tbl_df()
+
+set.seed(1)
+df$count <- sample(1:10, nrow(df), replace = TRUE)
+
+df %>%
+  head() %>%
+  htmlTable(
+  align = "cccr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+)
+```
+
+
+### Marginal creation
+The number of persons, workers or vehicles is referred to as a marginal category 
+of the data.  Suppose that, from the Census, we know the total number of 
+households by each individual marginal.  For example, we know the number of 
+households by size:
+
+  * 1 person: 150 households
+  * 2 persons: 150 households
+  * 3 persons: 100 households
+  * 4+ persons: 100 households
+
+This information is created below.
+```{r "marginal creation"}
+persons <- data_frame(
+  persons = c(1, 2, 3, 4),
+  value = c(150, 150, 100, 200)
+)
+
+workers <- data_frame(
+  workers = c(0, 1, 2, 3),
+  value = c(100, 150, 150, 100)
+)
+
+vehicles <- data_frame(
+  vehicles = c(0, 1, 2, 3),
+  value = c(100, 150, 150, 100)
+)
+
+persons %>% htmlTable(
+  align = "cr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+)
+```
+
+## Using ipfr
+We know the count of each marginal individually, but assume we don't have 
+official information from the Census about the joint distribution.  What we want
+to do is use the joint distribution from our survey, but ensure it agrees with 
+the marginal information from the Census.
+
+An initial test shows that they do not agree.
+```{r "initial test"}
+df %>%
+  group_by(persons) %>%
+  summarize(total = sum(count)) %>%
+  left_join(persons) %>%
+  rename(survey = total, census = value) %>%
+  htmlTable(
+    align = "crr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+  )
+```
+
+We can use the ipfr package to change this.  The only step we need to take 
+before calling the function is to group the marginal tables into a named list.
+Importantly, the name of each list item must match the appropriate column in the
+seed table.
+
+```{r "group marginals"}
+marginals <- list(
+  persons = persons,
+  workers = workers,
+  vehicles = vehicles
+)
+```
+
+Now we can call the function to perform the fitting.
+```{r}
+df$NewWeight <- ipf(df, "count", marginals, verbose = TRUE)
+```
+
+Once complete, we can summarize the final table to see if it worked.
+```{r}
+df %>%
+  group_by(persons) %>%
+  summarize(total = sum(NewWeight)) %>%
+  left_join(persons) %>%
+  rename(survey = total, census = value) %>%
+  mutate(survey = round(survey, 3)) %>%
+  htmlTable(
+    align = "crr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+  )
+```
+
+Not only does the marginal distribution of persons match, but also workers and
+vehicles.
+```{r, echo=FALSE}
+df %>%
+  group_by(workers) %>%
+  summarize(total = sum(NewWeight)) %>%
+  left_join(workers) %>%
+  rename(survey = total, census = value) %>%
+  mutate(survey = round(survey, 3)) %>%
+  htmlTable(
+    align = "crr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+  )
+```
+

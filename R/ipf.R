@@ -8,8 +8,16 @@
 #' 
 #' @param marginals a named list of \code{data.frame} objects. Each name must 
 #'    match a column in the seed table, with each table describing the marginal
-#'    distribution. The tables should have columns corresponding to 
+#'    distribution. The tables should have rows corresponding to 
 #'    possible values for the appropriate \code{var*} variable.
+#'
+#' @param relative_gap defines convergence.  If if no cells are factored by more 
+#'    than this amount, the process is said to have converged.  For example, the
+#'    default value of .01 imlies that convergence is reached when no cell in 
+#'    seed table is changed by more than 10 percent.
+#'
+#' @param max_iterations maximimum number of iterations to perform, even if 
+#'    convergence is not reached.
 #'   
 #' @param verbose Print the maximum expansion factor with each iteration? 
 #'   Default \code{FALSE}. 
@@ -31,6 +39,26 @@ ipf <- function(seed, weight_var = NULL, marginals, relative_gap = 0.01,
     seed <- dplyr::rename_(seed, weight = weight_var)
   }
   
+  # Check to see if the marginal totals match
+  if (length(marginals) > 1){
+    for (i in 1:length(marginals)){
+      marginal <- marginals[[i]]
+      
+      if (i == 1){
+        check <- c(sum(marginal$value))
+      } else {
+        check <- append(check, sum(marginal$value))
+      }
+    }
+    if (!all(max(check) - min(check) == 0)){
+      warning(paste0(
+        "Marginal totals are not equivalent. ",
+        "The percentage distribution will still match all marginals. ",
+        "Final weight total will match first marginal."
+      ))
+    }
+  }
+  
   variables <- names(marginals)
   
   # IPF ---
@@ -44,7 +72,7 @@ ipf <- function(seed, weight_var = NULL, marginals, relative_gap = 0.01,
       variable <- variables[i]
       
       marginal <- marginals[[variable]]  %>%
-        tidyr::gather_(variable, "value", colnames(.), convert = TRUE) %>%
+        #tidyr::gather_(variable, "value", colnames(.), convert = TRUE) %>%
         
         # Normalize marginals to percents
         dplyr::mutate(m_pct = value / sum(value)) %>%
@@ -57,7 +85,7 @@ ipf <- function(seed, weight_var = NULL, marginals, relative_gap = 0.01,
           dplyr::mutate(s_pct = totalweight / sum(totalweight)) %>%
           dplyr::left_join(marginal) %>%
           dplyr::mutate(factor = m_pct / s_pct) %>%
-          dplyr::select(persons, factor)
+          dplyr::select_(variable, "factor")
       )
       
       suppressMessages(
@@ -72,6 +100,8 @@ ipf <- function(seed, weight_var = NULL, marginals, relative_gap = 0.01,
       
       # convergence criteria for each marginal
       gap[i] <- abs(max(seed$factor) - 1)
+      
+      seed <- seed %>% select(-factor)
     }
     
     # print statistic
@@ -82,10 +112,11 @@ ipf <- function(seed, weight_var = NULL, marginals, relative_gap = 0.01,
       print(paste("Converged after", iter, "iterations"))
       break
     }
-    
-    
   }
-      
+  
+  # When finished, scale up the weights to match the first marginal total
+  seed$weight <- seed$weight * (sum(marginals[[1]]$value) / sum(seed$weight))
+        
   # if iterations exceeded, throw a warning.
   if(iter == max_iterations){
     warning("Failed to converge after ", iter, " iterations")
