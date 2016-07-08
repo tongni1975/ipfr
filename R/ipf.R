@@ -34,7 +34,7 @@
 #' 
 ipf <- function(seed, weight_var = NULL, marginals, relative_gap = 0.01,
                 max_iterations = 50, min_weight = .0001, verbose = FALSE){
-  
+
   # set weights variable ----
   if(is.null(weight_var)){
     # if none given, set to 1.
@@ -100,7 +100,7 @@ ipf <- function(seed, weight_var = NULL, marginals, relative_gap = 0.01,
             )
       )
       
-      seed <- seed %>% select(-factor)
+      seed <- seed %>% dplyr::select(-factor)
     }
     
     # check tolerance after each pass
