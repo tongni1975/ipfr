@@ -66,7 +66,7 @@ This information is created below.
 ```{r "marginal creation"}
 persons <- data_frame(
   persons = c(1, 2, 3, 4),
-  value = c(150, 150, 100, 200)
+  value = c(100, 100, 150, 150)
 )
 
 workers <- data_frame(
@@ -117,7 +117,7 @@ marginals <- list(
 
 Now we can call the function to perform the fitting.
 ```{r}
-df$NewWeight <- ipf(df, "count", marginals, verbose = TRUE)
+df$NewWeight <- ipf(df, "count", marginals)
 ```
 
 Once complete, we can summarize the final table to see if it worked.
@@ -145,5 +145,83 @@ df %>%
   htmlTable(
     align = "crr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
   )
+
+df %>%
+  group_by(vehicles) %>%
+  summarize(total = sum(NewWeight)) %>%
+  left_join(vehicles) %>%
+  rename(survey = total, census = value) %>%
+  mutate(survey = round(survey, 3)) %>%
+  htmlTable(
+    align = "crr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+  )
 ```
 
+## Addressing common IPF problems
+
+### Zero weights
+IPF works by successively updating the table weights by factors.  Cells with a 
+zero weight cannot be modified by this process.  As the number of zero weights 
+increase, the flexibility of the process is reduced, and convergence becomes 
+more difficult. `ipfr` solves this problem by setting a minimum weight for all 
+cells to `.0001`.  This minimum weight can be adjusted using the `min_weight` 
+parameter and should be arbitrarily small compared to your seed table weights.
+
+### Marginal agreement
+In this vignette, the marginal distributions all added up to 500 households.
+If they disagreed on the total number of households, the standard process could 
+not converge.
+
+Occasionally, marginal distributions might disagree on the totals, particularly 
+if they are derived from different sources.  When that happens, this function 
+will still converge by matching the total of the first marginal table supplied 
+while using the percentage distribution from the remaining tables.  A warning 
+will be displayed when this happens.
+
+```{r, warning=TRUE}
+# Increase 1-person households from 100 to 500
+persons <- data_frame(
+  persons = c(1, 2, 3, 4),
+  value = c(500, 100, 150, 150)
+)
+
+marginals <- list(
+  persons = persons,
+  workers = workers,
+  vehicles = vehicles
+)
+
+df$NewWeight <- ipf(df, "count", marginals)
+```
+
+```{r, echo=FALSE}
+df %>%
+  group_by(persons) %>%
+  summarize(total = sum(NewWeight)) %>%
+  left_join(persons) %>%
+  rename(survey = total, census = value) %>%
+  mutate(survey = round(survey, 3)) %>%
+  htmlTable(
+    align = "crr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+  )
+
+df %>%
+  group_by(workers) %>%
+  summarize(total = sum(NewWeight)) %>%
+  left_join(workers) %>%
+  rename(survey = total, census = value) %>%
+  mutate(survey = round(survey, 3)) %>%
+  htmlTable(
+    align = "crr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+  )
+
+df %>%
+  group_by(vehicles) %>%
+  summarize(total = sum(NewWeight)) %>%
+  left_join(vehicles) %>%
+  rename(survey = total, census = value) %>%
+  mutate(survey = round(survey, 3)) %>%
+  htmlTable(
+    align = "crr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+  )
+```
