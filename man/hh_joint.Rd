@@ -4,7 +4,7 @@
 \name{hh_joint}
 \alias{hh_joint}
 \title{Joint Household Distribution}
-\format{An object of class \code{tbl_df} (inherits from \code{tbl}, \code{data.frame}) with 64 rows and 4 columns.}
+\format{An object of class \code{tbl_df} (inherits from \code{tbl}, \code{data.frame}) with 64 rows and 5 columns.}
 \usage{
 hh_joint
 }

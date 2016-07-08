@@ -5,7 +5,7 @@
 \title{Reweight a Seed Table to Marginal Controls}
 \usage{
 ipf(seed, weight_var = NULL, marginals, relative_gap = 0.01,
-  max_iterations = 50, verbose = FALSE)
+  max_iterations = 50, min_weight = 1e-04, verbose = FALSE)
 }
 \arguments{
 \item{seed}{a \code{data.frame} including necessary colums for matching to 
@@ -16,8 +16,20 @@ If \code{NULL}, defaults to 1.}
 
 \item{marginals}{a named list of \code{data.frame} objects. Each name must 
 match a column in the seed table, with each table describing the marginal
-distribution. The tables should have columns corresponding to 
+distribution. The tables should have rows corresponding to 
 possible values for the appropriate \code{var*} variable.}
+
+\item{relative_gap}{defines convergence.  If if no cells are factored by more 
+than this amount, the process is said to have converged.  For example, the
+default value of .01 imlies that convergence is reached when no cell in 
+seed table is changed by more than 10 percent.}
+
+\item{max_iterations}{maximimum number of iterations to perform, even if 
+convergence is not reached.}
+
+\item{min_weight}{Minimum weight to allow in any cell to prevent zero weights.
+Set to .0001 by default.  Should be arbitrarily small compared to your 
+seed table weights.}
 
 \item{verbose}{Print the maximum expansion factor with each iteration? 
 Default \code{FALSE}.}

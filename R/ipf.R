@@ -18,6 +18,10 @@
 #'
 #' @param max_iterations maximimum number of iterations to perform, even if 
 #'    convergence is not reached.
+#'
+#' @param min_weight Minimum weight to allow in any cell to prevent zero weights.
+#'    Set to .0001 by default.  Should be arbitrarily small compared to your 
+#'    seed table weights.
 #'   
 #' @param verbose Print the maximum expansion factor with each iteration? 
 #'   Default \code{FALSE}. 
@@ -29,7 +33,7 @@
 #' @importFrom magrittr "%>%"
 #' 
 ipf <- function(seed, weight_var = NULL, marginals, relative_gap = 0.01,
-                max_iterations = 50, verbose = FALSE){
+                max_iterations = 50, min_weight = .0001, verbose = FALSE){
   
   # set weights variable ----
   if(is.null(weight_var)){
@@ -62,7 +66,6 @@ ipf <- function(seed, weight_var = NULL, marginals, relative_gap = 0.01,
   variables <- names(marginals)
   
   # IPF ---
-  gap <- vector("numeric", length(marginals))
   
   for(iter in 1:max_iterations){
     
@@ -72,7 +75,6 @@ ipf <- function(seed, weight_var = NULL, marginals, relative_gap = 0.01,
       variable <- variables[i]
       
       marginal <- marginals[[variable]]  %>%
-        #tidyr::gather_(variable, "value", colnames(.), convert = TRUE) %>%
         
         # Normalize marginals to percents
         dplyr::mutate(m_pct = value / sum(value)) %>%
@@ -94,22 +96,48 @@ ipf <- function(seed, weight_var = NULL, marginals, relative_gap = 0.01,
           # calc new weight while preventing the creation of zeros
           dplyr::mutate(
             weight = weight * factor,
-            weight = ifelse(weight < .0001, .0001, weight)
+            weight = ifelse(weight < min_weight, min_weight, weight)
             )
       )
-      
-      # convergence criteria for each marginal
-      gap[i] <- abs(max(seed$factor) - 1)
       
       seed <- seed %>% select(-factor)
     }
     
-    # print statistic
-    if(verbose){print(gap)}
+    # check tolerance after each pass
+    converged <- FALSE
+    for (i in 1:length(marginals)){
+      variable <- variables[i]
+      
+      marginal <- marginals[[variable]]  %>%
+        
+        # Normalize marginals to percents
+        dplyr::mutate(m_pct = value / sum(value)) %>%
+        dplyr::select_(variable, "m_pct")
+      
+      suppressMessages(
+        seed_summary <- seed %>%
+          dplyr::group_by_(variable) %>%
+          dplyr::summarize(totalweight = sum(weight)) %>%
+          dplyr::mutate(s_pct = totalweight / sum(totalweight)) %>%
+          dplyr::left_join(marginal) %>%
+          dplyr::mutate(factor = m_pct / s_pct) %>%
+          dplyr::select_(variable, "factor")
+      )
+      
+      if (i == 1){
+        max_factor <- max(seed_summary$factor)
+      } else {
+        max_factor <- max(max_factor, max(seed_summary$factor))
+      }
+      
+      if (abs(max_factor - 1) < relative_gap){
+        converged <-  TRUE
+        print(paste0("Converged after ", iter, " iterations."))
+        break
+      }
+    }
     
-    # check tolerance
-    if(max(gap) < relative_gap){
-      print(paste("Converged after", iter, "iterations"))
+    if (converged){
       break
     }
   }
