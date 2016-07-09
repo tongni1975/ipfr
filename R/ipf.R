@@ -40,6 +40,7 @@ ipf <- function(seed, weight_var = NULL, marginals, relative_gap = 0.01,
     # if none given, set to 1.
     seed <- dplyr::mutate(seed, weight = 1)
   } else {
+    warning("weight_var not specified.  Initializing with equal weights.")
     seed <- dplyr::rename_(seed, weight = weight_var)
   }
   
