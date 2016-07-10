@@ -6,10 +6,11 @@
 #' @param weight_var existing weights column in seed table. 
 #' If \code{NULL}, defaults to 1.
 #' 
-#' @param marginals a named list of \code{data.frame} objects. Each name must 
-#'    match a column in the seed table, with each table describing the marginal
-#'    distribution. The tables should have rows corresponding to 
-#'    possible values for the appropriate \code{var*} variable.
+#' @param marginals a two-column \code{data.frame}.  Column names must be 
+#'    \code{marginal} and \code{value}.  The \code{marginal} column is filled  
+#'    with combinations of marginal names and category numbers (e.g. "persons1",
+#'    or "wrk2").  The character portion (\code{persons} or \code{wrk}) must 
+#'    correspond to a column name in the \code{seed} table.
 #'
 #' @param relative_gap defines convergence.  If if no cells are factored by more 
 #'    than this amount, the process is said to have converged.  For example, the
@@ -44,25 +45,29 @@ ipf <- function(seed, weight_var = NULL, marginals, relative_gap = 0.01,
     seed <- dplyr::rename_(seed, weight = weight_var)
   }
   
+  # Split the marginal column into marginal and category columns
+  marginals <- marginals %>%
+    dplyr::mutate(
+      category = gsub("[A-z]", "", marginal),
+      marginal = gsub("[0-9]", "", marginal)
+    )
+  
   # Check to see if the marginal totals match
-  if (length(marginals) > 1){
-    for (i in 1:length(marginals)){
-      marginal <- marginals[[i]]
-      
-      if (i == 1){
-        check <- c(sum(marginal$value))
-      } else {
-        check <- append(check, sum(marginal$value))
-      }
-    }
-    if (!all(max(check) - min(check) == 0)){
-      warning(paste0(
-        "Marginal totals are not equivalent. ",
-        "The percentage distribution will still match all marginals. ",
-        "Final weight total will match first marginal."
-      ))
-    }
+  equal <- marginals %>%
+    dplyr::group_by(marginal) %>%
+    summarize(total = sum(value)) %>%
+    .$total
+  equal <- all(max(equal) - min(equal) == 0)
+  if (!equal){
+    warning(paste0(
+      "Marginal totals are not equivalent. ",
+      "The percentage distribution will still match all marginals. ",
+      "Final weight total will match first marginal."
+    ))
   }
+  
+
+
   
   variables <- names(marginals)
   
