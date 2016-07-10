@@ -14,10 +14,16 @@ marginals and an optional weight field.}
 \item{weight_var}{existing weights column in seed table. 
 If \code{NULL}, defaults to 1.}
 
-\item{marginals}{a named list of \code{data.frame} objects. Each name must 
-match a column in the seed table, with each table describing the marginal
-distribution. The tables should have rows corresponding to 
-possible values for the appropriate \code{var*} variable.}
+\item{marginals}{a two-column \code{data.frame}.  Column names must be 
+\code{marginal} and \code{value}.  The \code{marginal} column is filled  
+with combinations of marginal names and category numbers (e.g. "persons1",
+or "wrk2").
+
+The character portion (\code{persons} or \code{wrk}) must 
+correspond to a column name in the \code{seed} table.
+
+The numeric portion must correspond to the values found in the column of
+the \code{seed} table.}
 
 \item{relative_gap}{defines convergence.  If if no cells are factored by more 
 than this amount, the process is said to have converged.  For example, the

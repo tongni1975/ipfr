@@ -9,8 +9,13 @@
 #' @param marginals a two-column \code{data.frame}.  Column names must be 
 #'    \code{marginal} and \code{value}.  The \code{marginal} column is filled  
 #'    with combinations of marginal names and category numbers (e.g. "persons1",
-#'    or "wrk2").  The character portion (\code{persons} or \code{wrk}) must 
+#'    or "wrk2").
+#'    
+#'    The character portion (\code{persons} or \code{wrk}) must 
 #'    correspond to a column name in the \code{seed} table.
+#'    
+#'    The numeric portion must correspond to the values found in the column of
+#'    the \code{seed} table.
 #'
 #' @param relative_gap defines convergence.  If if no cells are factored by more 
 #'    than this amount, the process is said to have converged.  For example, the
@@ -39,16 +44,16 @@ ipf <- function(seed, weight_var = NULL, marginals, relative_gap = 0.01,
   # set weights variable ----
   if(is.null(weight_var)){
     # if none given, set to 1.
+    warning("weight_var not specified.  Initializing with equal weights.")
     seed <- dplyr::mutate(seed, weight = 1)
   } else {
-    warning("weight_var not specified.  Initializing with equal weights.")
     seed <- dplyr::rename_(seed, weight = weight_var)
   }
   
   # Split the marginal column into marginal and category columns
   marginals <- marginals %>%
     dplyr::mutate(
-      category = gsub("[A-z]", "", marginal),
+      category = as.numeric(gsub("[A-z]", "", marginal)),
       marginal = gsub("[0-9]", "", marginal)
     )
   
@@ -66,34 +71,32 @@ ipf <- function(seed, weight_var = NULL, marginals, relative_gap = 0.01,
     ))
   }
   
-
-
-  
-  variables <- names(marginals)
+  # Create a percent column to use in the IPF
+  marginals <- marginals %>%
+    dplyr::group_by(marginal) %>%
+    dplyr::mutate(m_pct = value / sum(value))
   
   # IPF ---
   
-  for(iter in 1:max_iterations){
+  iter <- 1
+  while (!converged & iter <= max_iterations){
     
-    # For each marginal table
-    for (i in 1:length(marginals)) {
+    # In the following loop, track the maximum gap in this vector
+    gap <- vector("numeric", nrow(marginals))
+    
+    # For each row in the marginal table
+    for (i in 1:nrow(marginals)) {
+      mName <- marginals[[1, i]]
       
-      variable <- variables[i]
-      
-      marginal <- marginals[[variable]]  %>%
-        
-        # Normalize marginals to percents
-        dplyr::mutate(m_pct = value / sum(value)) %>%
-        dplyr::select_(variable, "m_pct")
-      
-      suppressMessages(
+      supressMessages(
         seed_summary <- seed %>%
-          dplyr::group_by_(variable) %>%
+          dplyr::group_by_(mName) %>%
           dplyr::summarize(totalweight = sum(weight)) %>%
           dplyr::mutate(s_pct = totalweight / sum(totalweight)) %>%
-          dplyr::left_join(marginal) %>%
+          dplyr::left_join(marginals, setNames("category", mName)) %>%
+          dplyr::filter(marginal == mName) %>%
           dplyr::mutate(factor = m_pct / s_pct) %>%
-          dplyr::select_(variable, "factor")
+          dplyr::select_(mName, "factor")
       )
       
       suppressMessages(
@@ -103,49 +106,17 @@ ipf <- function(seed, weight_var = NULL, marginals, relative_gap = 0.01,
           dplyr::mutate(
             weight = weight * factor,
             weight = ifelse(weight < min_weight, min_weight, weight)
-            )
+          )
       )
+      
+      gap[i] <- max(abs(seed$factor - 1))
       
       seed <- seed %>% dplyr::select(-factor)
     }
     
-    # check tolerance after each pass
-    converged <- FALSE
-    for (i in 1:length(marginals)){
-      variable <- variables[i]
-      
-      marginal <- marginals[[variable]]  %>%
-        
-        # Normalize marginals to percents
-        dplyr::mutate(m_pct = value / sum(value)) %>%
-        dplyr::select_(variable, "m_pct")
-      
-      suppressMessages(
-        seed_summary <- seed %>%
-          dplyr::group_by_(variable) %>%
-          dplyr::summarize(totalweight = sum(weight)) %>%
-          dplyr::mutate(s_pct = totalweight / sum(totalweight)) %>%
-          dplyr::left_join(marginal) %>%
-          dplyr::mutate(factor = m_pct / s_pct) %>%
-          dplyr::select_(variable, "factor")
-      )
-      
-      if (i == 1){
-        max_factor <- max(seed_summary$factor)
-      } else {
-        max_factor <- max(max_factor, max(seed_summary$factor))
-      }
-      
-      if (abs(max_factor - 1) < relative_gap){
-        converged <-  TRUE
-        print(paste0("Converged after ", iter, " iterations."))
-        break
-      }
-    }
-    
-    if (converged){
-      break
-    }
+    # Check for convergence and increment iter
+    converged <- all(gap <= min_weight)
+    iter = iter + 1
   }
   
   # When finished, scale up the weights to match the first marginal total
