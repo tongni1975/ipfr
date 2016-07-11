@@ -34,16 +34,16 @@ library(dplyr)
 library(ipfr)
 library(htmlTable)
 
-df <- expand.grid(
-  persons = c(1, 2, 3, 4),
-  workers = c(0, 1, 2, 3),
-  vehicles = c(0, 1, 2, 3)
+seed <- expand.grid(
+  siz = c(1, 2, 3, 4),
+  wrk = c(0, 1, 2, 3),
+  veh = c(0, 1, 2, 3)
 ) %>% tbl_df()
 
 set.seed(1)
-df$count <- sample(1:10, nrow(df), replace = TRUE)
+seed$count <- sample(1:10, nrow(seed), replace = TRUE)
 
-df %>%
+seed %>%
   head() %>%
   htmlTable(
   align = "cccr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
@@ -52,8 +52,8 @@ df %>%
 
 
 ### Marginal creation
-The number of persons, workers or vehicles is referred to as a marginal category 
-of the data.  Suppose that, from the Census, we know the total number of 
+The number of households by size (e.g., 1-person, 2-person, etc.) is referred to
+as a marginal distribution.  Often, from the Census, we know the total number of 
 households by each individual marginal.  For example, we know the number of 
 households by size:
 
@@ -62,24 +62,27 @@ households by size:
   * 3 persons: 100 households
   * 4+ persons: 100 households
 
-This information is created below.
+This information is created below. For the distribution of households by size, 
+number of workers, and number of vehicles.  Importanlty, the "marginal" column 
+is a concatenation of the marginal name in the seed table ("siz", "wrk", and 
+"veh") and the numbers describing the categories within that marginal found in 
+the seed table (e.g., 0, 1, 2, etc.)
 ```{r "marginal creation"}
-persons <- data_frame(
-  persons = c(1, 2, 3, 4),
-  value = c(100, 100, 150, 150)
+
+marginals <- data_frame(
+  marginal = c(
+    "siz1", "siz2", "siz3", "siz4",
+    "wrk0", "wrk1", "wrk2", "wrk3",
+    "veh0", "veh1", "veh2", "veh3"
+    ),
+  value = c(
+    100, 100, 150, 150,
+    100, 150, 150, 100,
+    75, 175, 150, 100
+  )
 )
 
-workers <- data_frame(
-  workers = c(0, 1, 2, 3),
-  value = c(100, 150, 150, 100)
-)
-
-vehicles <- data_frame(
-  vehicles = c(0, 1, 2, 3),
-  value = c(100, 150, 150, 100)
-)
-
-persons %>% htmlTable(
+marginals %>% htmlTable(
   align = "cr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
 )
 ```
@@ -90,42 +93,39 @@ official information from the Census about the joint distribution.  What we want
 to do is use the joint distribution from our survey, but ensure it agrees with 
 the marginal information from the Census.
 
-An initial test shows that they do not agree.
+An initial test comparing size shows they do not agree.
 ```{r "initial test"}
-df %>%
-  group_by(persons) %>%
+siz <- marginals %>%
+    mutate(
+      category = as.numeric(gsub("[A-z]", "", marginal)),
+      marginal = gsub("[0-9]", "", marginal)
+    ) %>%
+  filter(marginal == "siz") %>%
+  select(siz = category, value)
+  
+
+seed %>%
+  select(siz, count) %>%
+  group_by(siz) %>%
   summarize(total = sum(count)) %>%
-  left_join(persons) %>%
+  left_join(siz) %>%
   rename(survey = total, census = value) %>%
   htmlTable(
     align = "crr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
   )
 ```
 
-We can use the ipfr package to change this.  The only step we need to take 
-before calling the function is to group the marginal tables into a named list.
-Importantly, the name of each list item must match the appropriate column in the
-seed table.
-
-```{r "group marginals"}
-marginals <- list(
-  persons = persons,
-  workers = workers,
-  vehicles = vehicles
-)
-```
-
-Now we can call the function to perform the fitting.
+We can use the ipfr package to change this.
 ```{r}
-df$NewWeight <- ipf(df, "count", marginals)
+seed$NewWeight <- ipf(seed, weight_var = "count", marginals)
 ```
 
 Once complete, we can summarize the final table to see if it worked.
 ```{r}
-df %>%
-  group_by(persons) %>%
+seed %>%
+  group_by(siz) %>%
   summarize(total = sum(NewWeight)) %>%
-  left_join(persons) %>%
+  left_join(siz) %>%
   rename(survey = total, census = value) %>%
   mutate(survey = round(survey, 3)) %>%
   htmlTable(
@@ -136,20 +136,36 @@ df %>%
 Not only does the marginal distribution of persons match, but also workers and
 vehicles.
 ```{r, echo=FALSE}
-df %>%
-  group_by(workers) %>%
+wrk <- marginals %>%
+    mutate(
+      category = as.numeric(gsub("[A-z]", "", marginal)),
+      marginal = gsub("[0-9]", "", marginal)
+    ) %>%
+  filter(marginal == "wrk") %>%
+  select(wrk = category, value)
+
+seed %>%
+  group_by(wrk) %>%
   summarize(total = sum(NewWeight)) %>%
-  left_join(workers) %>%
+  left_join(wrk) %>%
   rename(survey = total, census = value) %>%
   mutate(survey = round(survey, 3)) %>%
   htmlTable(
     align = "crr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
   )
 
-df %>%
-  group_by(vehicles) %>%
+veh <- marginals %>%
+    mutate(
+      category = as.numeric(gsub("[A-z]", "", marginal)),
+      marginal = gsub("[0-9]", "", marginal)
+    ) %>%
+  filter(marginal == "veh") %>%
+  select(veh = category, value)
+
+seed %>%
+  group_by(veh) %>%
   summarize(total = sum(NewWeight)) %>%
-  left_join(vehicles) %>%
+  left_join(veh) %>%
   rename(survey = total, census = value) %>%
   mutate(survey = round(survey, 3)) %>%
   htmlTable(
@@ -191,11 +207,11 @@ marginals <- list(
   vehicles = vehicles
 )
 
-df$NewWeight <- ipf(df, "count", marginals)
+seed$NewWeight <- ipf(df, "count", marginals)
 ```
 
 ```{r, echo=FALSE}
-df %>%
+seed %>%
   group_by(persons) %>%
   summarize(total = sum(NewWeight)) %>%
   left_join(persons) %>%
@@ -205,7 +221,7 @@ df %>%
     align = "crr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
   )
 
-df %>%
+seed %>%
   group_by(workers) %>%
   summarize(total = sum(NewWeight)) %>%
   left_join(workers) %>%
@@ -215,7 +231,7 @@ df %>%
     align = "crr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
   )
 
-df %>%
+seed %>%
   group_by(vehicles) %>%
   summarize(total = sum(NewWeight)) %>%
   left_join(vehicles) %>%
