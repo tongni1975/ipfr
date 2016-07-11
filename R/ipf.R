@@ -79,6 +79,7 @@ ipf <- function(seed, weight_var = NULL, marginals, relative_gap = 0.01,
   # IPF ---
   
   iter <- 1
+  converged <- FALSE
   while (!converged & iter <= max_iterations){
     
     # In the following loop, track the maximum gap in this vector
@@ -86,9 +87,9 @@ ipf <- function(seed, weight_var = NULL, marginals, relative_gap = 0.01,
     
     # For each row in the marginal table
     for (i in 1:nrow(marginals)) {
-      mName <- marginals[[1, i]]
+      mName <- marginals[[i, 1]]
       
-      supressMessages(
+      suppressMessages(
         seed_summary <- seed %>%
           dplyr::group_by_(mName) %>%
           dplyr::summarize(totalweight = sum(weight)) %>%
@@ -120,7 +121,12 @@ ipf <- function(seed, weight_var = NULL, marginals, relative_gap = 0.01,
   }
   
   # When finished, scale up the weights to match the first marginal total
-  seed$weight <- seed$weight * (sum(marginals[[1]]$value) / sum(seed$weight))
+  firstMarg <- marginals$marginal[1]
+  target <- marginals %>%
+    summarize(total = sum(value))
+  target <- target$total[1]
+  
+  seed$weight <- seed$weight * (target) / sum(seed$weight)
         
   # if iterations exceeded, throw a warning.
   if(iter == max_iterations){

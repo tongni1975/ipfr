@@ -133,8 +133,7 @@ seed %>%
   )
 ```
 
-Not only does the marginal distribution of persons match, but also workers and
-vehicles.
+Not only does the marginal distribution of persons match, but also workers and vehicles.
 ```{r, echo=FALSE}
 wrk <- marginals %>%
     mutate(
@@ -184,7 +183,7 @@ cells to `.0001`.  This minimum weight can be adjusted using the `min_weight`
 parameter and should be arbitrarily small compared to your seed table weights.
 
 ### Marginal agreement
-In this vignette, the marginal distributions all added up to 500 households.
+So far, the marginal distributions all added up to 500 households.
 If they disagreed on the total number of households, the standard process could 
 not converge.
 
@@ -196,45 +195,64 @@ will be displayed when this happens.
 
 ```{r, warning=TRUE}
 # Increase 1-person households from 100 to 500
-persons <- data_frame(
-  persons = c(1, 2, 3, 4),
-  value = c(500, 100, 150, 150)
-)
+marginals <- marginals %>%
+  mutate(value = ifelse(
+    marginal == "siz1", 500, value
+  ))
 
-marginals <- list(
-  persons = persons,
-  workers = workers,
-  vehicles = vehicles
-)
-
-seed$NewWeight <- ipf(df, "count", marginals)
+seed$NewWeight <- ipf(seed, "count", marginals)
 ```
 
 ```{r, echo=FALSE}
+siz <- marginals %>%
+    mutate(
+      category = as.numeric(gsub("[A-z]", "", marginal)),
+      marginal = gsub("[0-9]", "", marginal)
+    ) %>%
+  filter(marginal == "siz") %>%
+  select(siz = category, value)
+  
+
 seed %>%
-  group_by(persons) %>%
+  select(siz, NewWeight) %>%
+  group_by(siz) %>%
   summarize(total = sum(NewWeight)) %>%
-  left_join(persons) %>%
+  left_join(siz) %>%
+  rename(survey = total, census = value) %>%
+  htmlTable(
+    align = "crr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+  )
+
+wrk <- marginals %>%
+    mutate(
+      category = as.numeric(gsub("[A-z]", "", marginal)),
+      marginal = gsub("[0-9]", "", marginal)
+    ) %>%
+  filter(marginal == "wrk") %>%
+  select(wrk = category, value)
+
+seed %>%
+  group_by(wrk) %>%
+  summarize(total = sum(NewWeight)) %>%
+  left_join(wrk) %>%
   rename(survey = total, census = value) %>%
   mutate(survey = round(survey, 3)) %>%
   htmlTable(
     align = "crr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
   )
 
-seed %>%
-  group_by(workers) %>%
-  summarize(total = sum(NewWeight)) %>%
-  left_join(workers) %>%
-  rename(survey = total, census = value) %>%
-  mutate(survey = round(survey, 3)) %>%
-  htmlTable(
-    align = "crr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
-  )
+veh <- marginals %>%
+    mutate(
+      category = as.numeric(gsub("[A-z]", "", marginal)),
+      marginal = gsub("[0-9]", "", marginal)
+    ) %>%
+  filter(marginal == "veh") %>%
+  select(veh = category, value)
 
 seed %>%
-  group_by(vehicles) %>%
+  group_by(veh) %>%
   summarize(total = sum(NewWeight)) %>%
-  left_join(vehicles) %>%
+  left_join(veh) %>%
   rename(survey = total, census = value) %>%
   mutate(survey = round(survey, 3)) %>%
   htmlTable(
