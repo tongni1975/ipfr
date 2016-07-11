@@ -76,6 +76,29 @@ ipf <- function(seed, weight_var = NULL, marginals, relative_gap = 0.01,
     dplyr::group_by(marginal) %>%
     dplyr::mutate(m_pct = value / sum(value))
   
+  # Check that at least one row of seed information exists for each
+  # marginal category.
+  margs <- unique(marginals$marginal)
+  temp <- list()
+  for (marg in margs){
+    cats <- marginals %>%
+      ungroup() %>%
+      filter(marginal == marg) %>%
+      .[["category"]]
+    
+    for (cat in cats){
+      ok <- any(seed[, marg] == cat)
+      
+      if (!ok) {
+        warning(paste0(
+          "The seed table has no observations of marginal: ", marg,
+          " category: ", cat
+        ))
+        return()
+      }
+    }
+  }
+  
   # IPF ---
   
   iter <- 1
