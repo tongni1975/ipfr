@@ -74,4 +74,4 @@ tbl %>%
   col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
 )
 ```
-Because `ipf_multi` calls `ipf`, all the same error checks and warnings are performed for each row in the marginal table.  Refer to the `ipf` vignette for more information on what those are.
+

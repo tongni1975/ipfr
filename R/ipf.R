@@ -162,7 +162,7 @@ ipf <- function(seed, weight_var = NULL, marginals,
   seed$weight <- seed$weight * (target) / sum(seed$weight)
         
   # if iterations exceeded, throw a warning.
-  if(iter == max_iterations){
+  if(iter == max_iterations & !converged){
     warning("Failed to converge after ", iter, " iterations")
     flush.console()
   }
@@ -195,47 +195,123 @@ ipf_multi <- function(seed, weight_var = NULL, margTbl, id_field,
                    relative_gap = 0.01, max_iterations = 50, 
                    min_weight = .0001, verbose = FALSE){
   
-  # Transform the marginal table into long format
-  margTbl_long <- margTbl %>%
-    dplyr::rename_(ID = id_field) %>%
-    tidyr::gather(key = marginal, value = value, -ID)
+  # set weights variable ----
+  if(is.null(weight_var)){
+    # if none given, set to 1.
+    warning("weight_var not specified.  Initializing with equal weights.")
+    flush.console()
+    seed <- dplyr::mutate(seed, weight = 1)
+  } else {
+    seed <- dplyr::rename_(seed, weight = weight_var)
+  }
   
   # Collect the marginal names
-  margNames <- margTbl_long[, "marginal"] %>%
-    dplyr::mutate(marginal = gsub("[0-9]", "", marginal)) %>%
-    unique() %>%
-    .$marginal
-    
-  # Expand the seed table to be repeated for each id_field
-  seed_long <- merge(margTbl$ID, seed) %>%
-    dplyr::rename(ID = x)
+  mNameCats <- margTbl %>%
+    dplyr::select(-ID) %>%
+    names()
   
-  ids <- unique(seed_long$ID)
-  dfs <- list()
-  for (id in ids) {
-    # Print out which ID is being processed
-    message("ID ", id)
-    flush.console()
+  mNames <- mNameCats %>%
+    gsub("[0-9]", "", .) %>%
+    unique()
     
-    tempMargs <- margTbl_long %>%
-      dplyr::filter(ID == id) %>%
-      dplyr::select(-ID)
+  # Expand the seed table to be repeated for each id_field, add marginal, and
+  # convert weight field to a percent.
+  seed_long <- merge(margTbl$ID, seed) %>%
+    dplyr::rename(ID = x) %>%
+    dplyr::group_by(ID) %>%
+    dplyr::mutate(weight = weight / sum(weight)) %>%
+    ungroup()
+  
+  for (i in 1:length(mNames)) {
+    name <- mNames[i]
+    namecats <- mNameCats[grep(name, mNameCats)]
     
-    tempSeed <- seed
-    tempSeed$newweight <- ipf(tempSeed, weight_var = weight_var, tempMargs)
-    tempSeed$ID <- id
-    dfs[[id]] <- tempSeed
+    # save first marginal for later scaling
+    if (i == 1) {
+      firstMarg <- margTbl %>%
+        dplyr::select(ID, one_of(namecats)) %>%
+        tidyr::gather(key = m, value = value, -ID) %>%
+        dplyr::group_by(ID) %>%
+        dplyr::summarize(total = sum(value))
+    }
+    
+    tojoin <- margTbl %>%
+      dplyr::select(ID, one_of(namecats)) %>%
+      tidyr::gather(key = m, value = value, -ID) %>%
+      dplyr::mutate(
+        m = as.numeric(gsub("[A-z]", "", m)),
+        value = value / sum(value)
+      ) %>%
+      dplyr::rename_(
+        .dots = setNames(c("m", "value"), c(name, paste0(name,"marg")))
+      )
+    
+    seed_long <- seed_long %>%
+      dplyr::left_join(tojoin)
   }
   
-  # Combine the individual data frames back together and format them as desired
-  final <- do.call(rbind, dfs)
-  for (name in margNames) {
+  # Perform IPF
+  iter <- 1
+  converged <- FALSE
+  while (!converged & iter <= max_iterations) {
+    # In the following loop, track the maximum gap in this vector
+    gap <- vector("numeric", length(mNames))
+    
+    # For each marginal
+    for (i in length(mNames)) {
+      name <- mNames[i]
+      namecat <- paste0(name,"marg")
+      
+      dots <- list(
+        lazyeval::interp(~x / y, x = as.name(namecat), y = as.name("total"))
+      )
+      
+      seed_long <- seed_long %>%
+        dplyr::group_by_("ID", name) %>%
+        dplyr::mutate(total = sum(weight)) %>%
+        dplyr::mutate_(.dots = setNames(dots, "factor")) %>%
+        dplyr::mutate(
+          weight = weight * factor,
+          # Don't allow weight to drop below min_weight
+          weight = ifelse(weight < min_weight, min_weight, weight),
+          # If a factor was 0 (meaning the marginal was zero), set the factor
+          # to 1 to allow convergence.
+          factor = ifelse(factor == 0, 1, factor)
+        )
+      
+      gap[i] <- max(abs(seed_long$factor - 1))
+    }
+    
+    # Check for convergence and increment iter
+    converged <- all(gap <= min_weight)
+    iter = iter + 1
+  }
+  
+  # if iterations exceeded, throw a warning.
+  if(iter > max_iterations){
+    warning("Failed to converge after ", max_iterations, " iterations")
+    flush.console()
+  }
+  
+  # When finished, scale up the weights to match the first marginal total
+  seed_long <- seed_long %>%
+    dplyr::ungroup() %>%
+    dplyr::select(ID, one_of(mNames), weight) %>%
+    dplyr::left_join(firstMarg) %>%
+    dplyr::group_by(ID) %>%
+    dplyr::mutate(weight = weight * total / sum(weight)) %>%
+    dplyr::select(-total) %>%
+    dplyr::ungroup()
+    
+  # Format final data frame
+  final <- seed_long
+  for (name in mNames) {
     final[, name] <- paste0(name, final[[name]])
   }
-  final$category <- do.call(paste0, final[margNames])
+  final$category <- do.call(paste0, select(final, one_of(mNames)))
   final <- final %>%
-    dplyr::select(ID, category, newweight) %>%
-    tidyr::spread(category, newweight)
+    dplyr::select(ID, category, weight) %>%
+    tidyr::spread(key = category, value = weight)
   
   return(final)
 }
