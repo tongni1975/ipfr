@@ -30,7 +30,7 @@
 #'    seed table weights.
 #'   
 #' @param verbose Print the maximum expansion factor with each iteration? 
-#'   Default \code{FALSE}. 
+#'    Default \code{FALSE}. 
 #'   
 #' @return a vector of weights for each row in \code{seed}
 #' 
@@ -38,8 +38,9 @@
 #' 
 #' @importFrom magrittr "%>%"
 #' 
-ipf <- function(seed, weight_var = NULL, marginals, relative_gap = 0.01,
-                max_iterations = 50, min_weight = .0001, verbose = FALSE){
+ipf <- function(seed, weight_var = NULL, marginals,
+                relative_gap = 0.01, max_iterations = 50, min_weight = .0001,
+                verbose = FALSE){
 
   # set weights variable ----
   if(is.null(weight_var)){
@@ -163,6 +164,67 @@ ipf <- function(seed, weight_var = NULL, marginals, relative_gap = 0.01,
    
 
 
+#' Perform the ipf procedure for multiple marginal sets and returns a 
+#' \code{data.frame}.
+#' 
+#' @inheritParams ipf
+#' 
+#' @param margTbl A \code{data.frame} with a row for each set of marginals to
+#'    use in an ipf procedure.  Every column other than the \code{id_field} will
+#'    be treated as a marginal column.
+#'    
+#' @param id_field The name of the identifying field not to be used as a 
+#'    marginal.
+#'
+#' @return a \code{data.frame} with a row for each \code{id_field}. The columns 
+#'    of which contain the joint-distribution weights after fitting to marginals.
+#'
+#' @export
+#'    
+ipf_multi <- function(seed, weight_var = NULL, margTbl, id_field,
+                   relative_gap = 0.01, max_iterations = 50, 
+                   min_weight = .0001, verbose = FALSE){
+  
+  # Transform the marginal table into long format
+  margTbl_long <- margTbl %>%
+    dplyr::rename_(ID = id_field) %>%
+    tidyr::gather(key = marginal, value = value, -ID)
+  
+  # Collect the marginal names
+  margNames <- margTbl_long[, "marginal"] %>%
+    dplyr::mutate(marginal = gsub("[0-9]", "", marginal)) %>%
+    unique() %>%
+    .$marginal
+    
+  # Expand the seed table to be repeated for each id_field
+  seed_long <- merge(margTbl$ID, seed) %>%
+    dplyr::rename(ID = x)
+  
+  ids <- unique(seed_long$ID)
+  dfs <- list()
+  for (id in ids) {
+    tempMargs <- margTbl_long %>%
+      dplyr::filter(ID == id) %>%
+      dplyr::select(-ID)
+    
+    tempSeed <- seed
+    tempSeed$newweight <- ipf(tempSeed, weight_var = weight_var, tempMargs)
+    tempSeed$ID <- id
+    dfs[[id]] <- tempSeed
+  }
+  
+  # Combine the individual data frames back together and format them as desired
+  final <- do.call(rbind, dfs)
+  for (name in margNames) {
+    final[, name] <- paste0(name, final[[name]])
+  }
+  final$category <- do.call(paste0, final[margNames])
+  final <- final %>%
+    dplyr::select(ID, category, newweight) %>%
+    tidyr::spread(category, newweight)
+  
+  return(final)
+}
 
 
 

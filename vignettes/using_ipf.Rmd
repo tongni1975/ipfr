@@ -1,10 +1,10 @@
 ---
-title: "Using ipfr"
+title: "Using ipf"
 author: "Kyle Ward"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{ipfr}
+  %\VignetteIndexEntry{ipf}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
