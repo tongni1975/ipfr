@@ -46,6 +46,7 @@ ipf <- function(seed, weight_var = NULL, marginals,
   if(is.null(weight_var)){
     # if none given, set to 1.
     warning("weight_var not specified.  Initializing with equal weights.")
+    flush.console()
     seed <- dplyr::mutate(seed, weight = 1)
   } else {
     seed <- dplyr::rename_(seed, weight = weight_var)
@@ -70,6 +71,7 @@ ipf <- function(seed, weight_var = NULL, marginals,
       "The percentage distribution will still match all marginals. ",
       "Final weight total will match first marginal."
     ))
+    flush.console()
   }
   
   # Create a percent column to use in the IPF
@@ -95,6 +97,7 @@ ipf <- function(seed, weight_var = NULL, marginals,
           "The seed table has no observations of marginal: ", marg,
           " category: ", cat
         ))
+        flush.console()
         return()
       }
     }
@@ -155,6 +158,7 @@ ipf <- function(seed, weight_var = NULL, marginals,
   # if iterations exceeded, throw a warning.
   if(iter == max_iterations){
     warning("Failed to converge after ", iter, " iterations")
+    flush.console()
   }
   
   # return the new weights
@@ -203,6 +207,10 @@ ipf_multi <- function(seed, weight_var = NULL, margTbl, id_field,
   ids <- unique(seed_long$ID)
   dfs <- list()
   for (id in ids) {
+    # Print out which ID is being processed
+    message("ID ", id)
+    flush.console()
+    
     tempMargs <- margTbl_long %>%
       dplyr::filter(ID == id) %>%
       dplyr::select(-ID)
