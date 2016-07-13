@@ -60,11 +60,11 @@ ipf <- function(seed, weight_var = NULL, marginals,
     )
   
   # Check to see if the marginal totals match
-  equal <- marginals %>%
+  vals <- marginals %>%
     dplyr::group_by(marginal) %>%
     summarize(total = sum(value)) %>%
     .$total
-  equal <- all(max(equal) - min(equal) == 0)
+  equal <- all(max(vals) - min(vals) == 0)
   if (!equal){
     warning(paste0(
       "Marginal totals are not equivalent. ",
@@ -72,6 +72,12 @@ ipf <- function(seed, weight_var = NULL, marginals,
       "Final weight total will match first marginal."
     ))
     flush.console()
+  }
+  
+  # If all the marginals add up to zero, return vector of zeros.
+  if (sum(vals) == 0) {
+    seed$weight <- 0
+    return(seed$weight)
   }
   
   # Create a percent column to use in the IPF
