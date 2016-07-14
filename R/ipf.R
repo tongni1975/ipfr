@@ -62,7 +62,7 @@ ipf <- function(seed, weight_var = NULL, marginals,
   # Check to see if the marginal totals match
   vals <- marginals %>%
     dplyr::group_by(marginal) %>%
-    summarize(total = sum(value)) %>%
+    dplyr::summarize(total = sum(value)) %>%
     .$total
   equal <- all(max(vals) - min(vals) == 0)
   if (!equal){
@@ -156,7 +156,7 @@ ipf <- function(seed, weight_var = NULL, marginals,
   # When finished, scale up the weights to match the first marginal total
   firstMarg <- marginals$marginal[1]
   target <- marginals %>%
-    summarize(total = sum(value))
+    dplyr::summarize(total = sum(value))
   target <- target$total[1]
   
   seed$weight <- seed$weight * (target) / sum(seed$weight)
@@ -220,7 +220,7 @@ ipf_multi <- function(seed, weight_var = NULL, margTbl, id_field,
     dplyr::rename(ID = x) %>%
     dplyr::group_by(ID) %>%
     dplyr::mutate(weight = weight / sum(weight)) %>%
-    ungroup()
+    dplyr::ungroup()
   
   for (i in 1:length(mNames)) {
     name <- mNames[i]
@@ -229,14 +229,14 @@ ipf_multi <- function(seed, weight_var = NULL, margTbl, id_field,
     # save first marginal for later scaling
     if (i == 1) {
       firstMarg <- margTbl %>%
-        dplyr::select(ID, one_of(namecats)) %>%
+        dplyr::select(ID, dplyr::one_of(namecats)) %>%
         tidyr::gather(key = m, value = value, -ID) %>%
         dplyr::group_by(ID) %>%
         dplyr::summarize(total = sum(value))
     }
     
     tojoin <- margTbl %>%
-      dplyr::select(ID, one_of(namecats)) %>%
+      dplyr::select(ID, dplyr::one_of(namecats)) %>%
       tidyr::gather(key = m, value = value, -ID) %>%
       dplyr::mutate(
         m = as.numeric(gsub("[A-z]", "", m)),
@@ -296,7 +296,7 @@ ipf_multi <- function(seed, weight_var = NULL, margTbl, id_field,
   # When finished, scale up the weights to match the first marginal total
   seed_long <- seed_long %>%
     dplyr::ungroup() %>%
-    dplyr::select(ID, one_of(mNames), weight) %>%
+    dplyr::select(ID, dplyr::one_of(mNames), weight) %>%
     dplyr::left_join(firstMarg) %>%
     dplyr::group_by(ID) %>%
     dplyr::mutate(weight = weight * total / sum(weight)) %>%
@@ -308,7 +308,8 @@ ipf_multi <- function(seed, weight_var = NULL, margTbl, id_field,
   for (name in mNames) {
     final[, name] <- paste0(name, final[[name]])
   }
-  final$category <- do.call(paste0, select(final, one_of(mNames)))
+  #final$category <- do.call(paste0, select(final, one_of(mNames)))
+  final <- tidyr::unite(final, col = category, dplyr::one_of(mNames), sep = "_")
   final <- final %>%
     dplyr::select(ID, category, weight) %>%
     tidyr::spread(key = category, value = weight)
