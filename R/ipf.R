@@ -46,7 +46,7 @@ ipf <- function(seed, weight_var = NULL, marginals,
   if(is.null(weight_var)){
     # if none given, set to 1.
     warning("weight_var not specified.  Initializing with equal weights.")
-    flush.console()
+    utils::flush.console()
     seed <- dplyr::mutate(seed, weight = 1)
   } else {
     seed <- dplyr::rename_(seed, weight = weight_var)
@@ -71,7 +71,7 @@ ipf <- function(seed, weight_var = NULL, marginals,
       "The percentage distribution will still match all marginals. ",
       "Final weight total will match first marginal."
     ))
-    flush.console()
+    utils::flush.console()
   }
   
   # If all the marginals add up to zero, return vector of zeros.
@@ -91,9 +91,9 @@ ipf <- function(seed, weight_var = NULL, marginals,
   temp <- list()
   for (marg in margs){
     cats <- marginals %>%
-      ungroup() %>%
-      filter(marginal == marg) %>%
-      .[["category"]]
+      dplyr::ungroup() %>%
+      dplyr::filter(marginal == marg)
+    cats <- cats$category
     
     for (cat in cats){
       ok <- any(seed[, marg] == cat)
@@ -103,7 +103,7 @@ ipf <- function(seed, weight_var = NULL, marginals,
           "The seed table has no observations of marginal: ", marg,
           " category: ", cat
         ))
-        flush.console()
+        utils::flush.console()
         return()
       }
     }
@@ -127,7 +127,7 @@ ipf <- function(seed, weight_var = NULL, marginals,
           dplyr::group_by_(mName) %>%
           dplyr::summarize(totalweight = sum(weight)) %>%
           dplyr::mutate(s_pct = totalweight / sum(totalweight)) %>%
-          dplyr::left_join(marginals, setNames("category", mName)) %>%
+          dplyr::left_join(marginals, stats::setNames("category", mName)) %>%
           dplyr::filter(marginal == mName) %>%
           dplyr::mutate(factor = m_pct / s_pct) %>%
           dplyr::select_(mName, "factor")
@@ -164,7 +164,7 @@ ipf <- function(seed, weight_var = NULL, marginals,
   # if iterations exceeded, throw a warning.
   if(iter == max_iterations & !converged){
     warning("Failed to converge after ", iter, " iterations")
-    flush.console()
+    utils::flush.console()
   }
   
   # return the new weights
@@ -199,7 +199,7 @@ ipf_multi <- function(seed, weight_var = NULL, margTbl, id_field,
   if(is.null(weight_var)){
     # if none given, set to 1.
     warning("weight_var not specified.  Initializing with equal weights.")
-    flush.console()
+    utils::flush.console()
     seed <- dplyr::mutate(seed, weight = 1)
   } else {
     seed <- dplyr::rename_(seed, weight = weight_var)
@@ -243,7 +243,7 @@ ipf_multi <- function(seed, weight_var = NULL, margTbl, id_field,
         value = value / sum(value)
       ) %>%
       dplyr::rename_(
-        .dots = setNames(c("m", "value"), c(name, paste0(name,"marg")))
+        .dots = stats::setNames(c("m", "value"), c(name, paste0(name,"marg")))
       )
     
     seed_long <- seed_long %>%
@@ -269,7 +269,7 @@ ipf_multi <- function(seed, weight_var = NULL, margTbl, id_field,
       seed_long <- seed_long %>%
         dplyr::group_by_("ID", name) %>%
         dplyr::mutate(total = sum(weight)) %>%
-        dplyr::mutate_(.dots = setNames(dots, "factor")) %>%
+        dplyr::mutate_(.dots = stats::setNames(dots, "factor")) %>%
         dplyr::mutate(
           weight = weight * factor,
           # Don't allow weight to drop below min_weight
@@ -290,7 +290,7 @@ ipf_multi <- function(seed, weight_var = NULL, margTbl, id_field,
   # if iterations exceeded, throw a warning.
   if(iter > max_iterations){
     warning("Failed to converge after ", max_iterations, " iterations")
-    flush.console()
+    utils::flush.console()
   }
   
   # When finished, scale up the weights to match the first marginal total

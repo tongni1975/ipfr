@@ -5,7 +5,7 @@
 \title{Reweight a Seed Table to Marginal Controls}
 \usage{
 ipf(seed, weight_var = NULL, marginals, relative_gap = 0.01,
-  max_iterations = 50, min_weight = 1e-04, verbose = FALSE)
+  max_iterations = 50, min_weight = 0.0001, verbose = FALSE)
 }
 \arguments{
 \item{seed}{a \code{data.frame} including necessary colums for matching to 
