@@ -241,7 +241,8 @@ ipf_multi <- function(seed, weight_var = "weight", margTbl, id_field,
       dplyr::group_by(ID) %>%
       dplyr::mutate(
         m = as.numeric(gsub("[A-z]", "", m)),
-        value = ifelse(sum(value) == 0, 0, value / sum(value))
+        total = sum(value),
+        value = ifelse(total == 0, 0, value / total)
       ) %>%
       dplyr::rename_(
         .dots = stats::setNames(c("m", "value"), c(name, paste0(name,"marg")))

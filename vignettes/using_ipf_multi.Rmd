@@ -24,6 +24,7 @@ options(scipen=999) # removes sci notation
 The seed table provides an observed, usually regional, three-way distribution of households by size, workers, and vehicles.  It uses the same format as `ipf`.
 ```{r "seed creation"}
 library(dplyr)
+library(tidyr)
 library(ipfr)
 library(htmlTable)
 
@@ -73,5 +74,15 @@ tbl %>%
   htmlTable(
   col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
 )
+```
+
+The results can be re-summarized to check for correctness.
+```{r}
+tbl %>%
+  gather(key = category, value = count, -ID) %>%
+  separate(category, into = c("siz", "wrk", "veh"), sep = "_") %>%
+  group_by(ID, siz) %>%
+  summarize(total = sum(count)) %>%
+  spread(key = siz, value = total)
 ```
 
