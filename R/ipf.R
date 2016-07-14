@@ -238,13 +238,15 @@ ipf_multi <- function(seed, weight_var = "weight", margTbl, id_field,
     tojoin <- margTbl %>%
       dplyr::select(ID, dplyr::one_of(namecats)) %>%
       tidyr::gather(key = m, value = value, -ID) %>%
+      dplyr::group_by(ID) %>%
       dplyr::mutate(
         m = as.numeric(gsub("[A-z]", "", m)),
-        value = value / sum(value)
+        value = ifelse(sum(value) == 0, 0, value / sum(value))
       ) %>%
       dplyr::rename_(
         .dots = stats::setNames(c("m", "value"), c(name, paste0(name,"marg")))
-      )
+      ) %>%
+      dplyr::ungroup()
     
     seed_long <- seed_long %>%
       dplyr::left_join(tojoin)
@@ -258,7 +260,7 @@ ipf_multi <- function(seed, weight_var = "weight", margTbl, id_field,
     gap <- vector("numeric", length(mNames))
     
     # For each marginal
-    for (i in length(mNames)) {
+    for (i in 1:length(mNames)) {
       name <- mNames[i]
       namecat <- paste0(name,"marg")
       
