@@ -5,8 +5,9 @@
 \title{Perform the ipf procedure for multiple marginal sets and returns a 
 \code{data.frame}.}
 \usage{
-ipf_multi(seed, weight_var = NULL, margTbl, id_field, relative_gap = 0.01,
-  max_iterations = 50, min_weight = 0.0001, verbose = FALSE)
+ipf_multi(seed, weight_var = "weight", margTbl, id_field,
+  relative_gap = 0.01, max_iterations = 50, min_weight = 1e-04,
+  verbose = FALSE)
 }
 \arguments{
 \item{seed}{a \code{data.frame} including necessary colums for matching to 

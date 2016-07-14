@@ -191,7 +191,7 @@ ipf <- function(seed, weight_var = NULL, marginals,
 #'
 #' @export
 #'    
-ipf_multi <- function(seed, weight_var = NULL, margTbl, id_field,
+ipf_multi <- function(seed, weight_var = "weight", margTbl, id_field,
                    relative_gap = 0.01, max_iterations = 50, 
                    min_weight = .0001, verbose = FALSE){
   
