@@ -37,8 +37,8 @@ convergence is not reached.}
 Set to .0001 by default.  Should be arbitrarily small compared to your 
 seed table weights.}
 
-\item{verbose}{Print the maximum expansion factor with each iteration? 
-Default \code{FALSE}.}
+\item{verbose}{Print details on the maximum expansion factor with each 
+iteration? Default \code{FALSE}.}
 }
 \value{
 a vector of weights for each row in \code{seed}

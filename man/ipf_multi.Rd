@@ -6,8 +6,8 @@
 \code{data.frame}.}
 \usage{
 ipf_multi(seed, weight_var = "weight", margTbl, id_field,
-  relative_gap = 0.01, max_iterations = 50, min_weight = 1e-04,
-  verbose = FALSE)
+  relative_gap = 0.01, absolute_gap = 1, max_iterations = 50,
+  min_weight = 1e-04, verbose = FALSE)
 }
 \arguments{
 \item{seed}{a \code{data.frame} including necessary colums for matching to 
@@ -28,6 +28,10 @@ than this amount, the process is said to have converged.  For example, the
 default value of .01 imlies that convergence is reached when no cell in 
 seed table is changed by more than 10 percent.}
 
+\item{absolute_gap}{The relative gap checks the percent difference.  The 
+absolute gap checks the absolute difference.  If the absolute difference is 
+below the absolute_gap, the percent difference is ignored.}
+
 \item{max_iterations}{maximimum number of iterations to perform, even if 
 convergence is not reached.}
 
@@ -35,8 +39,8 @@ convergence is not reached.}
 Set to .0001 by default.  Should be arbitrarily small compared to your 
 seed table weights.}
 
-\item{verbose}{Print the maximum expansion factor with each iteration? 
-Default \code{FALSE}.}
+\item{verbose}{Print details on the maximum expansion factor with each 
+iteration? Default \code{FALSE}.}
 }
 \value{
 a \code{data.frame} with a row for each \code{id_field}. The columns 

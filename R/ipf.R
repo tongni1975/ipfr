@@ -29,8 +29,8 @@
 #'    Set to .0001 by default.  Should be arbitrarily small compared to your 
 #'    seed table weights.
 #'   
-#' @param verbose Print the maximum expansion factor with each iteration? 
-#'    Default \code{FALSE}. 
+#' @param verbose Print details on the maximum expansion factor with each 
+#'    iteration? Default \code{FALSE}. 
 #'   
 #' @return a vector of weights for each row in \code{seed}
 #' 
@@ -186,13 +186,17 @@ ipf <- function(seed, weight_var = NULL, marginals,
 #' @param id_field The name of the identifying field not to be used as a 
 #'    marginal.  IPF will be performed for each ID.
 #'
+#' @param absolute_gap The relative gap checks the percent difference.  The 
+#'    absolute gap checks the absolute difference.  If the absolute difference is 
+#'    below the absolute_gap, the percent difference is ignored.
+#'
 #' @return a \code{data.frame} with a row for each \code{id_field}. The columns 
 #'    of which contain the joint-distribution weights after fitting to marginals.
 #'
 #' @export
 #'    
 ipf_multi <- function(seed, weight_var = "weight", margTbl, id_field,
-                   relative_gap = 0.01, max_iterations = 50, 
+                   relative_gap = 0.01, absolute_gap = 1, max_iterations = 50, 
                    min_weight = .0001, verbose = FALSE){
   
   # set weights variable ----
@@ -264,6 +268,9 @@ ipf_multi <- function(seed, weight_var = "weight", margTbl, id_field,
     
     # In the following loop, track the maximum gap in this vector
     gap <- vector("numeric", length(mNames))
+    absgap <- vector("numeric", length(mNames))
+    v_id <- vector("numeric", length(mNames))
+    v_cat <- vector("numeric", length(mNames))
     
     # For each marginal
     for (i in 1:length(mNames)) {
@@ -284,10 +291,32 @@ ipf_multi <- function(seed, weight_var = "weight", margTbl, id_field,
           weight = ifelse(weight < min_weight, min_weight, weight),
           # If a factor was 0 (meaning the marginal was zero), set the factor
           # to 1 to allow convergence.
-          factor = ifelse(factor == 0, 1, factor)
+          factor = ifelse(factor == 0, 1, factor),
+          relgap = abs(factor - 1)
         )
+        
+      # If first iter, append the total from firstMarg
+      # Used to calculate absolute gap
+      if (iter == 1 & i == 1){
+        seed_long <- seed_long %>%
+          dplyr::left_join(
+            firstMarg %>%
+              dplyr::rename(totunits = total),
+            by = "ID"
+          )
+      }
       
-      gap[i] <- max(abs(seed_long$factor - 1))
+      # Calculate absolute gap and set relgap to 0 where absgap is small
+      seed_long$absgap <- seed_long$relgap * seed_long$totunits *
+        seed_long[[namecat]]
+      seed_long <- seed_long %>%
+        dplyr::mutate(relgap = ifelse(absgap <= absolute_gap, 0, relgap))
+      
+      # Collect information on the current marginal loop
+      gap[i] <- max(seed_long$relgap)
+      absgap[i] <- max(seed_long$absgap[seed_long$relgap == gap[i]])
+      v_id[i] <- max(seed_long$ID[seed_long$relgap == gap[i]])
+      v_cat[i] <- max(seed_long[seed_long$relgap == gap[i], name])
     }
     
     # Check for convergence and increment iter
@@ -298,17 +327,13 @@ ipf_multi <- function(seed, weight_var = "weight", margTbl, id_field,
   # if iterations exceeded, throw a warning.
   if(iter > max_iterations){
     warning("Failed to converge after ", max_iterations, " iterations")
-    cat("\n", "max gap:", max(gap))
-    cat("\n", "waiting", 10, "seconds.")
-    utils::flush.console()
-    Sys.sleep(10)
   }
   
   # When finished, scale up the weights to match the first marginal total
   seed_long <- seed_long %>%
     dplyr::ungroup() %>%
     dplyr::select(ID, dplyr::one_of(mNames), weight) %>%
-    dplyr::left_join(firstMarg) %>%
+    dplyr::left_join(firstMarg, by = "ID") %>%
     dplyr::group_by(ID) %>%
     dplyr::mutate(weight = weight * total / sum(weight)) %>%
     dplyr::select(-total) %>%
@@ -324,6 +349,18 @@ ipf_multi <- function(seed, weight_var = "weight", margTbl, id_field,
   final <- final %>%
     dplyr::select(ID, category, weight) %>%
     tidyr::spread(key = category, value = weight)
+  
+  if (verbose) {
+    position <- which(gap == max(gap))[1]
+    cat("\n", "Max Rel Gap:", gap[position])
+    cat("\n", "Absolute Gap:", absgap[position])
+    cat("\n", "ID:", v_id[position])
+    cat("\n", "Marg:", mNames[position])
+    cat("\n", "Category:", v_cat[position])
+    cat("\n", "waiting", 10, "seconds.")
+    utils::flush.console()
+    Sys.sleep(10)
+  }
   
   return(final)
 }
