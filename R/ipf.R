@@ -184,7 +184,7 @@ ipf <- function(seed, weight_var = NULL, marginals,
 #'    be treated as a marginal column.
 #'    
 #' @param id_field The name of the identifying field not to be used as a 
-#'    marginal.
+#'    marginal.  IPF will be performed for each ID.
 #'
 #' @return a \code{data.frame} with a row for each \code{id_field}. The columns 
 #'    of which contain the joint-distribution weights after fitting to marginals.
@@ -247,7 +247,8 @@ ipf_multi <- function(seed, weight_var = "weight", margTbl, id_field,
       dplyr::rename_(
         .dots = stats::setNames(c("m", "value"), c(name, paste0(name,"marg")))
       ) %>%
-      dplyr::ungroup()
+      dplyr::ungroup() %>%
+      select(-total)
     
     seed_long <- seed_long %>%
       dplyr::left_join(tojoin)

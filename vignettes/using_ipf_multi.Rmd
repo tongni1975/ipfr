@@ -72,8 +72,8 @@ tbl %>%
   mutate_each(funs(round(., digits = 2))) %>%
   select(1:4) %>%
   htmlTable(
-  col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
-)
+    col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+  )
 ```
 
 The results can be re-summarized to check for correctness.
@@ -82,7 +82,10 @@ tbl %>%
   gather(key = category, value = count, -ID) %>%
   separate(category, into = c("siz", "wrk", "veh"), sep = "_") %>%
   group_by(ID, siz) %>%
-  summarize(total = sum(count)) %>%
-  spread(key = siz, value = total)
+  summarize(total = round(sum(count), 0)) %>%
+  spread(key = siz, value = total) %>%
+  htmlTable(
+    col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+  )
 ```
 

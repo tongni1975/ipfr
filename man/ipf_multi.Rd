@@ -21,7 +21,7 @@ use in an ipf procedure.  Every column other than the \code{id_field} will
 be treated as a marginal column.}
 
 \item{id_field}{The name of the identifying field not to be used as a 
-marginal.}
+marginal.  IPF will be performed for each ID.}
 
 \item{relative_gap}{defines convergence.  If if no cells are factored by more 
 than this amount, the process is said to have converged.  For example, the
