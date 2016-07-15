@@ -258,6 +258,10 @@ ipf_multi <- function(seed, weight_var = "weight", margTbl, id_field,
   iter <- 1
   converged <- FALSE
   while (!converged & iter <= max_iterations) {
+    # Print iteration status
+    cat("\r", "Iteration", iter, "of", max_iterations)
+    utils::flush.console()
+    
     # In the following loop, track the maximum gap in this vector
     gap <- vector("numeric", length(mNames))
     
@@ -294,7 +298,10 @@ ipf_multi <- function(seed, weight_var = "weight", margTbl, id_field,
   # if iterations exceeded, throw a warning.
   if(iter > max_iterations){
     warning("Failed to converge after ", max_iterations, " iterations")
+    cat("\n", "max gap:", max(gap))
+    cat("\n", "waiting", 10, "seconds.")
     utils::flush.console()
+    Sys.sleep(10)
   }
   
   # When finished, scale up the weights to match the first marginal total
