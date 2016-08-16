@@ -1,3 +1,13 @@
+#' ipfr: A package to perform iterative proportional fitting
+#' 
+#' The two functions are \code{\link{ipf}} and
+#'    \code{\link{ipf_multi}}
+#' 
+#' @docType package
+#' @name ipfr
+NULL
+#> NULL
+
 #' Reweight a Seed Table to Marginal Controls
 #' 
 #' @param seed a \code{data.frame} including necessary colums for matching to 
