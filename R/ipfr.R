@@ -159,6 +159,9 @@ ipf <- function(seed, weight_var = NULL, marginals,
     }
     
     # Check for convergence and increment iter
+    if(verbose){
+      message("Finished iteration ", iter)
+    }
     converged <- all(gap <= min_weight)
     iter = iter + 1
   }
