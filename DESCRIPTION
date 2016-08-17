@@ -1,11 +1,22 @@
-Package: expandr
+Package: ipfr
 Title: Develop Expansion Weights for a Survey
 Version: 0.0.0.9000
-Authors@R: person("Greg", "Macfarlane", email = "gregmacfarlane@gmail.com", 
+Authors@R: person("Kyle", "Ward", email = "warddk@pbworld.com", 
                   role = c("aut", "cre"))
-Description: Develops expansion weights for a survey based on marginal distributions at multiple geographies.
-Depends: R (>= 3.2.0)
-License: MIT
+Description: Performs iterative proportional fitting given a seed table and
+    and arbitrary number of marginal distributions.
+Depends:
+    R (>= 3.2.0)
+Imports:
+    dplyr (>= 0.5.0),
+    magrittr (>= 1.5),
+    tidyr (>= 0.5.1),
+    lazyeval (>= 0.2.0)
+License: MIT + file LICENSE
 LazyData: true
-Suggests: knitr
+Suggests:
+    knitr,
+    htmlTable,
+    rmarkdown
 VignetteBuilder: knitr
+RoxygenNote: 5.0.1

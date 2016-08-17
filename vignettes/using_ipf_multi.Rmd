@@ -1,0 +1,92 @@
+---
+title: "Using ipf_multi"
+author: "Kyle Ward"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{ipf-multi}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache=FALSE,echo=TRUE,
+                      message=FALSE,warning=FALSE,error=FALSE)
+options(scipen=999) # removes sci notation
+```
+
+## Introduction
+`ipf_multi` is a wrapper to the `ipf` function included to support specific applications.  For example, in travel modeling, IPF is often performed on each zone in the model to create cross-classified distributions of households.
+
+## Example data creation
+
+### Seed table creation
+The seed table provides an observed, usually regional, three-way distribution of households by size, workers, and vehicles.  It uses the same format as `ipf`.
+```{r "seed creation"}
+library(dplyr)
+library(tidyr)
+library(ipfr)
+library(htmlTable)
+
+seed <- expand.grid(
+  siz = c(1, 2),
+  wrk = c(0, 1),
+  veh = c(0, 1)
+) %>% tbl_df()
+
+set.seed(1)
+seed$count <- sample(1:10, nrow(seed), replace = TRUE)
+
+seed %>%
+  head() %>%
+  htmlTable(
+  align = "cccr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+)
+```
+
+### Marginal table creation
+For `ipf_multi`, the marginal table looks different from the marginal table in `ipf`.  Each row now represents a zone where IPF will be applied.  The marginals are spread across the columns.  In this example, there are two zones: 1000 and 1001.
+```{r}
+margTbl <- data_frame(
+  ID = c(1000, 1001),
+  siz1 = c(100, 150),
+  siz2 = c(150, 100),
+  wrk0 = c(50, 200),
+  wrk1 = c(200, 50),
+  veh0 = c(75, 175),
+  veh1 = c(175, 75)
+)
+
+margTbl %>%
+  htmlTable(
+    col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+  )
+```
+
+## Using ipf_multi
+These two sources of information can be fed into `ipf_multi`.  `weight_var` names the field in the seed table with the count or percentage distribution.  `id_field` names the ID field in the marginal table.  A sample of the result is shown below.
+```{r}
+tbl <- ipf_multi(seed, weight_var = "count", margTbl, id_field = "ID",
+                 verbose = TRUE)
+
+tbl %>% 
+  mutate_each(funs(round(., digits = 2))) %>%
+  select(1:4) %>%
+  htmlTable(
+    col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+  )
+```
+
+The results can be re-summarized to check for correctness.
+```{r}
+tbl %>%
+  gather(key = category, value = count, -ID) %>%
+  separate(category, into = c("siz", "wrk", "veh"), sep = "_") %>%
+  group_by(ID, siz) %>%
+  summarize(total = round(sum(count), 0)) %>%
+  spread(key = siz, value = total) %>%
+  htmlTable(
+    col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+  )
+```
+

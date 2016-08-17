@@ -1,0 +1,290 @@
+---
+title: "Using ipf"
+author: "Kyle Ward"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{ipf}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache=FALSE,echo=TRUE,
+                      message=FALSE,warning=FALSE,error=FALSE)
+options(scipen=999) # removes sci notation
+```
+
+## Introduction
+
+This package provides a generic implimentation of the iterative proportional 
+fitting algorithm or [IPF](https://en.wikipedia.org/wiki/Iterative_proportional_fitting).
+
+## Example data creation
+
+This section creates a random seed table and fixed marginal values to illustrate 
+how the package is used.
+
+### Seed table creation
+The seed table is the starting point for the IPF procedure.  In this example, 
+we will use a made up summary table of survey data.  This fake table is a count 
+of households by the number persons, workers and vehicles.  A sample of the 
+table is shown for illustration.
+```{r "seed creation"}
+library(dplyr)
+library(ipfr)
+library(htmlTable)
+
+seed <- expand.grid(
+  siz = c(1, 2, 3, 4),
+  wrk = c(0, 1, 2, 3),
+  veh = c(0, 1, 2, 3)
+) %>% tbl_df()
+
+set.seed(1)
+seed$count <- sample(1:10, nrow(seed), replace = TRUE)
+
+seed %>%
+  head() %>%
+  htmlTable(
+  align = "cccr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+)
+```
+
+
+### Marginal creation
+The number of households by size (e.g., 1-person, 2-person, etc.) is referred to
+as a marginal distribution.  Often, from the Census, we know the total number of 
+households by each individual marginal.  For example, we know the number of 
+households by size:
+
+  * 1 person: 150 households
+  * 2 persons: 150 households
+  * 3 persons: 100 households
+  * 4+ persons: 100 households
+
+This information is created below for the distribution of households by size, 
+number of workers, and number of vehicles.  Importanlty, the "marginal" column 
+is a concatenation of the marginal column from the seed table ("siz", "wrk", and 
+"veh") and the category numbers in that column (e.g., 0, 1, 2, etc.).
+```{r "marginal creation"}
+
+marginals <- data_frame(
+  marginal = c(
+    "siz1", "siz2", "siz3", "siz4",
+    "wrk0", "wrk1", "wrk2", "wrk3",
+    "veh0", "veh1", "veh2", "veh3"
+    ),
+  value = c(
+    100, 100, 150, 150,
+    100, 150, 150, 100,
+    75, 175, 150, 100
+  )
+)
+
+marginals %>% htmlTable(
+  align = "cr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+)
+```
+
+## Using ipfr
+We know the count of each marginal individually, but assume we don't have 
+official information from the Census about the joint distribution.  What we want
+to do is use the joint distribution from our survey, but ensure it agrees with 
+the marginal information from the Census.
+
+An initial test comparing size shows they do not agree.
+```{r "initial test"}
+siz <- marginals %>%
+    mutate(
+      category = as.numeric(gsub("[A-z]", "", marginal)),
+      marginal = gsub("[0-9]", "", marginal)
+    ) %>%
+  filter(marginal == "siz") %>%
+  select(siz = category, value)
+  
+
+seed %>%
+  select(siz, count) %>%
+  group_by(siz) %>%
+  summarize(total = sum(count)) %>%
+  left_join(siz) %>%
+  rename(survey = total, census = value) %>%
+  htmlTable(
+    align = "crr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+  )
+```
+
+We can use the ipfr package to change this.
+```{r}
+seed$NewWeight <- ipf(seed, weight_var = "count", marginals)
+```
+
+Once complete, we can summarize the final table to see if it worked.
+```{r}
+seed %>%
+  group_by(siz) %>%
+  summarize(total = sum(NewWeight)) %>%
+  left_join(siz) %>%
+  rename(survey = total, census = value) %>%
+  mutate(survey = round(survey, 3)) %>%
+  htmlTable(
+    align = "crr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+  )
+```
+
+Not only does the marginal distribution of size match, but also workers and vehicles.
+```{r, echo=FALSE}
+wrk <- marginals %>%
+    mutate(
+      category = as.numeric(gsub("[A-z]", "", marginal)),
+      marginal = gsub("[0-9]", "", marginal)
+    ) %>%
+  filter(marginal == "wrk") %>%
+  select(wrk = category, value)
+
+seed %>%
+  group_by(wrk) %>%
+  summarize(total = sum(NewWeight)) %>%
+  left_join(wrk) %>%
+  rename(survey = total, census = value) %>%
+  mutate(survey = round(survey, 3)) %>%
+  htmlTable(
+    align = "crr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+  )
+
+veh <- marginals %>%
+    mutate(
+      category = as.numeric(gsub("[A-z]", "", marginal)),
+      marginal = gsub("[0-9]", "", marginal)
+    ) %>%
+  filter(marginal == "veh") %>%
+  select(veh = category, value)
+
+seed %>%
+  group_by(veh) %>%
+  summarize(total = sum(NewWeight)) %>%
+  left_join(veh) %>%
+  rename(survey = total, census = value) %>%
+  mutate(survey = round(survey, 3)) %>%
+  htmlTable(
+    align = "crr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+  )
+```
+
+## Addressing common IPF problems
+
+### Zero weights
+IPF works by successively multiplying the table weights by factors.  Cells with 
+a zero weight cannot be modified by this process.  As the number of zero weights 
+increase, the flexibility of the process is reduced, and convergence becomes 
+more difficult. `ipfr` solves this problem by setting a minimum weight for all 
+cells to `.0001`.  This minimum weight can be adjusted using the `min_weight` 
+parameter and should be arbitrarily small compared to your seed table weights.
+
+### Marginal agreement
+In our example, the marginal distributions all add up to 500 households.
+If they disagreed on the total number of households, the standard IPF process could not converge.
+
+Occasionally, marginal distributions might disagree on the totals, particularly 
+if they are derived from different sources.  When that happens, this function 
+will still converge by matching the total of the first marginal table supplied 
+while using the percentage distribution from the remaining tables.  A warning 
+will be displayed when this happens.
+
+```{r, warning=TRUE}
+# Increase 1-person households from 100 to 500
+new_marginals <- marginals %>%
+  mutate(value = ifelse(
+    marginal == "siz1", 500, value
+  ))
+
+seed$NewWeight <- ipf(seed, "count", new_marginals)
+```
+
+```{r, echo=FALSE}
+siz <- new_marginals %>%
+    mutate(
+      category = as.numeric(gsub("[A-z]", "", marginal)),
+      marginal = gsub("[0-9]", "", marginal)
+    ) %>%
+  filter(marginal == "siz") %>%
+  select(siz = category, value)
+  
+
+seed %>%
+  select(siz, NewWeight) %>%
+  group_by(siz) %>%
+  summarize(total = sum(NewWeight)) %>%
+  left_join(siz) %>%
+  rename(survey = total, census = value) %>%
+  mutate(survey = round(survey, 0)) %>%
+  htmlTable(
+    align = "crr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+  )
+
+wrk <- new_marginals %>%
+    mutate(
+      category = as.numeric(gsub("[A-z]", "", marginal)),
+      marginal = gsub("[0-9]", "", marginal)
+    ) %>%
+  filter(marginal == "wrk") %>%
+  select(wrk = category, value)
+
+seed %>%
+  group_by(wrk) %>%
+  summarize(total = sum(NewWeight)) %>%
+  left_join(wrk) %>%
+  rename(survey = total, census = value) %>%
+  mutate(survey = round(survey, 3)) %>%
+  htmlTable(
+    align = "crr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+  )
+
+veh <- new_marginals %>%
+    mutate(
+      category = as.numeric(gsub("[A-z]", "", marginal)),
+      marginal = gsub("[0-9]", "", marginal)
+    ) %>%
+  filter(marginal == "veh") %>%
+  select(veh = category, value)
+
+seed %>%
+  group_by(veh) %>%
+  summarize(total = sum(NewWeight)) %>%
+  left_join(veh) %>%
+  rename(survey = total, census = value) %>%
+  mutate(survey = round(survey, 3)) %>%
+  htmlTable(
+    align = "crr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+  )
+```
+
+### Missing seed information
+Not every combination of marginal category is required to be included in the 
+seed table; however, at least one observation of each category must exist.  For example, the combination:
+
+  * siz = 1
+  * wrk = 1
+  * veh = 0
+
+may not have been observed in the survey, and thus may be missing from the seed 
+table.  As long as other combinations of size-1 households exist (e.g. with 0 workers and 1 vehicle), `ipfr` will work fine.  On the other hand, if there are no observations of any size-1 households, `ipfr` will show a warning 
+and return nothing.
+
+```{r, warning=TRUE}
+missing_seed <- seed %>%
+  filter(siz != 1)
+
+missing_seed$NewWeight <- ipf(missing_seed, "count", marginals)
+```
+
+Show the `missing_seed` table to confirm no change.
+```{r}
+missing_seed %>%
+  head() %>%
+  htmlTable(
+    align = "crr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+  )
+```
+

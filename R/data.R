@@ -1,8 +1,8 @@
-#' Household travel survey records
+#' Joint Household Distribution
 #' 
-#' \code{hh} is a reduced and cleaned version of nhts records from Roanoke
-#' county, Virginia. 
+#' \code{hh_joint} is the joint distribution of households by size, workers, 
+#' and vehicles. 
 #' 
 #' 
 #' 
-"hh"
+"hh_joint"
