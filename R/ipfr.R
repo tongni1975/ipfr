@@ -135,11 +135,11 @@ ipf <- function(seed, weight_var = NULL, marginals,
       suppressMessages(
         seed_summary <- seed %>%
           dplyr::group_by_(mName) %>%
-          dplyr::summarize(totalweight = sum(weight)) %>%
-          dplyr::mutate(s_pct = totalweight / sum(totalweight)) %>%
+          dplyr::summarize(totalweight = sum(weight, na.rm = TRUE)) %>%
+          dplyr::mutate(s_pct = totalweight / sum(totalweight, na.rm = TRUE)) %>%
           dplyr::left_join(marginals, stats::setNames("category", mName)) %>%
           dplyr::filter(marginal == mName) %>%
-          dplyr::mutate(factor = m_pct / s_pct) %>%
+          dplyr::mutate(factor = ifelse(s_pct == 0, 0, m_pct / s_pct)) %>%
           dplyr::select_(mName, "factor")
       )
       
