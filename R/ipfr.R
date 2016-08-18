@@ -299,11 +299,14 @@ ipf_multi <- function(seed, weight_var = "weight", margTbl, id_field,
         dplyr::mutate(total = sum(weight)) %>%
         dplyr::mutate_(.dots = stats::setNames(dots, "factor")) %>%
         dplyr::mutate(
+          # If the total weight for a marginal category is 0,
+          # set the factor to 0
+          factor = ifelse(total == 0, 0, factor),
           weight = weight * factor,
           # Don't allow weight to drop below min_weight
           weight = ifelse(weight < min_weight, min_weight, weight),
-          # If a factor was 0 (meaning the marginal was zero), set the factor
-          # to 1 to allow convergence.
+          # If a factor was 0 (meaning either the marginal or total weight
+          # was zero), set the factor to 1 to allow convergence.
           factor = ifelse(factor == 0, 1, factor),
           relgap = abs(factor - 1)
         )
