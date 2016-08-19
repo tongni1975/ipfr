@@ -45,16 +45,16 @@ seed %>%
 ```
 
 ### Marginal table creation
-For `ipf_multi`, the marginal table looks different from the marginal table in `ipf`.  Each row now represents a zone where IPF will be applied.  The marginals are spread across the columns.  In this example, there are two zones: 1000 and 1001.
+For `ipf_multi`, the marginal table looks different from the marginal table in `ipf`.  Each row now represents a zone where IPF will be applied.  The marginals are spread across the columns.  In this example, there are three zones: 1000 - 1002.
 ```{r}
 margTbl <- data_frame(
-  ID = c(1000, 1001),
-  siz1 = c(100, 150),
-  siz2 = c(150, 100),
-  wrk0 = c(50, 200),
-  wrk1 = c(200, 50),
-  veh0 = c(75, 175),
-  veh1 = c(175, 75)
+  ID = c(1000, 1001, 1002),
+  siz1 = c(100, 150, 0),
+  siz2 = c(150, 100, 0),
+  wrk0 = c(50, 200, 0),
+  wrk1 = c(200, 50, 0),
+  veh0 = c(75, 175, 0),
+  veh1 = c(175, 75, 0)
 )
 
 margTbl %>%
@@ -65,6 +65,7 @@ margTbl %>%
 
 ## Using ipf_multi
 These two sources of information can be fed into `ipf_multi`.  `weight_var` names the field in the seed table with the count or percentage distribution.  `id_field` names the ID field in the marginal table.  A sample of the result is shown below.
+
 ```{r}
 tbl <- ipf_multi(seed, weight_var = "count", margTbl, id_field = "ID",
                  verbose = TRUE)
