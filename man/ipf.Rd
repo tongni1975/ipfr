@@ -4,31 +4,31 @@
 \alias{ipf}
 \title{Reweight a Seed Table to Marginal Controls}
 \usage{
-ipf(seed, weight_var = NULL, marginals, relative_gap = 0.01,
-  max_iterations = 50, min_weight = 0.0001, verbose = FALSE)
+ipf(seed, targets, relative_gap = 0.01, absolute_gap = 10,
+  max_iterations = 50, min_weight = 1e-04, verbose = FALSE)
 }
 \arguments{
-\item{seed}{a \code{data.frame} including necessary colums for matching to 
-marginals and an optional weight field.}
+\item{seed}{A \code{data frame} including a \code{weight} field and necessary
+colums for matching to marginal targets.}
 
-\item{weight_var}{existing weights column in seed table. 
-If \code{NULL}, defaults to 1.}
+\item{targets}{A \code{named list} of data frames.  Each name in the list defines a
+marginal dimension and must match a column from the seed table.  The data
+frame associated with each name must start with an identical \code{ID} column.
+The other column names define the marginal categories that targets are
+provided for.  Each row of the data frames represents a unique set of
+targets to fit.  Every data frame must have the same number of rows.}
 
-\item{marginals}{a two-column \code{data.frame}.  Column names must be 
-\code{marginal} and \code{value}.  The \code{marginal} column is filled  
-with combinations of marginal names and category numbers (e.g. "persons1",
-or "wrk2").
+\item{relative_gap}{target for convergence.  Maximum percent change to allow
+any seed weight to move by while considering the process converged.  By 
+default, if no weights change by more than 1%, the process has converged.
+The process is said to be converged if either \code{relative_gap} or 
+\code{absolute_gap} parameters have been met.}
 
-The character portion (\code{persons} or \code{wrk}) must 
-correspond to a column name in the \code{seed} table.
-
-The numeric portion must correspond to the values found in the column of
-the \code{seed} table.}
-
-\item{relative_gap}{defines convergence.  If if no cells are factored by more 
-than this amount, the process is said to have converged.  For example, the
-default value of .01 imlies that convergence is reached when no cell in 
-seed table is changed by more than 10 percent.}
+\item{absolute_gap}{target for convergence.  Maximum absolute change to allow
+any seed weight to move by while considering the process converged.  By 
+default, if no weights change by more than 10, the process has converged.
+The process is said to be converged if either \code{relative_gap} or 
+\code{absolute_gap} parameters have been met.}
 
 \item{max_iterations}{maximimum number of iterations to perform, even if 
 convergence is not reached.}
@@ -41,7 +41,8 @@ seed table weights.}
 iteration? Default \code{FALSE}.}
 }
 \value{
-a vector of weights for each row in \code{seed}
+the seed \code{data frame} with a column of weights appended for each
+   row in the target dataframes
 }
 \description{
 Reweight a Seed Table to Marginal Controls
