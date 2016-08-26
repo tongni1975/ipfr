@@ -144,10 +144,9 @@ We can summarize the final table to see if it worked.
 ```{r}
 table %>%
   select(-c(wrk, veh)) %>%
-  group_by(siz) %>%
-  summarize_each(funs(round(sum(.), 1))) %>%
-  gather(key = ID, value = result, -siz) %>%
-  spread(key = siz, value = result) %>%
+  group_by(ID, siz) %>%
+  summarize(total = round(sum(weight), 0)) %>%
+  spread(key = siz, value = total) %>%
   htmlTable(
     align = "crr", rnames = FALSE, caption = "Size: Result"
   )
@@ -163,10 +162,9 @@ Not only does the marginal distribution of size match, but also workers and vehi
 # Workers
 table %>%
   select(-c(siz, veh)) %>%
-  group_by(wrk) %>%
-  summarize_each(funs(round(sum(.), 1))) %>%
-  gather(key = ID, value = result, -wrk) %>%
-  spread(key = wrk, value = result) %>%
+  group_by(ID, wrk) %>%
+  summarize(total = round(sum(weight), 0)) %>%
+  spread(key = wrk, value = total) %>%
   htmlTable(
     align = "crr", rnames = FALSE, caption = "Workers: Result"
   )
@@ -179,10 +177,9 @@ targets$wrk %>%
 # Vehciles
 table %>%
   select(-c(siz, wrk)) %>%
-  group_by(veh) %>%
-  summarize_each(funs(round(sum(.), 1))) %>%
-  gather(key = ID, value = result, -veh) %>%
-  spread(key = veh, value = result) %>%
+  group_by(ID, veh) %>%
+  summarize(total = round(sum(weight), 0)) %>%
+  spread(key = veh, value = total) %>%
   htmlTable(
     align = "crr", rnames = FALSE, caption = "Vehicles: Result"
   )
@@ -245,12 +242,12 @@ table <- ipf(seed, targets)
 ```
 
 ```{r, echo=FALSE}
+# Size
 table %>%
   select(-c(wrk, veh)) %>%
-  group_by(siz) %>%
-  summarize_each(funs(round(sum(.), 1))) %>%
-  gather(key = ID, value = result, -siz) %>%
-  spread(key = siz, value = result) %>%
+  group_by(ID, siz) %>%
+  summarize(total = round(sum(weight), 0)) %>%
+  spread(key = siz, value = total) %>%
   htmlTable(
     align = "crr", rnames = FALSE, caption = "Size: Result"
   )
@@ -263,10 +260,9 @@ targets$siz %>%
 # Workers
 table %>%
   select(-c(siz, veh)) %>%
-  group_by(wrk) %>%
-  summarize_each(funs(round(sum(.), 1))) %>%
-  gather(key = ID, value = result, -wrk) %>%
-  spread(key = wrk, value = result) %>%
+  group_by(ID, wrk) %>%
+  summarize(total = round(sum(weight), 0)) %>%
+  spread(key = wrk, value = total) %>%
   htmlTable(
     align = "crr", rnames = FALSE, caption = "Workers: Result"
   )
@@ -279,10 +275,9 @@ targets$wrk %>%
 # Vehciles
 table %>%
   select(-c(siz, wrk)) %>%
-  group_by(veh) %>%
-  summarize_each(funs(round(sum(.), 1))) %>%
-  gather(key = ID, value = result, -veh) %>%
-  spread(key = veh, value = result) %>%
+  group_by(ID, veh) %>%
+  summarize(total = round(sum(weight), 0)) %>%
+  spread(key = veh, value = total) %>%
   htmlTable(
     align = "crr", rnames = FALSE, caption = "Vehicles: Result"
   )
@@ -313,15 +308,14 @@ As shown below, the marginal distributions of size categories 1, 2, and 3 are fa
 ```{r}
 table %>%
   select(-c(wrk, veh)) %>%
-  group_by(siz) %>%
-  summarize_each(funs(round(sum(.), 1))) %>%
-  gather(key = ID, value = result, -siz) %>%
-  spread(key = siz, value = result) %>%
+  group_by(ID, siz) %>%
+  summarize(total = round(sum(weight), 0)) %>%
+  spread(key = siz, value = total) %>%
   htmlTable(
     align = "crr", rnames = FALSE, caption = "Size: Result"
   )
 
-targets$siz %>%
+partial_targets$siz %>%
   htmlTable(
     align = "crr", rnames = FALSE, caption = "Size: Target"
   )
