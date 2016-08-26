@@ -204,10 +204,6 @@ ipf <- function(seed, targets,
     dplyr::mutate(weight = weight * total) %>%
     dplyr::select(-total)
   
-  # Change seed_long into final format to return
-  # seed_long <- seed_long %>%
-  #   tidyr::spread(key = ID, value = weight)
-  
   # if iterations exceeded, throw a warning.
   if(iter > max_iterations){
     warning("Failed to converge after ", max_iterations, " iterations")
