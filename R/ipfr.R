@@ -217,6 +217,7 @@ ipf <- function(seed, targets,
     cat("\n", "ID:", rel_id[position])
     cat("\n", "Marginal:", names(targets)[position])
     cat("\n", "Category:", rel_cat[position])
+    cat("\n")
     utils::flush.console()
   }
   
