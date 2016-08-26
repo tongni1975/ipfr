@@ -193,7 +193,7 @@ ipf <- function(seed, targets,
     
     # Check for convergence and increment iter
     if(verbose){
-      message("Finished iteration ", iter)
+      cat("\r Finished iteration ", iter)
     }
     converged <- all(v_converged)
     iter = iter + 1
