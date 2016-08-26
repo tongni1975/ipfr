@@ -1,7 +1,6 @@
 #' ipfr: A package to perform iterative proportional fitting
 #' 
-#' The two functions are \code{\link{ipf}} and
-#'    \code{\link{ipf_multi}}
+#' The sing function is \code{\link{ipf}}
 #' 
 #' @docType package
 #' @name ipfr
@@ -10,27 +9,27 @@ NULL
 
 #' Reweight a Seed Table to Marginal Controls
 #' 
-#' @param seed a \code{data.frame} including necessary colums for matching to 
-#' marginals and an optional weight field.
-#'   
-#' @param weight_var existing weights column in seed table. 
-#' If \code{NULL}, defaults to 1.
-#' 
-#' @param marginals a two-column \code{data.frame}.  Column names must be 
-#'    \code{marginal} and \code{value}.  The \code{marginal} column is filled  
-#'    with combinations of marginal names and category numbers (e.g. "persons1",
-#'    or "wrk2").
+#' @param targets A \code{named list} of data frames.  Each name in the list defines a
+#'    marginal dimension and must match a column from the seed table.  The data
+#'    frame associated with each name must start with an identical \code{ID} column.
+#'    The other column names define the marginal categories that targets are
+#'    provided for.  Each row of the data frames represents a unique set of
+#'    targets to fit.  Every data frame must have the same number of rows.
 #'    
-#'    The character portion (\code{persons} or \code{wrk}) must 
-#'    correspond to a column name in the \code{seed} table.
-#'    
-#'    The numeric portion must correspond to the values found in the column of
-#'    the \code{seed} table.
+#' @param seed A \code{data frame} including a \code{weight} field and necessary
+#'    colums for matching to marginal targets.
 #'
-#' @param relative_gap defines convergence.  If if no cells are factored by more 
-#'    than this amount, the process is said to have converged.  For example, the
-#'    default value of .01 imlies that convergence is reached when no cell in 
-#'    seed table is changed by more than 10 percent.
+#' @param relative_gap target for convergence.  Maximum percent change to allow
+#'    any seed weight to move by while considering the process converged.  By 
+#'    default, if no weights change by more than 1%, the process has converged.
+#'    The process is said to be converged if either \code{relative_gap} or 
+#'    \code{absolute_gap} parameters have been met.
+#'
+#' @param absolute_gap target for convergence.  Maximum absolute change to allow
+#'    any seed weight to move by while considering the process converged.  By 
+#'    default, if no weights change by more than 10, the process has converged.
+#'    The process is said to be converged if either \code{relative_gap} or 
+#'    \code{absolute_gap} parameters have been met.
 #'
 #' @param max_iterations maximimum number of iterations to perform, even if 
 #'    convergence is not reached.
@@ -42,82 +41,60 @@ NULL
 #' @param verbose Print details on the maximum expansion factor with each 
 #'    iteration? Default \code{FALSE}. 
 #'   
-#' @return a vector of weights for each row in \code{seed}
+#' @return the seed \code{data frame} with a column of weights appended for each
+#'    row in the target dataframes
 #' 
 #' @export
 #' 
 #' @importFrom magrittr "%>%"
 #' 
-ipf <- function(seed, weight_var = NULL, marginals,
-                relative_gap = 0.01, max_iterations = 50, min_weight = .0001,
-                verbose = FALSE){
+ipf <- function(seed, targets,
+                relative_gap = 0.01, absolute_gap = 1, max_iterations = 50,
+                min_weight = .0001, verbose = FALSE){
 
-  # set weights variable ----
-  if(is.null(weight_var)){
-    # if none given, set to 1.
-    warning("weight_var not specified.  Initializing with equal weights.")
-    utils::flush.console()
-    seed <- dplyr::mutate(seed, weight = 1)
-  } else {
-    seed <- dplyr::rename_(seed, weight = weight_var)
+  # Check check that seed and target are provided
+  if (is.null(seed)) {
+    stop("Seed table not provided")
+  }
+  if (is.null(targets)) {
+    stop("Targets not provided")
   }
   
-  # Split the marginal column into marginal and category columns
-  marginals <- marginals %>%
-    dplyr::mutate(
-      category = as.numeric(gsub("[A-z]", "", marginal)),
-      marginal = gsub("[0-9]", "", marginal)
-    )
-  
-  # Check to see if the marginal totals match
-  vals <- marginals %>%
-    dplyr::group_by(marginal) %>%
-    dplyr::summarize(total = sum(value)) %>%
-    .$total
-  equal <- all(max(vals) - min(vals) == 0)
-  if (!equal){
-    warning(paste0(
-      "Marginal totals are not equivalent. ",
-      "The percentage distribution will still match all marginals. ",
-      "Final weight total will match first marginal."
-    ))
-    utils::flush.console()
-  }
-  
-  # If all the marginals add up to zero, return vector of zeros.
-  if (sum(vals) == 0) {
-    seed$weight <- 0
-    return(seed$weight)
-  }
-  
-  # Create a percent column to use in the IPF
-  marginals <- marginals %>%
-    dplyr::group_by(marginal) %>%
-    dplyr::mutate(m_pct = value / sum(value))
-  
-  # Check that at least one row of seed information exists for each
-  # marginal category.
-  margs <- unique(marginals$marginal)
-  temp <- list()
-  for (marg in margs){
-    cats <- marginals %>%
-      dplyr::ungroup() %>%
-      dplyr::filter(marginal == marg)
-    cats <- cats$category
+  # Check that at least one observation of each marginal category exists
+  # in the seed table.  Otherwise, the process produces wrong answers without
+  # throwing errors.
+  for (name in names(targets)) {
+    col_names <- colnames(targets[[name]])
+    col_names <- as.numeric(col_names[!col_names == "ID"])
     
-    for (cat in cats){
-      ok <- any(seed[, marg] == cat)
-      
-      if (!ok) {
-        warning(paste0(
-          "The seed table has no observations of marginal: ", marg,
-          " category: ", cat
-        ))
-        utils::flush.console()
-        return()
-      }
+    test <- match(col_names, seed[[name]])
+    if (any(is.na(test))) {
+      prob_cat <- col_names[which(is.na(test))]
+      stop(paste0(
+        "Marginal ", name, "; category ", prob_cat,
+        " is missing from seed table"
+      ))
     }
   }
+  
+  # Create df of totals from the first marginal table
+  # (e.g. total households, persons, etc.)
+  totals <- targets[[1]] %>%
+    tidyr::gather(key = category, value = count, -ID) %>%
+    group_by(ID) %>%
+    summarize(total = sum(count))
+  
+  # Create a long data frame by repeating the seed table for each
+  # row in the target tables.
+  seed_long <- merge(totals$ID, seed) %>%
+    dplyr::rename(ID = x) %>%
+    dplyr::arrange(ID)
+  
+  # Convert the weights into percents.  The percents will sum to 1 for each ID
+  seed_long <- seed_long %>%
+    dplyr::group_by(ID) %>%
+    dplyr::mutate(weight = weight / sum(weight)) %>%
+    dplyr::ungroup()
   
   # IPF ---
   
@@ -125,263 +102,131 @@ ipf <- function(seed, weight_var = NULL, marginals,
   converged <- FALSE
   while (!converged & iter <= max_iterations){
     
-    # In the following loop, track the maximum gap in this vector
-    gap <- vector("numeric", nrow(marginals))
+    # In the following loop, track the maximum gap and convergence
+    # stats in these vectors
+    rel_gap <- vector("numeric", length(targets))
+    rel_id <- vector("numeric", length(targets))
+    rel_cat <- vector("numeric", length(targets))
+    abs_gap <- vector("numeric", length(targets))
+    v_converged <- vector("logical", length(targets))
     
-    # For each row in the marginal table
-    for (i in 1:nrow(marginals)) {
-      mName <- marginals[[i, 1]]
+    # For each table in targets
+    for (i in 1:length(targets)) {
+      mName <- names(targets)[i]
       
-      suppressMessages(
-        seed_summary <- seed %>%
-          dplyr::group_by_(mName) %>%
-          dplyr::summarize(totalweight = sum(weight, na.rm = TRUE)) %>%
-          dplyr::mutate(s_pct = totalweight / sum(totalweight, na.rm = TRUE)) %>%
-          dplyr::left_join(marginals, stats::setNames("category", mName)) %>%
-          dplyr::filter(marginal == mName) %>%
-          dplyr::mutate(factor = ifelse(s_pct == 0, 0, m_pct / s_pct)) %>%
-          dplyr::select_(mName, "factor")
-      )
+      # Prepare the target table
+      target <- targets[[mName]] %>%
+        tidyr::gather(key = marg, value = target, -ID) %>%
+        dplyr::mutate(marg = as.numeric(marg)) %>%
+        dplyr::group_by(ID) %>%
+        dplyr::mutate(target = target / sum(target)) %>%
+        dplyr::ungroup() %>%
+        dplyr::arrange(ID)
+      colnames(target) <- c("ID", mName, "target")
       
-      suppressMessages(
-        seed <- seed %>%
-          dplyr::left_join(seed_summary) %>%
-          # calc new weight while preventing the creation of zeros
-          dplyr::mutate(
-            weight = weight * factor,
-            weight = ifelse(weight < min_weight, min_weight, weight)
-          )
-      )
+      # Prepare a summary of the seed table
+      seed_summary <- seed_long %>%
+        dplyr::group_by_("ID", mName) %>%
+        dplyr::summarize(weight = sum(weight)) %>%
+        dplyr::ungroup()
       
-      gap[i] <- max(abs(seed$factor - 1))
+      # Join target to seed to calculate factor
+      fac_tbl <- seed_summary %>%
+        dplyr::left_join(target, by = setNames(c("ID", mName), c("ID", mName))) %>%
+        dplyr::mutate(factor = ifelse(weight == 0, 1, target / weight))
       
-      seed <- seed %>% dplyr::select(-factor)
+      # Handle missing targets.  For example, if the seed table had size
+      # categories 1-5, but the targets only had 1-4, leave the 5s alone without
+      # causing an error
+      fac_tbl <- fac_tbl %>%
+        dplyr::mutate(factor = ifelse(is.na(target), 1, factor ))
+      
+      # Prepare fac_tbl for joining to seed table
+      fac_tbl <- fac_tbl %>%
+        dplyr::select(dplyr::one_of("ID", mName, "factor"))
+      
+      # Join to the seed_long table and calculate new weight
+      seed_long <- seed_long %>%
+        dplyr::left_join(fac_tbl, by = setNames(c("ID", mName), c("ID", mName))) %>%
+        dplyr::mutate(new_weight = weight * factor)
+      
+      # Because closure will depend on relative and absolute gap, add the
+      # totals vector back to determine the absolute difference.
+      # Remove rows from the table if the absolute diff is below the threshold.
+      # This will keep them from keeping the IPF running.
+      gap_tbl <- seed_long %>%
+        dplyr::left_join(totals, by = "ID") %>%
+        dplyr::mutate(
+          old = total * weight,
+          new = total * new_weight,
+          rel_diff = ifelse(weight == 0, 0, abs((new_weight - weight) / weight)),
+          abs_diff = abs(new - old)
+        )
+            
+      # Collect gap information and test if this marginal has converged
+      # If every row in gap_tbl is below the absolute gap tolerance, then
+      # collect the largest relative difference.  Otherwise, collect the
+      # largest relative difference from the rows above the absolute gap
+      # tolerance.  Also, collect information on ID and category
+      # to report out after IPF is complete.
+      if (all(gap_tbl$abs_diff <= absolute_gap)) {
+        rel_gap[i] <- max(gap_tbl$rel_diff)
+      } else {
+        gap_tbl <- gap_tbl %>%
+          dplyr::filter(abs_diff > absolute_gap)
+        
+        rel_gap[i] <- max(gap_tbl$rel_diff)
+      }
+      pos <- which(gap_tbl$rel_diff == rel_gap[i])
+      pos <- pos[1]
+      rel_id[i] <- gap_tbl$ID[pos]
+      rel_cat[i] <- gap_tbl[[mName]][pos]
+      abs_gap[i] <- gap_tbl$abs_diff[pos]
+      v_converged[i] <- rel_gap[i] <= relative_gap | abs_gap[i] <= absolute_gap
+      
+      # Clean up seed_long for next iteration
+      seed_long <- seed_long %>%
+        dplyr::mutate(weight = new_weight) %>%
+        dplyr::select(-c(factor, new_weight))
     }
     
     # Check for convergence and increment iter
     if(verbose){
-      message("Finished iteration ", iter)
+      cat("\r Finished iteration ", iter)
     }
-    converged <- all(gap <= min_weight)
+    converged <- all(v_converged)
     iter = iter + 1
   }
   
-  # When finished, scale up the weights to match the first marginal total
-  firstMarg <- marginals$marginal[1]
-  target <- marginals %>%
-    dplyr::summarize(total = sum(value))
-  target <- target$total[1]
+  # After the loop, scale up the weights to match the totals
+  seed_long <- seed_long %>%
+    dplyr::left_join(totals, by = "ID") %>%
+    dplyr::mutate(weight = weight * total) %>%
+    dplyr::select(-total)
   
-  seed$weight <- seed$weight * (target) / sum(seed$weight)
-        
-  # if iterations exceeded, throw a warning.
-  if(iter == max_iterations & !converged){
-    warning("Failed to converge after ", iter, " iterations")
-    utils::flush.console()
-  }
-  
-  # return the new weights
-  seed$weight
-}
-
-   
-
-
-#' Perform the ipf procedure for multiple marginal sets and returns a 
-#' \code{data.frame}.
-#' 
-#' @inheritParams ipf
-#' 
-#' @param margTbl A \code{data.frame} with a row for each set of marginals to
-#'    use in an ipf procedure.  Every column other than the \code{id_field} will
-#'    be treated as a marginal column.
-#'    
-#' @param id_field The name of the identifying field not to be used as a 
-#'    marginal.  IPF will be performed for each ID.
-#'
-#' @param absolute_gap The relative gap checks the percent difference.  The 
-#'    absolute gap checks the absolute difference.  If the absolute difference is 
-#'    below the absolute_gap, the percent difference is ignored.
-#'
-#' @return a \code{data.frame} with a row for each \code{id_field}. The columns 
-#'    of which contain the joint-distribution weights after fitting to marginals.
-#'
-#' @export
-#'    
-ipf_multi <- function(seed, weight_var = "weight", margTbl, id_field,
-                   relative_gap = 0.01, absolute_gap = 1, max_iterations = 50, 
-                   min_weight = .0001, verbose = FALSE){
-  
-  # set weights variable ----
-  if(is.null(weight_var)){
-    # if none given, set to 1.
-    warning("weight_var not specified.  Initializing with equal weights.")
-    utils::flush.console()
-    seed <- dplyr::mutate(seed, weight = 1)
-  } else {
-    seed <- dplyr::rename_(seed, weight = weight_var)
-  }
-  
-  # Collect the marginal names
-  mNameCats <- margTbl %>%
-    dplyr::select(-ID) %>%
-    names()
-  
-  mNames <- mNameCats %>%
-    gsub("[0-9]", "", .) %>%
-    unique()
-    
-  # Expand the seed table to be repeated for each id_field, add marginal, and
-  # convert weight field to a percent.
-  seed_long <- merge(margTbl$ID, seed) %>%
-    dplyr::rename(ID = x) %>%
-    dplyr::group_by(ID) %>%
-    dplyr::mutate(weight = weight / sum(weight)) %>%
-    dplyr::ungroup()
-  
-  for (i in 1:length(mNames)) {
-    name <- mNames[i]
-    namecats <- mNameCats[grep(name, mNameCats)]
-    
-    # save first marginal for later scaling
-    if (i == 1) {
-      firstMarg <- margTbl %>%
-        dplyr::select(ID, dplyr::one_of(namecats)) %>%
-        tidyr::gather(key = m, value = value, -ID) %>%
-        dplyr::group_by(ID) %>%
-        dplyr::summarize(total = sum(value))
-    }
-    
-    tojoin <- margTbl %>%
-      dplyr::select(ID, dplyr::one_of(namecats)) %>%
-      tidyr::gather(key = m, value = value, -ID) %>%
-      dplyr::group_by(ID) %>%
-      dplyr::mutate(
-        m = as.numeric(gsub("[A-z]", "", m)),
-        total = sum(value),
-        value = ifelse(total == 0, 0, value / total)
-      ) %>%
-      dplyr::rename_(
-        .dots = stats::setNames(c("m", "value"), c(name, paste0(name,"marg")))
-      ) %>%
-      dplyr::ungroup() %>%
-      select(-total)
-    
-    seed_long <- seed_long %>%
-      dplyr::left_join(tojoin)
-  }
-  
-  # Perform IPF
-  iter <- 1
-  converged <- FALSE
-  while (!converged & iter <= max_iterations) {
-    # Print iteration status
-    cat("\r", "Iteration", iter, "of", max_iterations)
-    utils::flush.console()
-    
-    # In the following loop, track the maximum gap in this vector
-    gap <- vector("numeric", length(mNames))
-    absgap <- vector("numeric", length(mNames))
-    v_id <- vector("numeric", length(mNames))
-    v_cat <- vector("numeric", length(mNames))
-    
-    # For each marginal
-    for (i in 1:length(mNames)) {
-      name <- mNames[i]
-      namecat <- paste0(name,"marg")
-      
-      dots <- list(
-        lazyeval::interp(~x / y, x = as.name(namecat), y = as.name("total"))
-      )
-      
-      seed_long <- seed_long %>%
-        dplyr::group_by_("ID", name) %>%
-        dplyr::mutate(total = sum(weight)) %>%
-        dplyr::mutate_(.dots = stats::setNames(dots, "factor")) %>%
-        dplyr::mutate(
-          # If the total weight for a marginal category is 0,
-          # set the factor to 0
-          factor = ifelse(total == 0, 0, factor),
-          weight = weight * factor,
-          # Don't allow weight to drop below min_weight
-          weight = ifelse(weight < min_weight, min_weight, weight),
-          # If a factor was 0 (meaning either the marginal or total weight
-          # was zero), set the factor to 1 to allow convergence.
-          factor = ifelse(factor == 0, 1, factor),
-          relgap = abs(factor - 1)
-        )
-        
-      # If first iter, append the total from firstMarg
-      # Used to calculate absolute gap
-      if (iter == 1 & i == 1){
-        seed_long <- seed_long %>%
-          dplyr::left_join(
-            firstMarg %>%
-              dplyr::rename(totunits = total),
-            by = "ID"
-          )
-      }
-      
-      # Calculate absolute gap and set relgap to 0 where absgap is small
-      seed_long$absgap <- seed_long$relgap * seed_long$totunits *
-        seed_long[[namecat]]
-      seed_long <- seed_long %>%
-        dplyr::mutate(relgap = ifelse(absgap <= absolute_gap, 0, relgap))
-      
-      # Collect information on the current marginal loop
-      gap[i] <- max(seed_long$relgap)
-      absgap[i] <- max(seed_long$absgap[seed_long$relgap == gap[i]])
-      v_id[i] <- max(seed_long$ID[seed_long$relgap == gap[i]])
-      v_cat[i] <- max(seed_long[seed_long$relgap == gap[i], name])
-    }
-    
-    # Check for convergence and increment iter
-    converged <- all(gap <= min_weight)
-    iter = iter + 1
-  }
+  # Change seed_long into final format to return
+  # seed_long <- seed_long %>%
+  #   tidyr::spread(key = ID, value = weight)
   
   # if iterations exceeded, throw a warning.
   if(iter > max_iterations){
     warning("Failed to converge after ", max_iterations, " iterations")
+    utils::flush.console()
   }
-  
-  # When finished, scale up the weights to match the first marginal total
-  seed_long <- seed_long %>%
-    dplyr::ungroup() %>%
-    dplyr::select(ID, dplyr::one_of(mNames), weight) %>%
-    dplyr::left_join(firstMarg, by = "ID") %>%
-    dplyr::group_by(ID) %>%
-    dplyr::mutate(weight = weight * total / sum(weight)) %>%
-    dplyr::select(-total) %>%
-    dplyr::ungroup()
-    
-  # Format final data frame
-  final <- seed_long
-  for (name in mNames) {
-    final[, name] <- paste0(name, final[[name]])
-  }
-  #final$category <- do.call(paste0, select(final, one_of(mNames)))
-  final <- tidyr::unite(final, col = category, dplyr::one_of(mNames), sep = "_")
-  final <- final %>%
-    dplyr::select(ID, category, weight) %>%
-    tidyr::spread(key = category, value = weight)
   
   if (verbose) {
-    position <- which(gap == max(gap))[1]
-    cat("\n", "Max Rel Gap:", gap[position])
-    cat("\n", "Absolute Gap:", absgap[position])
-    cat("\n", "ID:", v_id[position])
-    cat("\n", "Marg:", mNames[position])
-    cat("\n", "Category:", v_cat[position])
-    cat("\n", "waiting", 10, "seconds.")
+    position <- which(rel_gap == max(rel_gap))[1]
+    cat("\n", "Max Rel Gap:", rel_gap[position])
+    cat("\n", "Absolute Gap:", abs_gap[position])
+    cat("\n", "ID:", rel_id[position])
+    cat("\n", "Marginal:", names(targets)[position])
+    cat("\n", "Category:", rel_cat[position])
     utils::flush.console()
-    Sys.sleep(10)
   }
   
-  return(final)
+  # return the table with new weights
+  return(seed_long)
 }
-
-
 
 
 
