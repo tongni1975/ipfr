@@ -50,7 +50,7 @@ NULL
 #' @importFrom magrittr "%>%"
 #' 
 ipf <- function(seed, targets,
-                relative_gap = 0.01, absolute_gap = 10, max_iterations = 50,
+                relative_gap = 0.01, absolute_gap = 1, max_iterations = 50,
                 min_weight = .0001, verbose = FALSE){
 
   # Check check that seed and target are provided
@@ -103,9 +103,13 @@ ipf <- function(seed, targets,
   converged <- FALSE
   while (!converged & iter <= max_iterations){
     
-    # In the following loop, track the maximum gap in this vector
+    # In the following loop, track the maximum gap and convergence
+    # stats in these vectors
     rel_gap <- vector("numeric", length(targets))
+    rel_id <- vector("numeric", length(targets))
+    rel_cat <- vector("numeric", length(targets))
     abs_gap <- vector("numeric", length(targets))
+    v_converged <- vector("logical", length(targets))
     
     # For each table in targets
     for (i in 1:length(targets)) {
@@ -149,25 +153,49 @@ ipf <- function(seed, targets,
       
       # Because closure will depend on relative and absolute gap, add the
       # totals vector back to determine the absolute difference.
+      # Remove rows from the table if the absolute diff is below the threshold.
+      # This will keep them from keeping the IPF running.
       gap_tbl <- seed_long %>%
         dplyr::left_join(totals, by = "ID") %>%
-        dplyr::mutate(abs_diff = abs(factor - 1) * total)
-      
-      rel_gap[i] <- max(abs(gap_tbl$factor - 1))
-      abs_gap[i] <- max(abs(gap_tbl$abs_diff))
+        dplyr::mutate(
+          old = total * weight,
+          new = total * new_weight,
+          rel_diff = ifelse(weight == 0, 0, abs((new_weight - weight) / weight)),
+          abs_diff = abs(new - old)
+        )
+            
+      # Collect gap information and test if this marginal has converged
+      # If every row in gap_tbl is below the absolute gap tolerance, then
+      # collect the largest relative difference.  Otherwise, collect the
+      # largest relative difference from the rows above the absolute gap
+      # tolerance.  Also, collect information on ID and category
+      # to report out after IPF is complete.
+      if (all(gap_tbl$abs_diff <= absolute_gap)) {
+        rel_gap[i] <- max(gap_tbl$rel_diff)
+      } else {
+        gap_tbl <- gap_tbl %>%
+          dplyr::filter(abs_diff > absolute_gap)
+        
+        rel_gap[i] <- max(gap_tbl$rel_diff)
+      }
+      pos <- which(gap_tbl$rel_diff == rel_gap[i])
+      pos <- pos[1]
+      rel_id[i] <- gap_tbl$ID[pos]
+      rel_cat[i] <- gap_tbl[[mName]][pos]
+      abs_gap[i] <- gap_tbl$abs_diff[pos]
+      v_converged[i] <- rel_gap[i] <= relative_gap | abs_gap[i] <= absolute_gap
       
       # Clean up seed_long for next iteration
       seed_long <- seed_long %>%
         dplyr::mutate(weight = new_weight) %>%
         dplyr::select(-c(factor, new_weight))
-        
     }
     
     # Check for convergence and increment iter
     if(verbose){
       message("Finished iteration ", iter)
     }
-    converged <- all(rel_gap <= relative_gap) | all(abs_gap <= absolute_gap)
+    converged <- all(v_converged)
     iter = iter + 1
   }
   
@@ -178,12 +206,12 @@ ipf <- function(seed, targets,
     dplyr::select(-total)
   
   # Change seed_long into final format to return
-  seed_long <- seed_long %>%
-    tidyr::spread(key = ID, value = weight)
+  # seed_long <- seed_long %>%
+  #   tidyr::spread(key = ID, value = weight)
   
   # if iterations exceeded, throw a warning.
-  if(iter == max_iterations & !converged){
-    warning("Failed to converge after ", iter, " iterations")
+  if(iter > max_iterations){
+    warning("Failed to converge after ", max_iterations, " iterations")
     utils::flush.console()
   }
   
@@ -191,8 +219,9 @@ ipf <- function(seed, targets,
     position <- which(rel_gap == max(rel_gap))[1]
     cat("\n", "Max Rel Gap:", rel_gap[position])
     cat("\n", "Absolute Gap:", abs_gap[position])
-    cat("\n", "ID:", gap_tbl$ID[position])
-    cat("\n", "Marg:", names(targets)[position])
+    cat("\n", "ID:", rel_id[position])
+    cat("\n", "Marginal:", names(targets)[position])
+    cat("\n", "Category:", rel_cat[position])
     utils::flush.console()
   }
   

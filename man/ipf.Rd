@@ -4,7 +4,7 @@
 \alias{ipf}
 \title{Reweight a Seed Table to Marginal Controls}
 \usage{
-ipf(seed, targets, relative_gap = 0.01, absolute_gap = 10,
+ipf(seed, targets, relative_gap = 0.01, absolute_gap = 1,
   max_iterations = 50, min_weight = 1e-04, verbose = FALSE)
 }
 \arguments{
