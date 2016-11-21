@@ -65,15 +65,12 @@ ipf <- function(seed, targets,
   # throwing errors.
   for (name in names(targets)) {
     col_names <- colnames(targets[[name]])
-    col_names <- as.numeric(col_names[!col_names == "ID"])
+    col_names <- type.convert(col_names[!col_names == "ID"], as.is = TRUE)
     
     test <- match(col_names, seed[[name]])
     if (any(is.na(test))) {
       prob_cat <- col_names[which(is.na(test))]
-      stop(paste0(
-        "Marginal ", name, "; category ", prob_cat,
-        " is missing from seed table"
-      ))
+      stop("Marginal ", name, "; category ", prob_cat, " is missing from seed table")
     }
   }
   
@@ -117,7 +114,7 @@ ipf <- function(seed, targets,
       # Prepare the target table
       target <- targets[[mName]] %>%
         tidyr::gather(key = marg, value = target, -ID) %>%
-        dplyr::mutate(marg = as.numeric(marg)) %>%
+        dplyr::mutate(marg = type.convert(marg, as.is = TRUE)) %>%
         dplyr::group_by(ID) %>%
         dplyr::mutate(target = target / sum(target)) %>%
         dplyr::ungroup() %>%
