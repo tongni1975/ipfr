@@ -5,18 +5,19 @@
 \title{Reweight a Seed Table to Marginal Controls}
 \usage{
 ipf(seed, targets, relative_gap = 0.01, absolute_gap = 1,
-  max_iterations = 50, min_weight = 1e-04, verbose = FALSE)
+  max_iterations = 50, min_weight = 0.0001, verbose = FALSE)
 }
 \arguments{
 \item{seed}{A \code{data frame} including a \code{weight} field and necessary
 colums for matching to marginal targets.}
 
-\item{targets}{A \code{named list} of data frames.  Each name in the list defines a
-marginal dimension and must match a column from the seed table.  The data
-frame associated with each name must start with an identical \code{ID} column.
-The other column names define the marginal categories that targets are
-provided for.  Each row of the data frames represents a unique set of
-targets to fit.  Every data frame must have the same number of rows.}
+\item{targets}{A \code{named list} of data frames.  Each name in the list 
+defines a marginal dimension and must match a column from the seed table. 
+The data frame associated with each name must start with an identical 
+column named \code{cluster}. Each row in the target table defines a new 
+cluster (these could be TAZs, tracts, districts, etc.), and every target 
+table must have the same number of rows/clusters. The other column names
+define the marginal categories that targets are provided for.}
 
 \item{relative_gap}{target for convergence.  Maximum percent change to allow
 any seed weight to move by while considering the process converged.  By 
@@ -47,4 +48,3 @@ the seed \code{data frame} with a column of weights appended for each
 \description{
 Reweight a Seed Table to Marginal Controls
 }
-
