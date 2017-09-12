@@ -61,6 +61,14 @@ ipf <- function(seed, targets,
     stop("Targets not provided")
   }
   
+  # Check that there are no NA values in seed or targets
+  if (any(is.na(unlist(seed)))) {
+    stop("'seed' contains NAs")
+  }
+  if (any(is.na(unlist(targets)))) {
+    stop("'targets' contains NAs")
+  }
+  
   # Check that at least one observation of each marginal category exists
   # in the seed table.  Otherwise, the process produces wrong answers without
   # throwing errors.
