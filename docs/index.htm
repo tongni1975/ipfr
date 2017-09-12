@@ -1,0 +1,1460 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta name="author" content="Kyle Ward" />
+
+<meta name="date" content="2017-09-12" />
+
+<title>Using ipf</title>
+
+
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code > span.dt { color: #902000; } /* DataType */
+code > span.dv { color: #40a070; } /* DecVal */
+code > span.bn { color: #40a070; } /* BaseN */
+code > span.fl { color: #40a070; } /* Float */
+code > span.ch { color: #4070a0; } /* Char */
+code > span.st { color: #4070a0; } /* String */
+code > span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code > span.ot { color: #007020; } /* Other */
+code > span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code > span.fu { color: #06287e; } /* Function */
+code > span.er { color: #ff0000; font-weight: bold; } /* Error */
+code > span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #880000; } /* Constant */
+code > span.sc { color: #4070a0; } /* SpecialChar */
+code > span.vs { color: #4070a0; } /* VerbatimString */
+code > span.ss { color: #bb6688; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #19177c; } /* Variable */
+code > span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #666666; } /* Operator */
+code > span.bu { } /* BuiltIn */
+code > span.ex { } /* Extension */
+code > span.pp { color: #bc7a00; } /* Preprocessor */
+code > span.at { color: #7d9029; } /* Attribute */
+code > span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code > span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+</style>
+
+
+
+<link href="data:text/css;charset=utf-8,body%20%7B%0Abackground%2Dcolor%3A%20%23fff%3B%0Amargin%3A%201em%20auto%3B%0Amax%2Dwidth%3A%20800px%3B%0Aoverflow%3A%20visible%3B%0Apadding%2Dleft%3A%202em%3B%0Apadding%2Dright%3A%202em%3B%0Afont%2Dfamily%3A%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20Arial%2C%20sans%2Dserif%3B%0Afont%2Dsize%3A%2014px%3B%0Aline%2Dheight%3A%2020px%3B%0A%7D%0A%23header%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0A%23TOC%20%7B%0Aclear%3A%20both%3B%0Amargin%3A%200%200%2010px%200%3B%0Apadding%3A%204px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Aborder%2Dradius%3A%205px%3B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Afont%2Dsize%3A%2013px%3B%0Aline%2Dheight%3A%201%2E3%3B%0A%7D%0A%23TOC%20%2Etoctitle%20%7B%0Afont%2Dweight%3A%20bold%3B%0Afont%2Dsize%3A%2015px%3B%0Amargin%2Dleft%3A%205px%3B%0A%7D%0A%23TOC%20ul%20%7B%0Apadding%2Dleft%3A%2040px%3B%0Amargin%2Dleft%3A%20%2D1%2E5em%3B%0Amargin%2Dtop%3A%205px%3B%0Amargin%2Dbottom%3A%205px%3B%0A%7D%0A%23TOC%20ul%20ul%20%7B%0Amargin%2Dleft%3A%20%2D2em%3B%0A%7D%0A%23TOC%20li%20%7B%0Aline%2Dheight%3A%2016px%3B%0A%7D%0Atable%3Anot%28%5Bclass%5D%29%20%7B%0Amargin%3A%20auto%3B%0Amin%2Dwidth%3A%2040%25%3B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dcolor%3A%20%23DDDDDD%3B%0Aborder%2Dstyle%3A%20outset%3B%0Aborder%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%5Bsummary%3D%22R%20argblock%22%5D%20%7B%0Awidth%3A%20100%25%3B%0Aborder%3A%20none%3B%0A%7D%0Atable%3Anot%28%5Bclass%5D%29%20th%20%7B%0Aborder%2Dwidth%3A%202px%3B%0Apadding%3A%205px%3B%0Aborder%2Dstyle%3A%20inset%3B%0A%7D%0Atable%3Anot%28%5Bclass%5D%29%20td%20%7B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dstyle%3A%20inset%3B%0Aline%2Dheight%3A%2018px%3B%0Apadding%3A%205px%205px%3B%0A%7D%0Atable%3Anot%28%5Bclass%5D%29%2C%20table%3Anot%28%5Bclass%5D%29%20th%2C%20table%3Anot%28%5Bclass%5D%29%20td%20%7B%0Aborder%2Dleft%2Dstyle%3A%20none%3B%0Aborder%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%3Anot%28%5Bclass%5D%29%20tr%2Eodd%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Ap%20%7B%0Amargin%3A%200%2E5em%200%3B%0A%7D%0Ablockquote%20%7B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Apadding%3A%2013px%3B%0Apadding%2Dbottom%3A%201px%3B%0A%7D%0Ahr%20%7B%0Aborder%2Dstyle%3A%20solid%3B%0Aborder%3A%20none%3B%0Aborder%2Dtop%3A%201px%20solid%20%23777%3B%0Amargin%3A%2028px%200%3B%0A%7D%0Adl%20%7B%0Amargin%2Dleft%3A%200%3B%0A%7D%0Adl%20dd%20%7B%0Amargin%2Dbottom%3A%2013px%3B%0Amargin%2Dleft%3A%2013px%3B%0A%7D%0Adl%20dt%20%7B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Aul%20%7B%0Amargin%2Dtop%3A%200%3B%0A%7D%0Aul%20li%20%7B%0Alist%2Dstyle%3A%20circle%20outside%3B%0A%7D%0Aul%20ul%20%7B%0Amargin%2Dbottom%3A%200%3B%0A%7D%0Apre%2C%20code%20%7B%0Abackground%2Dcolor%3A%20%23f5f5f5%3B%0Aborder%2Dradius%3A%203px%3B%0Acolor%3A%20%23333%3B%0A%7D%0Apre%20%7B%0Aoverflow%2Dx%3A%20auto%3B%0Aborder%2Dradius%3A%203px%3B%0Amargin%3A%205px%200%2010px%200%3B%0Apadding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0Abackground%2Dcolor%3A%20white%3B%0Aborder%3A%20%23f5f5f5%201px%20solid%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20code%20%7B%0Acolor%3A%20%23444%3B%0Abackground%2Dcolor%3A%20white%3B%0A%7D%0Acode%20%7B%0Afont%2Dfamily%3A%20monospace%3B%0Afont%2Dsize%3A%2090%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0Apadding%3A%202px%204px%3B%0Acolor%3A%20%23d14%3B%0Aborder%3A%201px%20solid%20%23e1e1e8%3B%0Awhite%2Dspace%3A%20inherit%3B%0A%7D%0Adiv%2Efigure%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0Atable%20%3E%20caption%2C%20div%2Efigure%20p%2Ecaption%20%7B%0Afont%2Dstyle%3A%20italic%3B%0A%7D%0Atable%20%3E%20caption%20span%2C%20div%2Efigure%20p%2Ecaption%20span%20%7B%0Afont%2Dstyle%3A%20normal%3B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Ap%20%7B%0Amargin%3A%200%200%2010px%3B%0A%7D%0Atable%3Anot%28%5Bclass%5D%29%20%7B%0Amargin%3A%20auto%20auto%2010px%20auto%3B%0A%7D%0Aimg%3Anot%28%5Bclass%5D%29%20%7B%0Abackground%2Dcolor%3A%20%23FFFFFF%3B%0Apadding%3A%202px%3B%0Aborder%2Dradius%3A%203px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Amargin%3A%200%205px%3B%0Amax%2Dwidth%3A%20100%25%3B%0A%7D%0Ah1%20%7B%0Amargin%2Dtop%3A%200%3B%0Afont%2Dsize%3A%2035px%3B%0Aline%2Dheight%3A%2040px%3B%0A%7D%0Ah2%20%7B%0Aborder%2Dbottom%3A%204px%20solid%20%23f5f5f5%3B%0Apadding%2Dtop%3A%2010px%3B%0Apadding%2Dbottom%3A%202px%3B%0Afont%2Dsize%3A%20145%25%3B%0A%7D%0Ah3%20%7B%0Aborder%2Dbottom%3A%202px%20solid%20%23f5f5f5%3B%0Apadding%2Dtop%3A%2010px%3B%0Afont%2Dsize%3A%20120%25%3B%0A%7D%0Ah4%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23f5f5f5%3B%0Amargin%2Dleft%3A%208px%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Ah5%2C%20h6%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23ccc%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Aa%20%7B%0Acolor%3A%20%230033dd%3B%0Atext%2Ddecoration%3A%20none%3B%0A%7D%0Aa%3Ahover%20%7B%0Acolor%3A%20%236666ff%3B%20%7D%0Aa%3Avisited%20%7B%0Acolor%3A%20%23800080%3B%20%7D%0Aa%3Avisited%3Ahover%20%7B%0Acolor%3A%20%23BB00BB%3B%20%7D%0Aa%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0Aa%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0Adiv%2Er%2Dhelp%2Dpage%20%7B%0Abackground%2Dcolor%3A%20%23f9f9f9%3B%0Aborder%2Dbottom%3A%20%23ddd%201px%20solid%3B%0Amargin%2Dbottom%3A%2010px%3B%0Apadding%3A%2010px%3B%0A%7D%0Adiv%2Er%2Dhelp%2Dpage%3Ahover%20%7B%0Abackground%2Dcolor%3A%20%23f4f4f4%3B%0A%7D%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%0A" rel="stylesheet" type="text/css" />
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Using ipf</h1>
+<h4 class="author"><em>Kyle Ward</em></h4>
+<h4 class="date"><em>2017-09-12</em></h4>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#introduction">Introduction</a></li>
+<li><a href="#first-ipf-example">First IPF Example</a><ul>
+<li><a href="#seed-table-creation">Seed table creation</a></li>
+<li><a href="#target-creation">Target creation</a></li>
+<li><a href="#the-goal">The Goal</a></li>
+<li><a href="#using-ipf">Using IPF</a></li>
+<li><a href="#summarizing-results">Summarizing Results</a></li>
+</ul></li>
+<li><a href="#example-2-combining-household-and-person-marginals">Example 2: Combining Household and Person Marginals</a></li>
+<li><a href="#example-3-survey-expansion-using-geographical-clusters">Example 3: Survey Expansion using Geographical Clusters</a></li>
+<li><a href="#how-ipfr-addresses-common-ipf-problems">How IPFR addresses common IPF problems</a><ul>
+<li><a href="#zero-weights">Zero weights</a></li>
+<li><a href="#missing-seed-information">Missing seed information</a></li>
+<li><a href="#marginal-agreement">Marginal agreement</a></li>
+<li><a href="#partial-marginals">Partial marginals</a></li>
+</ul></li>
+</ul>
+</div>
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>This package provides a generic implimentation of the iterative proportional fitting algorithm or <a href="https://en.wikipedia.org/wiki/Iterative_proportional_fitting">IPF</a>.</p>
+</div>
+<div id="first-ipf-example" class="section level1">
+<h1>First IPF Example</h1>
+<p>This section creates a random seed table and target values to illustrate how the package is used. The targets are specified for three separate clusters, which could represent model TAZs, survey districts, or some other grouping of geographic areas.</p>
+<div id="seed-table-creation" class="section level2">
+<h2>Seed table creation</h2>
+<p>The seed table is the starting point for the IPF procedure. In this example, we will use a made up summary table of survey data. This fake table is a count of households by the number persons, workers and vehicles. A sample of the table is shown for illustration. The count is stored in the <code>weight</code> field.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(dplyr)
+<span class="kw">library</span>(tidyr)
+<span class="kw">library</span>(ipfr)
+<span class="kw">library</span>(htmlTable)
+
+seed &lt;-<span class="st"> </span><span class="kw">expand.grid</span>(
+  <span class="dt">siz =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>),
+  <span class="dt">wrk =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>),
+  <span class="dt">veh =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>)
+) %&gt;%<span class="st"> </span><span class="kw">tbl_df</span>()
+
+<span class="kw">set.seed</span>(<span class="dv">1</span>)
+seed$weight &lt;-<span class="st"> </span><span class="kw">sample</span>(<span class="dv">1</span>:<span class="dv">10</span>, <span class="kw">nrow</span>(seed), <span class="dt">replace =</span> <span class="ot">TRUE</span>)
+
+seed %&gt;%
+<span class="st">  </span><span class="kw">head</span>() %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+  <span class="dt">align =</span> <span class="st">&quot;cccr&quot;</span>, <span class="dt">col.rgroup =</span> <span class="kw">c</span>(<span class="st">&quot;none&quot;</span>, <span class="st">&quot;#F7F7F7&quot;</span>), <span class="dt">rnames =</span> <span class="ot">FALSE</span>
+)</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>siz</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>wrk</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>veh</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>weight</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>0</td>
+<td style='text-align: center;'>0</td>
+<td style='text-align: right;'>3</td>
+</tr>
+<tr style='background-color: #f7f7f7;'>
+<td style='background-color: #f7f7f7; text-align: center;'>2</td>
+<td style='background-color: #f7f7f7; text-align: center;'>0</td>
+<td style='background-color: #f7f7f7; text-align: center;'>0</td>
+<td style='background-color: #f7f7f7; text-align: right;'>4</td>
+</tr>
+<tr>
+<td style='text-align: center;'>3</td>
+<td style='text-align: center;'>0</td>
+<td style='text-align: center;'>0</td>
+<td style='text-align: right;'>6</td>
+</tr>
+<tr style='background-color: #f7f7f7;'>
+<td style='background-color: #f7f7f7; text-align: center;'>4</td>
+<td style='background-color: #f7f7f7; text-align: center;'>0</td>
+<td style='background-color: #f7f7f7; text-align: center;'>0</td>
+<td style='background-color: #f7f7f7; text-align: right;'>10</td>
+</tr>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>0</td>
+<td style='text-align: right;'>3</td>
+</tr>
+<tr style='background-color: #f7f7f7;'>
+<td style='background-color: #f7f7f7; border-bottom: 2px solid grey; text-align: center;'>2</td>
+<td style='background-color: #f7f7f7; border-bottom: 2px solid grey; text-align: center;'>1</td>
+<td style='background-color: #f7f7f7; border-bottom: 2px solid grey; text-align: center;'>0</td>
+<td style='background-color: #f7f7f7; border-bottom: 2px solid grey; text-align: right;'>9</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="target-creation" class="section level2">
+<h2>Target creation</h2>
+<p>The number of households by size (e.g., 1-person, 2-person, etc.) is referred to as a marginal distribution. Often, from the Census, we know the total number of households by each individual marginal. For example, we know the number of households by size:</p>
+<ul>
+<li>1 person: 150 households</li>
+<li>2 persons: 150 households</li>
+<li>3 persons: 100 households</li>
+<li>4+ persons: 100 households</li>
+</ul>
+<p>This information becomes the target that the IPF process tries to match.</p>
+<p>This information is created below for the distribution of households by size, number of workers, and number of vehicles. The size table is shown as an example. Across the top are the marginal categories (1-4). The cluster column represents three separate geographies (counties, tracts, TAZs, etc.).</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">targets &lt;-<span class="st"> </span><span class="kw">list</span>()
+targets$siz &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>),
+  <span class="st">`</span><span class="dt">1</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">100</span>, <span class="dv">150</span>, <span class="dv">0</span>),
+  <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">100</span>, <span class="dv">100</span>, <span class="dv">0</span>),
+  <span class="st">`</span><span class="dt">3</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">150</span>, <span class="dv">100</span>, <span class="dv">0</span>),
+  <span class="st">`</span><span class="dt">4</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">150</span>, <span class="dv">150</span>, <span class="dv">0</span>)
+)
+targets$wrk &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>),
+  <span class="st">`</span><span class="dt">0</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">100</span>, <span class="dv">100</span>, <span class="dv">0</span>),
+  <span class="st">`</span><span class="dt">1</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">150</span>, <span class="dv">100</span>, <span class="dv">0</span>),
+  <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">150</span>, <span class="dv">150</span>, <span class="dv">0</span>),
+  <span class="st">`</span><span class="dt">3</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">100</span>, <span class="dv">150</span>, <span class="dv">0</span>)
+)
+targets$veh &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>),
+  <span class="st">`</span><span class="dt">0</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">75</span>, <span class="dv">175</span>, <span class="dv">0</span>),
+  <span class="st">`</span><span class="dt">1</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">175</span>, <span class="dv">75</span>, <span class="dv">0</span>),
+  <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">150</span>, <span class="dv">150</span>, <span class="dv">0</span>),
+  <span class="st">`</span><span class="dt">3</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">100</span>, <span class="dv">100</span>, <span class="dv">0</span>)
+)
+
+targets$siz %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">align =</span> <span class="st">&quot;crr&quot;</span>, <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Size Targets&quot;</span>
+  )  </code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='5' style='text-align: left;'>
+Size Targets</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>1</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>2</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>3</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>4</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>150</td>
+<td style='text-align: right;'>150</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: right;'>150</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>150</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>3</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="the-goal" class="section level2">
+<h2>The Goal</h2>
+<p>We know the count of each marginal individually, but assume we don’t have official information from the Census about the joint distribution. What we want to do is use the joint distribution from our survey, but ensure it agrees with the marginal information from the Census.</p>
+<p>An initial test comparing sizes for cluster 1 shows they do not agree.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">siz &lt;-<span class="st"> </span>targets$siz %&gt;%
+<span class="st">  </span><span class="kw">filter</span>(cluster ==<span class="st"> </span><span class="dv">1</span>) %&gt;%
+<span class="st">  </span><span class="kw">gather</span>(<span class="dt">key =</span> siz, <span class="dt">value =</span> target, -cluster) %&gt;%
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">siz =</span> <span class="kw">as.numeric</span>(siz)) %&gt;%
+<span class="st">  </span><span class="kw">select</span>(-cluster)
+  
+
+seed %&gt;%
+<span class="st">  </span><span class="kw">select</span>(siz, weight) %&gt;%
+<span class="st">  </span><span class="kw">group_by</span>(siz) %&gt;%
+<span class="st">  </span><span class="kw">summarize</span>(<span class="dt">seed =</span> <span class="kw">sum</span>(weight)) %&gt;%
+<span class="st">  </span><span class="kw">left_join</span>(siz, <span class="dt">by =</span> <span class="st">&quot;siz&quot;</span>) %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">align =</span> <span class="st">&quot;crr&quot;</span>, <span class="dt">rnames =</span> <span class="ot">FALSE</span>,
+    <span class="dt">caption =</span> <span class="st">&quot;Comparing size marginals for cluster 1&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='3' style='text-align: left;'>
+Comparing size marginals for cluster 1</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>siz</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>seed</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>target</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: right;'>105</td>
+<td style='text-align: right;'>100</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: right;'>77</td>
+<td style='text-align: right;'>100</td>
+</tr>
+<tr>
+<td style='text-align: center;'>3</td>
+<td style='text-align: right;'>88</td>
+<td style='text-align: right;'>150</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>4</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>86</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>150</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="using-ipf" class="section level2">
+<h2>Using IPF</h2>
+<p>We can use the ipfr package to change this. For this example, the <code>verbose</code> option is turned on to show what the tool reports upon completion. It reports the worst-performing marginal in the worst-performing cluster. If these values are small, then you can be confident in the result.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">table &lt;-<span class="st"> </span><span class="kw">ipf</span>(seed, targets, <span class="dt">verbose =</span> <span class="ot">TRUE</span>)</code></pre></div>
+<pre><code>## 
+ Finished iteration  1
+ Finished iteration  2
+ Finished iteration  3</code></pre>
+<pre><code>## Max Rel Gap:0.00530683350070032</code></pre>
+<pre><code>## Absolute Gap:0.0155541044001666</code></pre>
+<pre><code>## cluster:1</code></pre>
+<pre><code>## Marginal:siz</code></pre>
+<pre><code>## Category:4</code></pre>
+<p>A sample of the resulting table is shown below.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">table %&gt;%
+<span class="st">  </span><span class="kw">mutate_all</span>(<span class="kw">funs</span>(<span class="kw">round</span>(., <span class="dv">2</span>))) %&gt;%
+<span class="st">  </span><span class="kw">head</span>() %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">align =</span> <span class="st">&quot;crr&quot;</span>, <span class="dt">rnames =</span> <span class="ot">FALSE</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>siz</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>wrk</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>veh</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>weight</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: right;'>1</td>
+<td style='text-align: right;'>0</td>
+<td style='text-align: right;'>0</td>
+<td style='text-align: right;'>0.95</td>
+</tr>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: right;'>2</td>
+<td style='text-align: right;'>0</td>
+<td style='text-align: right;'>0</td>
+<td style='text-align: right;'>1.82</td>
+</tr>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: right;'>3</td>
+<td style='text-align: right;'>0</td>
+<td style='text-align: right;'>0</td>
+<td style='text-align: right;'>3.66</td>
+</tr>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: right;'>4</td>
+<td style='text-align: right;'>0</td>
+<td style='text-align: right;'>0</td>
+<td style='text-align: right;'>6.66</td>
+</tr>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: right;'>1</td>
+<td style='text-align: right;'>1</td>
+<td style='text-align: right;'>0</td>
+<td style='text-align: right;'>2</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>1</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>2</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>1</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>8.64</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="summarizing-results" class="section level2">
+<h2>Summarizing Results</h2>
+<p>We can summarize the final table to see if it worked.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">table %&gt;%
+<span class="st">  </span><span class="kw">select</span>(-<span class="kw">c</span>(wrk, veh)) %&gt;%
+<span class="st">  </span><span class="kw">group_by</span>(cluster, siz) %&gt;%
+<span class="st">  </span><span class="kw">summarize</span>(<span class="dt">total =</span> <span class="kw">round</span>(<span class="kw">sum</span>(weight), <span class="dv">0</span>)) %&gt;%
+<span class="st">  </span><span class="kw">spread</span>(<span class="dt">key =</span> siz, <span class="dt">value =</span> total) %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">align =</span> <span class="st">&quot;crr&quot;</span>, <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Size: Result&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='5' style='text-align: left;'>
+Size: Result</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>1</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>2</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>3</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>4</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>150</td>
+<td style='text-align: right;'>150</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: right;'>150</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>150</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>3</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">targets$siz %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">align =</span> <span class="st">&quot;crr&quot;</span>, <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Size: Target&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='5' style='text-align: left;'>
+Size: Target</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>1</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>2</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>3</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>4</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>150</td>
+<td style='text-align: right;'>150</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: right;'>150</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>150</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>3</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+</tr>
+</tbody>
+</table>
+<p>Not only does the marginal distribution of size match, but also workers and vehicles. <table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='5' style='text-align: left;'>
+Workers: Result</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>0</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>1</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>2</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>150</td>
+<td style='text-align: right;'>150</td>
+<td style='text-align: right;'>100</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>150</td>
+<td style='text-align: right;'>150</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>3</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+</tr>
+</tbody>
+</table><table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='5' style='text-align: left;'>
+Workers: Target</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>0</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>1</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>2</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>150</td>
+<td style='text-align: right;'>150</td>
+<td style='text-align: right;'>100</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>150</td>
+<td style='text-align: right;'>150</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>3</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+</tr>
+</tbody>
+</table><table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='5' style='text-align: left;'>
+Vehicles: Result</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>0</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>1</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>2</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: right;'>75</td>
+<td style='text-align: right;'>175</td>
+<td style='text-align: right;'>150</td>
+<td style='text-align: right;'>100</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: right;'>175</td>
+<td style='text-align: right;'>75</td>
+<td style='text-align: right;'>150</td>
+<td style='text-align: right;'>100</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>3</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+</tr>
+</tbody>
+</table><table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='5' style='text-align: left;'>
+Vehciles: Target</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>0</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>1</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>2</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: right;'>75</td>
+<td style='text-align: right;'>175</td>
+<td style='text-align: right;'>150</td>
+<td style='text-align: right;'>100</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: right;'>175</td>
+<td style='text-align: right;'>75</td>
+<td style='text-align: right;'>150</td>
+<td style='text-align: right;'>100</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>3</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+</tr>
+</tbody>
+</table></p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Saving seed and target for examples after example 2.</span>
+first_seed &lt;-<span class="st"> </span>seed
+first_targets &lt;-<span class="st"> </span>targets</code></pre></div>
+</div>
+</div>
+<div id="example-2-combining-household-and-person-marginals" class="section level1">
+<h1>Example 2: Combining Household and Person Marginals</h1>
+<p>In household survey expansion, it is common to want to control for certain features that describe households, (like size), while controlling for other attributes that describe people (like age). This is possible with <code>ipfr</code>.</p>
+<p>First consider a household table of four households with varying sizes.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">hh_tbl &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">hhid =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>),
+  <span class="dt">siz =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">1</span>)
+)
+
+hh_tbl %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Survey Household Table&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='2' style='text-align: left;'>
+Survey Household Table</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>hhid</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>siz</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>2</td>
+</tr>
+<tr>
+<td style='text-align: center;'>3</td>
+<td style='text-align: center;'>2</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>4</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>1</td>
+</tr>
+</tbody>
+</table>
+<p>That household table has an associated person table shown below. <code>age_group</code> takes on values between 1-4, and for clarity, let’s say they represent the following:</p>
+<ul>
+<li>ag_1 Under 18</li>
+<li>ag_2 Between 18 and 25</li>
+<li>ag_3 Between 25 and 50</li>
+<li>ag_4 Over 50</li>
+</ul>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">per_tbl &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">hhid =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">4</span>),
+  <span class="dt">perno =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">1</span>),
+  <span class="dt">age_group =</span> <span class="kw">c</span>(<span class="st">&quot;ag_4&quot;</span>, <span class="st">&quot;ag_3&quot;</span>, <span class="st">&quot;ag_1&quot;</span>, <span class="st">&quot;ag_4&quot;</span>, <span class="st">&quot;ag_4&quot;</span>, <span class="st">&quot;ag_2&quot;</span>)
+)
+
+per_tbl %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Survey Person Table&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='3' style='text-align: left;'>
+Survey Person Table</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>hhid</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>perno</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>age_group</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>ag_4</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>ag_3</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>ag_1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>3</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>ag_4</td>
+</tr>
+<tr>
+<td style='text-align: center;'>3</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>ag_4</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>4</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>1</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>ag_2</td>
+</tr>
+</tbody>
+</table>
+<p>A seed table with both attributes can be created. Note that each row is a unique person, and that household attributes are repeated for households that have more than one person.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">seed &lt;-<span class="st"> </span>per_tbl %&gt;%
+<span class="st">  </span><span class="kw">left_join</span>(hh_tbl, <span class="dt">by =</span> <span class="st">&quot;hhid&quot;</span>) %&gt;%
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">weight =</span> <span class="dv">1</span>)
+
+seed %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Combined Seed Table&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='5' style='text-align: left;'>
+Combined Seed Table</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>hhid</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>perno</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>age_group</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>siz</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>weight</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>ag_4</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>ag_3</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>ag_1</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>3</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>ag_4</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>3</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>ag_4</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>4</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>1</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>ag_2</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>1</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>1</td>
+</tr>
+</tbody>
+</table>
+<p>Create targets similar to before (this time for one cluster to keep it simple).</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">targets &lt;-<span class="st"> </span><span class="kw">list</span>()
+targets$siz &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>),
+  <span class="st">`</span><span class="dt">1</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">50</span>),
+  <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">150</span>)
+)
+targets$age_group &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>),
+  <span class="dt">ag_1 =</span> <span class="dv">50</span>,
+  <span class="dt">ag_2 =</span> <span class="dv">50</span>,
+  <span class="dt">ag_3 =</span> <span class="dv">50</span>,
+  <span class="dt">ag_4 =</span> <span class="dv">50</span>
+)</code></pre></div>
+<p>Call the ipf function.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result &lt;-<span class="st"> </span><span class="kw">ipf</span>(<span class="dt">seed =</span> seed, <span class="dt">targets =</span> targets)
+
+result %&gt;%
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">weight =</span> <span class="kw">round</span>(weight, <span class="dv">2</span>)) %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;IPF Result&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='6' style='text-align: left;'>
+IPF Result</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>hhid</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>perno</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>age_group</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>siz</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>weight</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>ag_4</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>0.97</td>
+</tr>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>ag_3</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>50</td>
+</tr>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>ag_1</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>50</td>
+</tr>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>3</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>ag_4</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>24.51</td>
+</tr>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>3</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>ag_4</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>24.51</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>1</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>4</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>1</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>ag_2</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>1</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>50</td>
+</tr>
+</tbody>
+</table>
+<p>The sum of the weight column is 200, which is the total number of households in our target tables. The last step is simply to sum the weights by HHID to get the final answer.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result %&gt;%
+<span class="st">  </span><span class="kw">group_by</span>(hhid) %&gt;%
+<span class="st">  </span><span class="kw">summarize</span>(<span class="dt">weight =</span> <span class="kw">round</span>(<span class="kw">sum</span>(weight), <span class="dv">2</span>)) %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Final Household Weights&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='2' style='text-align: left;'>
+Final Household Weights</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>hhid</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>weight</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>0.97</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>100</td>
+</tr>
+<tr>
+<td style='text-align: center;'>3</td>
+<td style='text-align: center;'>49.03</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>4</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>50</td>
+</tr>
+</tbody>
+</table>
+<p>Further checks on this simple data set show that both marginals were respected.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result %&gt;%
+<span class="st">  </span><span class="kw">group_by</span>(age_group) %&gt;%
+<span class="st">  </span><span class="kw">summarize</span>(<span class="dt">weight =</span> <span class="kw">round</span>(<span class="kw">sum</span>(weight), <span class="dv">2</span>)) %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Final Age Marginal Distribution&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='2' style='text-align: left;'>
+Final Age Marginal Distribution</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>age_group</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>weight</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>ag_1</td>
+<td style='text-align: center;'>50</td>
+</tr>
+<tr>
+<td style='text-align: center;'>ag_2</td>
+<td style='text-align: center;'>50</td>
+</tr>
+<tr>
+<td style='text-align: center;'>ag_3</td>
+<td style='text-align: center;'>50</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>ag_4</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>50</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result %&gt;%
+<span class="st">  </span><span class="kw">group_by</span>(siz) %&gt;%
+<span class="st">  </span><span class="kw">summarize</span>(<span class="dt">weight =</span> <span class="kw">round</span>(<span class="kw">sum</span>(weight), <span class="dv">2</span>)) %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Final Size Marginal Distribution&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='2' style='text-align: left;'>
+Final Size Marginal Distribution</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>siz</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>weight</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>50.97</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>2</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>149.03</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="example-3-survey-expansion-using-geographical-clusters" class="section level1">
+<h1>Example 3: Survey Expansion using Geographical Clusters</h1>
+<p>In the first example, target values were specified for various clusters, but no target information was appended to the seed table. In this case, <code>ipfr</code> assumes that the full seed table is used as a starting point for every cluster.</p>
+<p>In the case of survey expansion, it is common to define clusters in both the seed and target table. With this approach, only the seed records in a cluster will be expanded to match that cluster’s targets.</p>
+<p>Accomplishing this is as simple as appending the <code>cluster</code> values to the seed table. We will create a new seed table, and append cluster values into a new <code>cluster</code> field. Note that <code>cluster</code> is a special field name and must be used in both seed and target tables for this to work.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">seed &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">hhid =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>),
+  <span class="dt">siz =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">1</span>),
+  <span class="dt">weight =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>),
+  <span class="dt">cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>)
+)
+
+seed %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Seed Table with Cluster Appended&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='4' style='text-align: left;'>
+Seed Table with Cluster Appended</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>hhid</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>siz</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>weight</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>3</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>2</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>4</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>1</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>1</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>2</td>
+</tr>
+</tbody>
+</table>
+<p>New targets are specified:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">targets &lt;-<span class="st"> </span><span class="kw">list</span>()
+targets$siz &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>),
+  <span class="st">`</span><span class="dt">1</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">75</span>, <span class="dv">100</span>),
+  <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">25</span>, <span class="dv">150</span>)
+)</code></pre></div>
+<p>Run <code>ipf</code>. Note that it picks up a new error. When providing cluster values in the seed table, <code>ipfr</code> checks to make sure that every marginal category appears in every cluster. In this case, the full seed table does contain both size 1 and 2 records, but cluster 2 only has size 1.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result &lt;-<span class="st"> </span><span class="kw">ipf</span>(<span class="dt">seed =</span> seed, <span class="dt">targets =</span> targets)</code></pre></div>
+<pre><code>## Error in ipf(seed = seed, targets = targets): Marginal siz; category 2 is missing from cluster 2 in the seed table.</code></pre>
+<p>Fix the seed table and re-run <code>ipf</code>.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">seed &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">hhid =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>),
+  <span class="dt">siz =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">1</span>),
+  <span class="dt">weight =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>),
+  <span class="dt">cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>)
+)
+
+result &lt;-<span class="st"> </span><span class="kw">ipf</span>(<span class="dt">seed =</span> seed, <span class="dt">targets =</span> targets)</code></pre></div>
+<p>In the resulting table, note that the first two rows in the seed table (in cluster 1) match the 100 household total of cluster 1, while the second two rows match the 250 household total of cluster 2.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Survey Expansion to Clusters&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='4' style='text-align: left;'>
+Survey Expansion to Clusters</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>hhid</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>siz</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>weight</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>75</td>
+</tr>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>25</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>3</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>150</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>2</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>4</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>1</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>100</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="how-ipfr-addresses-common-ipf-problems" class="section level1">
+<h1>How IPFR addresses common IPF problems</h1>
+<p>This section will show how <code>ipfr</code> addresses some common problems found in basic ipf procedures. It uses the example data from the first example.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">seed &lt;-<span class="st"> </span>first_seed
+targets &lt;-<span class="st"> </span>first_targets</code></pre></div>
+<div id="zero-weights" class="section level2">
+<h2>Zero weights</h2>
+<p>IPF works by successively multiplying the table weights by factors. Cells with a zero weight cannot be modified by this process. As the number of zero weights increase, the flexibility of the process is reduced, and convergence becomes more difficult. <code>ipfr</code> solves this problem by setting a minimum weight for all cells to <code>.0001</code>. This minimum weight can be adjusted using the <code>min_weight</code> parameter and should be arbitrarily small compared to your seed table weights.</p>
+</div>
+<div id="missing-seed-information" class="section level2">
+<h2>Missing seed information</h2>
+<p>Not every combination of marginal categories is required to be included in the seed table; however, at least one observation of each category must exist. For example, the combination:</p>
+<ul>
+<li>siz = 1</li>
+<li>wrk = 1</li>
+<li>veh = 0</li>
+</ul>
+<p>may not have been observed in the survey, and thus may be missing from the seed table. As long as other combinations of size-1 households exist (e.g. with 0 workers and 1 vehicle), <code>ipfr</code> will work fine. On the other hand, if there are no observations of any size-1 households, <code>ipfr</code> will stop with an error message.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">missing_seed &lt;-<span class="st"> </span>seed %&gt;%
+<span class="st">  </span><span class="kw">filter</span>(siz !=<span class="st"> </span><span class="dv">1</span>)
+
+error &lt;-<span class="st"> </span><span class="kw">try</span>(table &lt;-<span class="st"> </span><span class="kw">ipf</span>(missing_seed, targets))
+error[<span class="dv">1</span>]</code></pre></div>
+<pre><code>## [1] &quot;Error in ipf(missing_seed, targets) : \n  Marginal siz; category 1 is missing from seed table\n&quot;</code></pre>
+</div>
+<div id="marginal-agreement" class="section level2">
+<h2>Marginal agreement</h2>
+<p>In our example, the marginal distributions all add up to the same number for each zone (500, 500, and 0). If they disagreed on the total number of households, the standard IPF process could not converge.</p>
+<p>Occasionally, marginal distributions might disagree slightly on the totals, particularly if they are derived from different sources. When that happens, <code>ipfr</code> will still converge by matching the total of the first marginal table supplied while using the percentage distribution from the remaining tables.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Increase 1-person households from 100 to 500</span>
+targets$siz &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>),
+  <span class="st">`</span><span class="dt">1</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">500</span>, <span class="dv">500</span>, <span class="dv">0</span>),
+  <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">100</span>, <span class="dv">100</span>, <span class="dv">0</span>),
+  <span class="st">`</span><span class="dt">3</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">150</span>, <span class="dv">100</span>, <span class="dv">0</span>),
+  <span class="st">`</span><span class="dt">4</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">150</span>, <span class="dv">150</span>, <span class="dv">0</span>)
+)
+
+table &lt;-<span class="st"> </span><span class="kw">ipf</span>(seed, targets)</code></pre></div>
+<p><table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='5' style='text-align: left;'>
+Size: Result</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>1</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>2</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>3</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>4</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: right;'>500</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>150</td>
+<td style='text-align: right;'>150</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: right;'>500</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>150</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>3</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+</tr>
+</tbody>
+</table><table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='5' style='text-align: left;'>
+Size: Target</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>1</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>2</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>3</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>4</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: right;'>500</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>150</td>
+<td style='text-align: right;'>150</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: right;'>500</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>150</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>3</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+</tr>
+</tbody>
+</table><table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='5' style='text-align: left;'>
+Workers: Result</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>0</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>1</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>2</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: right;'>180</td>
+<td style='text-align: right;'>270</td>
+<td style='text-align: right;'>270</td>
+<td style='text-align: right;'>180</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: right;'>170</td>
+<td style='text-align: right;'>170</td>
+<td style='text-align: right;'>255</td>
+<td style='text-align: right;'>255</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>3</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+</tr>
+</tbody>
+</table><table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='5' style='text-align: left;'>
+Workers: Target</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>0</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>1</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>2</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>150</td>
+<td style='text-align: right;'>150</td>
+<td style='text-align: right;'>100</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>150</td>
+<td style='text-align: right;'>150</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>3</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+</tr>
+</tbody>
+</table><table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='5' style='text-align: left;'>
+Vehicles: Result</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>0</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>1</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>2</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: right;'>135</td>
+<td style='text-align: right;'>315</td>
+<td style='text-align: right;'>270</td>
+<td style='text-align: right;'>180</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: right;'>298</td>
+<td style='text-align: right;'>128</td>
+<td style='text-align: right;'>255</td>
+<td style='text-align: right;'>170</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>3</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+</tr>
+</tbody>
+</table><table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='5' style='text-align: left;'>
+Vehciles: Target</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>0</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>1</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>2</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: right;'>75</td>
+<td style='text-align: right;'>175</td>
+<td style='text-align: right;'>150</td>
+<td style='text-align: right;'>100</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: right;'>175</td>
+<td style='text-align: right;'>75</td>
+<td style='text-align: right;'>150</td>
+<td style='text-align: right;'>100</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>3</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+</tr>
+</tbody>
+</table></p>
+</div>
+<div id="partial-marginals" class="section level2">
+<h2>Partial marginals</h2>
+<p>In some applications of IPF, there may not be a need to control every category of every marginal. In this example, perhaps you want to control 1-, 2-, and 3-person households, but are not concerned with 4+ person households. <code>ipfr</code> can handle a partial marginal table.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">partial_targets &lt;-<span class="st"> </span>targets
+partial_targets$siz &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>),
+  <span class="st">`</span><span class="dt">1</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">100</span>, <span class="dv">150</span>, <span class="dv">0</span>),
+  <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">100</span>, <span class="dv">100</span>, <span class="dv">0</span>),
+  <span class="st">`</span><span class="dt">3</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">150</span>, <span class="dv">100</span>, <span class="dv">0</span>)
+)
+
+table &lt;-<span class="st"> </span><span class="kw">ipf</span>(seed, partial_targets)</code></pre></div>
+<p>As shown below, the marginal distributions of size categories 1, 2, and 3 are fairly close to their target values, while 4+ is not.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">table %&gt;%
+<span class="st">  </span><span class="kw">select</span>(-<span class="kw">c</span>(wrk, veh)) %&gt;%
+<span class="st">  </span><span class="kw">group_by</span>(cluster, siz) %&gt;%
+<span class="st">  </span><span class="kw">summarize</span>(<span class="dt">total =</span> <span class="kw">round</span>(<span class="kw">sum</span>(weight), <span class="dv">0</span>)) %&gt;%
+<span class="st">  </span><span class="kw">spread</span>(<span class="dt">key =</span> siz, <span class="dt">value =</span> total) %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">align =</span> <span class="st">&quot;crr&quot;</span>, <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Size: Result&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='5' style='text-align: left;'>
+Size: Result</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>1</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>2</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>3</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>4</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: right;'>96</td>
+<td style='text-align: right;'>96</td>
+<td style='text-align: right;'>144</td>
+<td style='text-align: right;'>15</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: right;'>143</td>
+<td style='text-align: right;'>96</td>
+<td style='text-align: right;'>96</td>
+<td style='text-align: right;'>15</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>3</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">partial_targets$siz %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">align =</span> <span class="st">&quot;crr&quot;</span>, <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Size: Target&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='4' style='text-align: left;'>
+Size: Target</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>1</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>2</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>150</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: right;'>150</td>
+<td style='text-align: right;'>100</td>
+<td style='text-align: right;'>100</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>3</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<script type="text/javascript">
+window.onload = function() {
+  var i, fig = 1, caps = document.getElementsByClassName('caption');
+  for (i = 0; i < caps.length; i++) {
+    var cap = caps[i];
+    if (cap.parentElement.className !== 'figure' || cap.nodeName !== 'P')
+      continue;
+    cap.innerHTML = '<span>Figure ' + fig + ':</span> ' + cap.innerHTML;
+    fig++;
+  }
+  fig = 1;
+  caps = document.getElementsByTagName('caption');
+  for (i = 0; i < caps.length; i++) {
+    var cap = caps[i];
+    if (cap.parentElement.nodeName !== 'TABLE') continue;
+    cap.innerHTML = '<span>Table ' + fig + ':</span> ' + cap.innerHTML;
+    fig++;
+  }
+}
+</script>
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
