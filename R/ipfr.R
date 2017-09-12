@@ -114,8 +114,8 @@ ipf <- function(seed, targets,
   # and remove then remove the cluster column.
   if ("cluster" %in% colnames(seed)){
     seed_long <- seed_long %>%
-      filter(ID == cluster) %>% 
-      select(-cluster)
+      dplyr::filter(ID == cluster) %>% 
+      dplyr::select(-cluster)
   }
   
   # Rename the ID field to cluster
