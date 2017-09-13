@@ -29,7 +29,7 @@
 #' @importFrom magrittr "%>%"
 ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
                 relative_gap = 0.01, absolute_gap = 1, max_iterations = 50,
-                min_weight = .0001, verbose = FALSE){
+                min_weight = .0001){
   
   # Check check that seed and target are provided
   if (is.null(seed)) {
@@ -148,7 +148,6 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
   while (!converged & iter <= max_iterations) {
     # Loop over each target and upate weights
     for (attribute in attribute_cols) {
-      # attribute = attribute_cols[4]
       target_col <- paste0(attribute, ".", "target")
       
       to_join <- final %>%
@@ -169,18 +168,31 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
     }
     
     # Determine relative gaps (by cluster)
-    gap <- 0
+    rel_gap <- 0
     for (attribute in attribute_cols) {
       target_col <- paste0(attribute, ".", "target")
       
       gap_tbl <- final %>%
         dplyr::filter((!!as.name(attribute)) > 0) %>%
-        dplyr::select(cluster, hhid, attr = !!attribute, target = !!target_col, weight) %>%
-        dplyr::mutate(gap = (target - sum(attr * weight)) / target) %>%
+        dplyr::select(
+          cluster, hhid, attr = !!attribute, target = !!target_col, weight
+        ) %>%
+        dplyr::mutate(
+          abs_gap = abs(target - sum(attr * weight)),
+          rel_gap = abs_gap / (target + .0000001) # avoid dividing by zero
+        ) %>%
+        # Removes rows where the absolute gap is smaller than 'absolute_gap'
+        dplyr::filter(abs_gap > absolute_gap) %>%
         dplyr::slice(1) %>%
         dplyr::ungroup()
       
-      gap <- ifelse(max(gap_tbl$gap) > gap, max(gap_tbl$gap), gap)
+      # If any records are left in the gap_tbl, record worst relative gap
+      if (nrow(gap_tbl) > 0) {
+        rel_gap <- ifelse(
+          max(gap_tbl$rel_gap) > rel_gap, max(gap_tbl$rel_gap), rel_gap
+        )
+      }
+      
     }
     
     # Test for convergence
