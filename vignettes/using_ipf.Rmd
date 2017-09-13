@@ -219,12 +219,13 @@ attributes that describe people (like age). This is possible with `ipfr`.
 First consider a household table of four households with varying sizes.
 
 ```{r}
-hh_tbl <- data_frame(
-  hhid = c(1, 2, 3, 4),
-  siz = c(1, 2, 2, 1)
+hh_seed <- data_frame(
+  cluster = c(1, 1, 1, 1, 2, 2, 2, 2),
+  hhid = c(1, 2, 3, 4, 5, 6, 7, 8),
+  siz = c(1, 2, 2, 1, 1, 2, 2, 1)
 )
 
-hh_tbl %>%
+hh_seed %>%
   htmlTable(
     rnames = FALSE, caption = "Survey Household Table"
   )
@@ -240,55 +241,45 @@ following:
   * ag_4 Over 50
 
 ```{r}
-per_tbl <- data_frame(
+per_seed <- data_frame(
   hhid = c(1, 2, 2, 3, 3, 4),
   perno = c(1, 1, 2, 1, 2, 1),
   age_group = c("ag_4", "ag_3", "ag_1", "ag_4", "ag_4", "ag_2")
 )
+per_seed <- bind_rows(
+  per_seed,
+  per_seed %>% mutate(hhid = c(5, 6, 6, 7, 7, 8)))
 
-per_tbl %>%
+per_seed %>%
   htmlTable(
     rnames = FALSE, caption = "Survey Person Table"
   )
 ```
 
-A seed table with both attributes can be created. Note that each row is a unique
-person, and that household attributes are repeated for households that have
-more than one person.
+Create separate targets for households and persons.
 
 ```{r}
-seed <- per_tbl %>%
-  left_join(hh_tbl, by = "hhid") %>%
-  mutate(weight = 1)
-
-seed %>%
-  htmlTable(
-    rnames = FALSE, caption = "Combined Seed Table"
-  )
-```
-
-Create targets similar to before (this time for one cluster to keep it simple).
-
-```{r}
-targets <- list()
-targets$siz <- data_frame(
-  cluster = c(1),
-  `1` = c(50),
-  `2` = c(150)
+hh_targets <- list()
+hh_targets$siz <- data_frame(
+  cluster = c(1, 2),
+  `1` = c(50, 300),
+  `2` = c(150, 100)
 )
-targets$age_group <- data_frame(
-  cluster = c(1),
-  ag_1 = 50,
-  ag_2 = 50,
-  ag_3 = 50,
-  ag_4 = 50
+
+per_targets <- list()
+per_targets$age_group <- data_frame(
+  cluster = c(1, 2),
+  ag_1 = c(50, 150),
+  ag_2 = c(150, 250),
+  ag_3 = c(50, 150),
+  ag_4 = c(150, 250)
 )
 ```
 
 Call the ipf function.
 
 ```{r}
-result <- ipf(seed = seed, targets = targets)
+result <- ipu(hh_seed, hh_targets, per_seed, per_targets)
 
 result %>%
   mutate(weight = round(weight, 2)) %>%
@@ -297,7 +288,7 @@ result %>%
   )
 ```
 
-The sum of the weight column is 200, which is the total number of households
+The sum of the weight column is 600, which is the total number of households
 in our target tables. The last step is simply to sum the weights by HHID to get
 the final answer.
 
@@ -314,14 +305,14 @@ Further checks on this simple data set show that both marginals were respected.
 
 ```{r}
 result %>%
-  group_by(age_group) %>%
+  group_by(cluster, age_group) %>%
   summarize(weight = round(sum(weight), 2)) %>%
   htmlTable(
     rnames = FALSE, caption = "Final Age Marginal Distribution"
   )
 
 result %>%
-  group_by(siz) %>%
+  group_by(cluster, siz) %>%
   summarize(weight = round(sum(weight), 2)) %>%
   htmlTable(
     rnames = FALSE, caption = "Final Size Marginal Distribution"

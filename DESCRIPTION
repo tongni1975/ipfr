@@ -8,9 +8,10 @@ Description: Performs iterative proportional fitting given a seed table and
 Depends:
     R (>= 3.2.0)
 Imports:
-    dplyr (>= 0.5.0),
+    dplyr (>= 0.7.3),
     magrittr (>= 1.5),
-    tidyr (>= 0.5.1)
+    tidyr (>= 0.5.1),
+    mlr (>= 2.12)
 License: MIT + file LICENSE
 LazyData: true
 Suggests:
