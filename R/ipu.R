@@ -47,9 +47,22 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
     stop("'targets' contains NAs")
   }
   
+  # establish a logical variable that denotes whether a cluster definition
+  # was provided on the hh_seed table. Throw an error if it was provided on
+  # the per_seed table.
+  if ("cluster" %in% colnames(hh_seed)) {
+    clusters_provided = TRUE
+  } else {
+    clusters_provided = FALSE
+  }
+  if ("cluster" %in% colnames(per_seed)) {
+    stop(
+      "A 'cluster' column exists on the 'per_seed' table. Only specify on 'hh_seed'."
+    )
+  }
   # If a 'cluster' column wasn't provided on hh_seed, then repeat hh_seed
   # for every cluster found in the hh_targets.
-  if (!("cluster" %in% colnames(hh_seed))) {
+  if (!clusters_provided) {
     hh_seed_mod <- merge(hh_targets[[1]]$cluster, hh_seed) %>%
       dplyr::rename(cluster = x) %>%
       dplyr::arrange(cluster, hhid)
