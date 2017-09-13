@@ -60,6 +60,19 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
       "A 'cluster' column exists on the 'per_seed' table. Only specify on 'hh_seed'."
     )
   }
+  
+  # Check the seed tables for completeness. If clusters were provided, add
+  # them (temporarily) to the per_seed table before checking.
+  check_seed(hh_seed, hh_targets)
+  if (clusters_provided){
+    temp_seed <- per_seed %>%
+      dplyr::left_join(
+        hh_seed %>% select(hhid, cluster),
+        by = "hhid"
+      )
+    check_seed(temp_seed, per_targets)
+  }
+  
   # If a 'cluster' column wasn't provided on hh_seed, then repeat hh_seed
   # for every cluster found in the hh_targets.
   if (!clusters_provided) {
@@ -69,12 +82,7 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
   } else {
     hh_seed_mod <- hh_seed
   }
-  # Throw an error if the cluster is defined on the person seed
-  if ("cluster" %in% colnames(per_seed)) {
-    stop(
-      "A 'cluster' column exists on the 'per_seed' table. Only specify on 'hh_seed'."
-    )
-  }
+
   
   # Modify the household seed to the required format. Use one-hot-encoding to
   # expand standard columns into dummy columns.
@@ -184,4 +192,49 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
   
   return(hh_seed)
   
+}
+
+#' Check for complete seed table
+#' 
+#' @description Given seed and targets, checks to make sure that at least one
+#'   observation of each marginal category exists in the seed table.  Otherwise,
+#'   ipf/ipu would produce wrong answers without throwing errors.
+#'
+#' @param seed \code{data.frame} Seed table
+#' 
+#' @param targets \code{list} Target tables
+
+check_seed <- function(seed, targets){
+  
+  # Check that at least one observation of each marginal category exists
+  # in the seed table.  Otherwise, the process produces wrong answers without
+  # throwing errors.
+  for (name in names(targets)) {
+    col_names <- colnames(targets[[name]])
+    col_names <- type.convert(col_names[!col_names == "cluster"], as.is = TRUE)
+    
+    test <- match(col_names, seed[[name]])
+    if (any(is.na(test))) {
+      prob_cat <- col_names[which(is.na(test))]
+      stop("Marginal ", name, "; category ", prob_cat[1], " is missing from seed table")
+    }
+  }
+  
+  # If the seed table includes a cluster column (assigning certain seed
+  # records to specific clusters), repeat the above test to make sure that
+  # each cluster has every observation.
+  if ("cluster" %in% colnames(seed)){
+    for (name in names(targets)) {
+      col_names <- colnames(targets[[name]])
+      col_names <- type.convert(col_names[!col_names == "cluster"], as.is = TRUE)
+      
+      for (cluster in seed$cluster){
+        test <- match(col_names, seed[[name]][seed$cluster == cluster])
+        if (any(is.na(test))) {
+          prob_cat <- col_names[which(is.na(test))]
+          stop("Marginal ", name, "; category ", prob_cat[1], " is missing from cluster ", cluster, " in the seed table.")
+        }   
+      }
+    }
+  }
 }
