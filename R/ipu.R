@@ -172,11 +172,14 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
         dplyr::slice(1) %>%
         dplyr::ungroup()
       
-      # If any records are left in the gap_tbl, record worst relative gap
+      # If any records are left in the gap_tbl, record worst relative gap and
+      # save that gap table for reporting out.
       if (nrow(gap_tbl) > 0) {
-        rel_gap <- ifelse(
-          max(gap_tbl$rel_gap) > rel_gap, max(gap_tbl$rel_gap), rel_gap
-        )
+        if (max(gap_tbl$rel_gap) > rel_gap) {
+          rel_gap <- max(gap_tbl$rel_gap)
+          saved_gap_tbl <- gap_tbl
+          saved_category <- attribute
+        }
       }
       
     }
@@ -187,12 +190,11 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
   }
   
   if (verbose) {
-    # position <- which(rel_gap == max(rel_gap))[1]
+    position <- which(saved_gap_tbl$rel_gap == rel_gap)[1]
     message("Max Rel Gap:", rel_gap)
-    # message("Absolute Gap:", abs_gap[position])
-    # message("cluster:", rel_id[position])
-    # message("Marginal:", names(targets)[position])
-    # message("Category:", rel_cat[position])
+    message("Absolute Gap:", saved_gap_tbl$abs_gap[position])
+    message("cluster:", saved_gap_tbl$cluster[position])
+    message("Category:", saved_category)
     utils::flush.console()
   }
   
