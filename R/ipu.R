@@ -118,7 +118,7 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
   
   # store a vector of attribute column names to loop over later.
   # don't include 'hhid' or 'weight' in the vector.
-  attribute_cols <- colnames(seed)[-1]
+  attribute_cols <- colnames(seed)[-c(1, 2)]
   attribute_cols <- attribute_cols[-length(attribute_cols)]
   
   # modify the targets to match the new seed column names
@@ -139,16 +139,16 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
     tidyr::spread(key = key, value = target)
   
   # join targets to the seed table
-  # final <- seed %>%
-  #   dplyr::left_join(cluster_equiv, by = "hhid") %>%
-  #   dplyr::left_join(targets, by = "cluster") %>%
-  #   dplyr::group_by(cluster)
+  final <- seed %>%
+    dplyr::left_join(targets, by = "cluster") %>%
+    dplyr::group_by(cluster)
   
   iter <- 1
   converged <- FALSE
   while (!converged & iter <= max_iterations) {
     # Loop over each target and upate weights
     for (attribute in attribute_cols) {
+      # attribute = attribute_cols[4]
       target_col <- paste0(attribute, ".", "target")
       
       to_join <- final %>%

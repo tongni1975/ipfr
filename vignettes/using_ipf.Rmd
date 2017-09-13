@@ -20,16 +20,34 @@ options(scipen=999) # removes sci notation
 # Introduction
 
 This package provides a generic implimentation of the iterative proportional 
-fitting algorithm or [IPF](https://en.wikipedia.org/wiki/Iterative_proportional_fitting).
+fitting algorithm or
+[IPF](https://en.wikipedia.org/wiki/Iterative_proportional_fitting) in the
+`ipf()` function. It also provides an iterative proportional updating algorithm
+([IPU](http://www.scag.ca.gov/Documents/PopulationSynthesizerPaper_TRB.pdf)) for
+balancing household- and person-level marginals in the `ipu()` function.
 
-# First IPF Example
+# IPF
 
-This section creates a random seed table and target values to illustrate 
-how the package is used. The targets are specified for three separate clusters,
-which could represent model TAZs, survey districts, or some other grouping of
+The `ipf()` function is intended for basic IPF operations. It has
+many applications in different fields, but in transportation, you
+can use it to:
+
+  * Grow a base year through-trip table to future year station volumes.
+  * Expand a household survey to multiple household marginal distributions (any number of them).
+  * Expand a synthetic population seed (like PUMS data) to create base or future-year synthetic populations.
+  
+In more general terms, IPF takes a seed distribution with rich relational 
+information and weights it to match various 1-dimensional marginal
+distributions. The first example explains further.
+
+## Example 1: Basics
+
+This section creates a random seed table and target values to illustrate how the
+package is used. The targets are specified for three separate clusters, which
+could represent model TAZs, survey districts, or some other grouping of 
 geographic areas.
 
-## Seed table creation
+### Seed table creation
 The seed table is the starting point for the IPF procedure.  In this example, 
 we will use a made up summary table of survey data.  This fake table is a count 
 of households by the number persons, workers and vehicles.  A sample of the 
@@ -57,7 +75,7 @@ seed %>%
 ```
 
 
-## Target creation
+### Target creation
 The number of households by size (e.g., 1-person, 2-person, etc.) is referred to
 as a marginal distribution.  Often, from the Census, we know the total number of 
 households by each individual marginal.  For example, we know the number of 
@@ -105,7 +123,7 @@ targets$siz %>%
   )  
 ```
 
-## The Goal
+### The Goal
 We know the count of each marginal individually, but assume we don't have 
 official information from the Census about the joint distribution.  What we want
 to do is use the joint distribution from our survey, but ensure it agrees with 
@@ -131,7 +149,7 @@ seed %>%
   )
 ```
 
-## Using IPF
+### Using IPF
 
 We can use the ipfr package to change this.  For this example, the `verbose`
 option is turned on to show what the tool reports upon completion. It reports 
@@ -151,7 +169,7 @@ table %>%
   )
 ```
 
-## Summarizing Results
+### Summarizing Results
 
 We can summarize the final table to see if it worked.
 ```{r}
@@ -209,117 +227,7 @@ first_seed <- seed
 first_targets <- targets
 ```
 
-
-# Example 2: Combining Household and Person Marginals
-
-In household survey expansion, it is common to want to control for certain
-features that describe households, (like size), while controlling for other
-attributes that describe people (like age). This is possible with `ipfr`.
-
-First consider a household table of four households with varying sizes.
-
-```{r}
-hh_seed <- data_frame(
-  cluster = c(1, 1, 1, 1, 2, 2, 2, 2),
-  hhid = c(1, 2, 3, 4, 5, 6, 7, 8),
-  siz = c(1, 2, 2, 1, 1, 2, 2, 1)
-)
-
-hh_seed %>%
-  htmlTable(
-    rnames = FALSE, caption = "Survey Household Table"
-  )
-```
-
-That household table has an associated person table shown below. `age_group`
-takes on values between 1-4, and for clarity, let's say they represent the
-following:
-
-  * ag_1 Under 18
-  * ag_2 Between 18 and 25
-  * ag_3 Between 25 and 50
-  * ag_4 Over 50
-
-```{r}
-per_seed <- data_frame(
-  hhid = c(1, 2, 2, 3, 3, 4),
-  perno = c(1, 1, 2, 1, 2, 1),
-  age_group = c("ag_4", "ag_3", "ag_1", "ag_4", "ag_4", "ag_2")
-)
-per_seed <- bind_rows(
-  per_seed,
-  per_seed %>% mutate(hhid = c(5, 6, 6, 7, 7, 8)))
-
-per_seed %>%
-  htmlTable(
-    rnames = FALSE, caption = "Survey Person Table"
-  )
-```
-
-Create separate targets for households and persons.
-
-```{r}
-hh_targets <- list()
-hh_targets$siz <- data_frame(
-  cluster = c(1, 2),
-  `1` = c(50, 300),
-  `2` = c(150, 100)
-)
-
-per_targets <- list()
-per_targets$age_group <- data_frame(
-  cluster = c(1, 2),
-  ag_1 = c(50, 150),
-  ag_2 = c(150, 250),
-  ag_3 = c(50, 150),
-  ag_4 = c(150, 250)
-)
-```
-
-Call the ipf function.
-
-```{r}
-result <- ipu(hh_seed, hh_targets, per_seed, per_targets)
-
-result %>%
-  mutate(weight = round(weight, 2)) %>%
-  htmlTable(
-    rnames = FALSE, caption = "IPF Result"
-  )
-```
-
-The sum of the weight column is 600, which is the total number of households
-in our target tables. The last step is simply to sum the weights by HHID to get
-the final answer.
-
-```{r}
-result %>%
-  group_by(hhid) %>%
-  summarize(weight = round(sum(weight), 2)) %>%
-  htmlTable(
-    rnames = FALSE, caption = "Final Household Weights"
-  )
-```
-
-Further checks on this simple data set show that both marginals were respected.
-
-```{r}
-result %>%
-  group_by(cluster, age_group) %>%
-  summarize(weight = round(sum(weight), 2)) %>%
-  htmlTable(
-    rnames = FALSE, caption = "Final Age Marginal Distribution"
-  )
-
-result %>%
-  group_by(cluster, siz) %>%
-  summarize(weight = round(sum(weight), 2)) %>%
-  htmlTable(
-    rnames = FALSE, caption = "Final Size Marginal Distribution"
-  )
-```
-
-# Example 3: Survey Expansion using Geographical Clusters
+## Example 2: Survey Expansion using Geographical Clusters
 
 In the first example, target values were specified for various clusters, but no
 target information was appended to the seed table. In this case, `ipfr` assumes
@@ -393,6 +301,188 @@ result %>%
   )
 ```
 
+# IPU
+
+Iterative proportional updating is a method developed by Arizona State University
+that allows the IPF procedure to match household- and person-level marginals. In
+that basic IPF procedure, all marginal distributions must describe the same thing
+(e.g. households). IPU allows you to say, for example, that a zone needs a total
+household count of 500, but also needs 800 people.
+
+## Example 1: Combining Household and Person Marginals
+
+In household survey expansion, it is common to want to control for certain
+features that describe households, (like size), while controlling for other
+attributes that describe people (like age). This is possible with `ipfr`.
+
+First consider a household table of four households with varying sizes.
+
+```{r}
+hh_seed <- seed <- expand.grid(
+  cluster = c(1, 2, 3),
+  siz = c(1, 2, 3, 4),
+  veh = c(0, 1, 2),
+  wrk = c(0, 1, 2)
+) %>% 
+  tbl_df() %>%
+  mutate(hhid = seq(1, nrow(.)))
+
+hh_seed[c(1:3, 45:48), ] %>%
+  htmlTable(
+    rnames = FALSE, caption = "Survey Household Table"
+  )
+```
+
+That household table has an associated person table shown below. `age_group`
+takes on values between 1-4, and for clarity, let's say they represent the
+following:
+
+  * ag_1 Under 18
+  * ag_2 Between 18 and 25
+  * ag_3 Between 25 and 50
+  * ag_4 Over 50
+
+```{r}
+# pick a random number of persons per household
+per_seed <- hh_seed %>%
+  select(hhid) %>%
+  mutate(person_count = sample(1:4, n(), replace = TRUE))
+
+# expand the data frame to be one row per person and pick a random
+# age group.
+per_seed <- per_seed[rep(per_seed$hhid, per_seed$person_count), ] %>%
+  group_by(hhid) %>%
+  mutate(
+    perid = seq(1, n()),
+    age_group = sample(1:4, n(), replace = TRUE),
+    age_group = paste0("ag_", age_group)
+  ) %>%
+  select(-person_count) %>%
+  ungroup()
+
+per_seed %>%
+  head() %>%
+  htmlTable(
+    rnames = FALSE, caption = "Survey Person Table"
+  )
+```
+
+Create separate targets for households and persons.
+
+```{r}
+hh_targets <- list()
+hh_targets$siz <- data_frame(
+  cluster = c(1, 2, 3),
+  `1` = c(100, 150, 0),
+  `2` = c(100, 100, 0),
+  `3` = c(150, 100, 0),
+  `4` = c(150, 150, 0)
+)
+hh_targets$wrk <- data_frame(
+  cluster = c(1, 2, 3),
+  `0` = c(100, 100, 0),
+  `1` = c(150, 100, 0),
+  `2` = c(250, 300, 0)
+)
+hh_targets$veh <- data_frame(
+  cluster = c(1, 2, 3),
+  `0` = c(75, 175, 0),
+  `1` = c(175, 75, 0),
+  `2` = c(250, 250, 0)
+)
+
+per_targets <- list()
+per_targets$age_group <- data_frame(
+  cluster = c(1, 2, 3),
+  ag_1 = c(100, 150, 0),
+  ag_2 = c(300, 250, 0),
+  ag_3 = c(100, 150, 0),
+  ag_4 = c(300, 250, 0)
+)
+```
+
+Call the ipf function.
+
+```{r}
+result <- ipu(hh_seed, hh_targets, per_seed, per_targets)
+
+result %>%
+  mutate(weight = round(weight, 2)) %>%
+  htmlTable(
+    rnames = FALSE, caption = "IPF Result"
+  )
+```
+
+After running for the default of 50 iterations, the weights
+are nearly balanced for both persons and households. The table
+below shows that the total number of households by cluster
+is nearing the target.
+
+```{r}
+# summarize the hh targets to get total hh per cluster
+tot_hh_target <- hh_targets$siz %>%
+  gather(key = siz, value = target, -cluster) %>%
+  group_by(cluster) %>%
+  summarize(target = sum(target))
+
+result %>%
+  group_by(cluster) %>%
+  summarize(weight = round(sum(weight), 0)) %>%
+  left_join(tot_hh_target, by = "cluster")
+```
+
+The second table below shows that the number of persons per
+cluster is also nearing its target.
+
+```{r}
+# summarize the person targets to get total persons
+# per cluster
+tot_per_target <- per_targets$age_group %>%
+  gather(key = age_group, value = target, -cluster) %>%
+  group_by(cluster) %>%
+  summarize(target = sum(target))
+  
+# Create a comparison table to the result
+per_seed %>%
+  left_join(
+    result %>% select(hhid, weight, cluster),
+    by = "hhid"
+  ) %>%
+  group_by(cluster) %>%
+  summarize(weight = round(sum(weight), 0)) %>%
+  left_join(tot_per_target, by = "cluster") %>%
+  htmlTable(
+    rnames = FALSE, caption = "Comparing Persons per Cluster"
+  )
+```
+
+The final table shows more detail and compares the age
+distributions by cluster.
+
+```{r}
+# summarize the person targets to get persons by age
+tot_per_target <- per_targets$age_group %>%
+  gather(key = age_group, value = target, -cluster) %>%
+  group_by(cluster, age_group) %>%
+  summarize(target = sum(target))
+
+per_seed %>%
+  left_join(
+    result %>% select(hhid, weight, cluster),
+    by = "hhid"
+  ) %>%
+  group_by(cluster, age_group) %>%
+  summarize(weight = round(sum(weight), 0)) %>%
+  left_join(
+    tot_per_target, 
+    by = c("cluster" = "cluster", "age_group" = "age_group")
+  ) %>%
+  htmlTable(
+    rnames = FALSE,
+    caption = "Comparing Persons per Cluster and Age"
+  )
+```
+
 
 
 # How IPFR addresses common IPF problems
@@ -407,6 +497,9 @@ targets <- first_targets
 
 
 ## Zero weights
+
+Both `ipf()` and `ipu()` implement this improvement.
+
 IPF works by successively multiplying the table weights by factors.  Cells with 
 a zero weight cannot be modified by this process.  As the number of zero weights 
 increase, the flexibility of the process is reduced, and convergence becomes 
@@ -414,8 +507,10 @@ more difficult. `ipfr` solves this problem by setting a minimum weight for all
 cells to `.0001`.  This minimum weight can be adjusted using the `min_weight` 
 parameter and should be arbitrarily small compared to your seed table weights.
 
-
 ## Missing seed information
+
+Both `ipf()` and `ipu()` implement this improvement.
+
 Not every combination of marginal categories is required to be included in the 
 seed table; however, at least one observation of each category must exist.  For example, the combination:
 
@@ -435,12 +530,19 @@ error[1]
 ```
 
 ## Marginal agreement
-In our example, the marginal distributions all add up to the same number for each zone (500, 500, and 0). If they disagreed on the total number of households, the standard IPF process could not converge.
+
+Only `ipf()` implements this improvement. `ipu()` assumes that at least some
+marginals *should* disagree on the total.
+
+In our first IPF example, the marginal distributions of households all add up to
+the same number for each zone (500, 500, and 0). If they disagreed on the total
+number of households, the standard IPF process could not converge.
 
 Occasionally, marginal distributions might disagree slightly on the totals, particularly 
-if they are derived from different sources.  When that happens, `ipfr` 
+if they are derived from different sources.  When that happens, `ipf()` 
 will still converge by matching the total of the first marginal table supplied 
-while using the percentage distribution from the remaining tables.
+while using the percentage distribution from the remaining tables. The eliminates
+the painful task of ensuring all marginals match exactly.
 
 ```{r, warning=TRUE}
 # Increase 1-person households from 100 to 500
@@ -503,7 +605,10 @@ targets$veh %>%
 ```
 
 ## Partial marginals
-In some applications of IPF, there may not be a need to control every category of every marginal.  In this example, perhaps you want to control 1-, 2-, and 3-person households, but are not concerned with 4+ person households. `ipfr` can handle a partial marginal table.
+
+Both `ipf()` and `ipu()` implement this improvement.
+
+In some applications of IPF, there may not be a need to control every category of every marginal.  In this example, perhaps you want to control 1-, 2-, and 3-person households, but are not concerned with 4+ person households.
 
 ```{r}
 partial_targets <- targets
