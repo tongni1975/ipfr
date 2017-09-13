@@ -5,7 +5,8 @@
 \title{Iterative Proportional Updating}
 \usage{
 ipu(hh_seed, hh_targets, per_seed, per_targets, relative_gap = 0.01,
-  absolute_gap = 1, max_iterations = 50, min_weight = 0.0001)
+  absolute_gap = 1, max_iterations = 50, min_weight = 0.0001,
+  verbose = TRUE)
 }
 \arguments{
 \item{hh_seed}{Same as \code{seed} in \link[ipfr]{ipf}. Each row is a
@@ -38,6 +39,9 @@ convergence is not reached.}
 \item{min_weight}{Minimum weight to allow in any cell to prevent zero weights.
 Set to .0001 by default.  Should be arbitrarily small compared to your 
 seed table weights.}
+
+\item{verbose}{Print details on the maximum expansion factor with each 
+iteration? Default \code{FALSE}.}
 }
 \value{
 the \code{hh_seed} with a revised weight column.

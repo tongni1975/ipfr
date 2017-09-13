@@ -29,23 +29,10 @@
 #' @importFrom magrittr "%>%"
 ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
                 relative_gap = 0.01, absolute_gap = 1, max_iterations = 50,
-                min_weight = .0001){
+                min_weight = .0001, verbose = FALSE){
   
-  # Check check that seed and target are provided
-  if (is.null(seed)) {
-    stop("Seed table not provided")
-  }
-  if (is.null(targets)) {
-    stop("Targets not provided")
-  }
-  
-  # Check that there are no NA values in seed or targets
-  if (any(is.na(unlist(seed)))) {
-    stop("'seed' contains NAs")
-  }
-  if (any(is.na(unlist(targets)))) {
-    stop("'targets' contains NAs")
-  }
+  # Check hh tables for completeness
+  check_seed(hh_seed, hh_targets)
   
   # establish a logical variable that denotes whether a cluster definition
   # was provided on the hh_seed table. Throw an error if it was provided on
@@ -61,16 +48,15 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
     )
   }
   
-  # Check the seed tables for completeness. If clusters were provided, add
+  # Check the person tables for completeness. If clusters were provided, add
   # them (temporarily) to the per_seed table before checking.
-  check_seed(hh_seed, hh_targets)
   if (clusters_provided){
-    temp_seed <- per_seed %>%
+    temp_per_seed <- per_seed %>%
       dplyr::left_join(
-        hh_seed %>% select(hhid, cluster),
+        hh_seed %>% dplyr::select(hhid, cluster),
         by = "hhid"
       )
-    check_seed(temp_seed, per_targets)
+    check_seed(temp_per_seed, per_targets)
   }
   
   # If a 'cluster' column wasn't provided on hh_seed, then repeat hh_seed
@@ -89,10 +75,10 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
   col_names <- names(hh_targets)
   hh_seed_mod <- hh_seed_mod %>%
     # Keep only the fields of interest
-    select(one_of(c(col_names, "cluster", "hhid"))) %>%
+    dplyr::select(dplyr::one_of(c(col_names, "cluster", "hhid"))) %>%
     dplyr::mutate_at(
       .vars = col_names,
-      .funs = funs(as.factor(.))
+      .funs = dplyr::funs(as.factor(.))
     ) %>%
     mlr::createDummyFeatures()
   
@@ -100,10 +86,10 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
   col_names <- names(per_targets)
   per_seed_mod <- per_seed %>%
     # Keep only the fields of interest
-    select(one_of(c(col_names, "hhid"))) %>%
+    dplyr::select(dplyr::one_of(c(col_names, "hhid"))) %>%
     dplyr::mutate_at(
       .vars = col_names,
-      .funs = funs(as.factor(.))
+      .funs = dplyr::funs(as.factor(.))
     ) %>%
     mlr::createDummyFeatures() %>%
     dplyr::group_by(hhid) %>%
@@ -156,7 +142,7 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
           cluster, hhid, attr = !!attribute, target = !!target_col, weight
         ) %>%
         dplyr::mutate(factor = (target) / sum(attr * weight)) %>%
-        ungroup() %>%
+        dplyr::ungroup() %>%
         dplyr::select(hhid, factor)
       
       final <- final %>%
@@ -196,12 +182,21 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
     }
     
     # Test for convergence
-    converged <- ifelse(gap <= relative_gap, TRUE, FALSE)
+    converged <- ifelse(rel_gap <= relative_gap, TRUE, FALSE)
     iter <- iter + 1
   }
   
-  hh_seed$weight <- final$weight
+  if (verbose) {
+    # position <- which(rel_gap == max(rel_gap))[1]
+    message("Max Rel Gap:", rel_gap)
+    # message("Absolute Gap:", abs_gap[position])
+    # message("cluster:", rel_id[position])
+    # message("Marginal:", names(targets)[position])
+    # message("Category:", rel_cat[position])
+    utils::flush.console()
+  }
   
+  hh_seed$weight <- final$weight
   return(hh_seed)
   
 }
@@ -217,6 +212,22 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
 #' @param targets \code{list} Target tables
 
 check_seed <- function(seed, targets){
+  
+  # Check check that seed and target are provided
+  if (is.null(seed)) {
+    stop("Seed table not provided")
+  }
+  if (is.null(targets)) {
+    stop("Targets not provided")
+  }
+  
+  # Check that there are no NA values in seed or targets
+  if (any(is.na(unlist(seed)))) {
+    stop("A seed table contains NAs")
+  }
+  if (any(is.na(unlist(targets)))) {
+    stop("A targets table contains NAs")
+  }
   
   # Check that at least one observation of each marginal category exists
   # in the seed table.  Otherwise, the process produces wrong answers without
