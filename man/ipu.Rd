@@ -6,7 +6,7 @@
 \usage{
 ipu(hh_seed, hh_targets, per_seed, per_targets, relative_gap = 0.01,
   absolute_gap = 1, max_iterations = 50, min_weight = 0.0001,
-  verbose = TRUE)
+  verbose = FALSE)
 }
 \arguments{
 \item{hh_seed}{Same as \code{seed} in \link[ipfr]{ipf}. Each row is a
