@@ -6,5 +6,5 @@
 \alias{ipfr-package}
 \title{ipfr: A package to perform iterative proportional fitting}
 \description{
-The sing function is \code{\link{ipf}}
+The single function is \code{\link{ipf}}
 }

@@ -1,6 +1,6 @@
 #' ipfr: A package to perform iterative proportional fitting
 #' 
-#' The sing function is \code{\link{ipf}}
+#' The single function is \code{\link{ipf}}
 #' 
 #' @docType package
 #' @name ipfr
@@ -119,7 +119,7 @@ ipf <- function(seed, targets,
   # that every seed record should be repeated for every cluster. If it is
   # present, it means that specific seed records belong only to specific
   # clusters (common in household expansion). If present, filter the data frame
-  # and remove then remove the cluster column.
+  # and then remove the cluster column.
   if ("cluster" %in% colnames(seed)){
     seed_long <- seed_long %>%
       dplyr::filter(ID == cluster) %>% 
