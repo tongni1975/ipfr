@@ -4,9 +4,9 @@
 \alias{ipu}
 \title{Iterative Proportional Updating}
 \usage{
-ipu(hh_seed, hh_targets, per_seed, per_targets, relative_gap = 0.01,
-  absolute_gap = 1, max_iterations = 50, min_weight = 0.0001,
-  verbose = FALSE)
+ipu(hh_seed, hh_targets, per_seed, per_targets, damp_factor = 0.75,
+  relative_gap = 0.01, absolute_gap = 1, max_iterations = 100,
+  min_weight = 0.0001, verbose = FALSE)
 }
 \arguments{
 \item{hh_seed}{Same as \code{seed} in \link[ipfr]{ipf}. Each row is a
@@ -20,6 +20,11 @@ respective household in \code{hh_seed}.}
 
 \item{per_targets}{Similar to \code{targets} from \link[ipfr]{ipf}, but for
 person-level targets.}
+
+\item{damp_factor}{Should be a number between 0 and 1. Reduces the adjustment
+factor calculated in each iteration before updating weights. Lower values
+require more iterations but are less likely to overfit a single marginal
+distribution at the expense of the others. Defaults to 0.75.}
 
 \item{relative_gap}{target for convergence.  Maximum percent change to allow
 any seed weight to move by while considering the process converged.  By 
@@ -51,7 +56,8 @@ A special case of iterative proportional fitting when two,
 disparate sets of marginals need to be satisfied that do not agree on a
 single total. A common example is balance population data using household-
 and person-level marginal controls. This could be for survey expansion or
-synthetic population creation.
+synthetic population creation. The original Arizona IPU method is improved
+by dampening the adjustment factor.
 }
 \references{
 \url{http://www.scag.ca.gov/Documents/PopulationSynthesizerPaper_TRB.pdf}

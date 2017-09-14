@@ -404,7 +404,8 @@ per_targets$age_group <- data_frame(
 Call the ipf function.
 
 ```{r}
-result <- ipu(hh_seed, hh_targets, per_seed, per_targets)
+result <- ipu(hh_seed, hh_targets, per_seed, per_targets,
+              damp_factor = 1, max_iterations = 50)
 
 result %>%
   head() %>%
@@ -529,7 +530,7 @@ per_targets$age_group <- per_targets$age_group %>%
 Run `ipu()`.
 
 ```{r}
-result <- ipu(hh_seed, hh_targets, per_seed, per_targets, 
+result <- ipu(hh_seed, hh_targets, per_seed, per_targets, damp_factor = 1,
               verbose = TRUE, max_iterations = 10)
 
 result %>%
