@@ -31,51 +31,23 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
                 relative_gap = 0.01, absolute_gap = 1, max_iterations = 50,
                 min_weight = .0001, verbose = FALSE){
   
-  # Check hh tables for completeness
-  check_seed(hh_seed, hh_targets)
+  # Check hh and person tables
+  check_tables(hh_seed, hh_targets, per_seed, per_targets)
   
-  # establish a logical variable that denotes whether a cluster definition
-  # was provided on the hh_seed table. Throw an error if it was provided on
-  # the per_seed table.
-  if ("cluster" %in% colnames(hh_seed)) {
-    clusters_provided = TRUE
-  } else {
-    clusters_provided = FALSE
-  }
-  if ("cluster" %in% colnames(per_seed)) {
-    stop(
-      "A 'cluster' column exists on the 'per_seed' table. Only specify on 'hh_seed'."
-    )
-  }
-  
-  # Check the person tables for completeness. If clusters were provided, add
-  # them (temporarily) to the per_seed table before checking.
-  if (clusters_provided){
-    temp_per_seed <- per_seed %>%
-      dplyr::left_join(
-        hh_seed %>% dplyr::select(hhid, cluster),
-        by = "hhid"
-      )
-    check_seed(temp_per_seed, per_targets)
-  }
-  
-  # If a 'cluster' column wasn't provided on hh_seed, then repeat hh_seed
-  # for every cluster found in the hh_targets.
-  if (!clusters_provided) {
-    hh_seed_mod <- merge(hh_targets[[1]]$cluster, hh_seed) %>%
-      dplyr::rename(cluster = x) %>%
-      dplyr::arrange(cluster, hhid)
-  } else {
-    hh_seed_mod <- hh_seed
-  }
-
+  # Pull off the geo information into a separate equivalency table
+  # to be used as needed.
+  geo_equiv <- hh_seed %>%
+    dplyr::select(dplyr::starts_with("geo_"), "hhid")
+  hh_seed_mod <- hh_seed %>%
+    dplyr::select(-dplyr::starts_with("geo_"))
   
   # Modify the household seed to the required format. Use one-hot-encoding to
   # expand standard columns into dummy columns.
   col_names <- names(hh_targets)
   hh_seed_mod <- hh_seed_mod %>%
-    # Keep only the fields of interest
-    dplyr::select(dplyr::one_of(c(col_names, "cluster", "hhid"))) %>%
+    # Keep only the fields of interest (marginal columns and hhid)
+    dplyr::select(dplyr::one_of(c(col_names, "hhid"))) %>%
+    # Convert to factors and then to dummy columns
     dplyr::mutate_at(
       .vars = col_names,
       .funs = dplyr::funs(as.factor(.))
@@ -104,67 +76,80 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
   
   # store a vector of attribute column names to loop over later.
   # don't include 'hhid' or 'weight' in the vector.
-  attribute_cols <- colnames(seed)[-c(1, 2)]
-  attribute_cols <- attribute_cols[-length(attribute_cols)]
+  hhid_pos <- grep("hhid", colnames(seed))
+  weight_pos <- grep("weight", colnames(seed))
+  seed_attribute_cols <- colnames(seed)[-c(hhid_pos, weight_pos)]
   
   # modify the targets to match the new seed column names
-  targets <- NULL
-  for (name in names(hh_targets)) {
-    temp <- hh_targets[[name]] %>%
-      tidyr::gather(key = "key", value = "target", -cluster) %>%
+  targets <- c(hh_targets, per_targets)
+  for (name in names(targets)) {
+    targets[[name]] <- targets[[name]] %>%
+      tidyr::gather(key = "key", value = "target", -dplyr::starts_with("geo_")) %>%
       dplyr::mutate(key = paste0(!!name, ".", key, ".target"))
-    targets <- dplyr::bind_rows(targets, temp)
   }
-  for (name in names(per_targets)) {
-    temp <- per_targets[[name]] %>%
-      tidyr::gather(key = "key", value = "target", -cluster) %>%
-      dplyr::mutate(key = paste0(!!name, ".", key, ".target"))
-    targets <- dplyr::bind_rows(targets, temp)
-  }
-  targets <- targets %>%
-    tidyr::spread(key = key, value = target)
   
-  # join targets to the seed table
+  # Create a copy of the seed table that will have the final results.
+  # Add back in the geo information which will be needed for joining.
   final <- seed %>%
-    dplyr::left_join(targets, by = "cluster") %>%
-    dplyr::group_by(cluster)
+    dplyr::left_join(geo_equiv, by = "hhid")
   
   iter <- 1
   converged <- FALSE
   while (!converged & iter <= max_iterations) {
     # Loop over each target and upate weights
-    for (attribute in attribute_cols) {
-      target_col <- paste0(attribute, ".", "target")
+    for (seed_attribute in seed_attribute_cols) {
+      # create lookups for targets list
+      target_tbl_name <- strsplit(seed_attribute, ".", fixed = TRUE)[[1]][1]
+      target_name <- paste0(seed_attribute, ".", "target")
+      target_tbl <- targets[[target_tbl_name]] %>%
+        dplyr::filter(key == target_name)
       
-      to_join <- final %>%
-        dplyr::filter((!!as.name(attribute)) > 0) %>%
+      # Get the name of the geo column
+      pos <- grep("geo_", colnames(target_tbl))
+      geo_colname <- colnames(target_tbl)[pos]
+      
+      # Join the target table to the seed table
+      fac_tbl <- final %>%
+        dplyr::filter((!!as.name(seed_attribute)) > 0) %>%
+        dplyr::left_join(target_tbl, by = geo_colname) %>%
         dplyr::select(
-          cluster, hhid, attr = !!attribute, target = !!target_col, weight
+          geo = !!geo_colname, hhid, attr = !!seed_attribute, weight, target
         ) %>%
+        dplyr::group_by(geo) %>%
         dplyr::mutate(factor = (target) / sum(attr * weight)) %>%
         dplyr::ungroup() %>%
         dplyr::select(hhid, factor)
       
       final <- final %>%
-        dplyr::left_join(to_join, by = "hhid") %>%
+        dplyr::left_join(fac_tbl, by = "hhid") %>%
         dplyr::mutate(weight = ifelse(!is.na(factor), weight * factor, weight)) %>%
         # Implement the floor on minimum weight
         dplyr::mutate(weight = pmax(weight, min_weight)) %>%
         dplyr::select(-factor)
     }
     
-    # Determine relative gaps (by cluster)
+    # Determine relative gaps (by geo field)
     rel_gap <- 0
-    for (attribute in attribute_cols) {
-      target_col <- paste0(attribute, ".", "target")
+    for (seed_attribute in seed_attribute_cols) {
+      # create lookups for targets list
+      target_tbl_name <- strsplit(seed_attribute, ".", fixed = TRUE)[[1]][1]
+      target_name <- paste0(seed_attribute, ".", "target")
+      target_tbl <- targets[[target_tbl_name]] %>%
+        dplyr::filter(key == target_name)
+      
+      # Get the name of the geo column
+      pos <- grep("geo_", colnames(target_tbl))
+      geo_colname <- colnames(target_tbl)[pos]
       
       gap_tbl <- final %>%
-        dplyr::filter((!!as.name(attribute)) > 0) %>%
+        dplyr::filter((!!as.name(seed_attribute)) > 0) %>%
+        dplyr::left_join(target_tbl, by = geo_colname) %>%
         dplyr::select(
-          cluster, hhid, attr = !!attribute, target = !!target_col, weight
+          geo = !!geo_colname, hhid, attr = !!seed_attribute, weight, target
         ) %>%
+        dplyr::group_by(geo) %>%
         dplyr::mutate(
-          abs_gap = abs(target - sum(attr * weight)),
+          abs_gap = abs((target - sum(attr * weight))),
           rel_gap = abs_gap / (target + .0000001) # avoid dividing by zero
         ) %>%
         # Removes rows where the absolute gap is smaller than 'absolute_gap'
@@ -178,7 +163,8 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
         if (max(gap_tbl$rel_gap) > rel_gap) {
           rel_gap <- max(gap_tbl$rel_gap)
           saved_gap_tbl <- gap_tbl
-          saved_category <- attribute
+          saved_category <- seed_attribute
+          saved_geo <- geo_colname
         }
       }
       
@@ -193,7 +179,7 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
     position <- which(saved_gap_tbl$rel_gap == rel_gap)[1]
     message("Max Rel Gap:", rel_gap)
     message("Absolute Gap:", saved_gap_tbl$abs_gap[position])
-    message("cluster:", saved_gap_tbl$cluster[position])
+    message(saved_geo, ": ", saved_gap_tbl$geo[position])
     message("Category:", saved_category)
     utils::flush.console()
   }
@@ -203,63 +189,114 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
   
 }
 
-#' Check for complete seed table
+#' Check seed and target tables for completeness
 #' 
 #' @description Given seed and targets, checks to make sure that at least one
 #'   observation of each marginal category exists in the seed table.  Otherwise,
 #'   ipf/ipu would produce wrong answers without throwing errors.
 #'
-#' @param seed \code{data.frame} Seed table
-#' 
-#' @param targets \code{list} Target tables
+#' @inheritParams ipu
 
-check_seed <- function(seed, targets){
+check_tables <- function(hh_seed, hh_targets, per_seed, per_targets){
   
   # Check check that seed and target are provided
-  if (is.null(seed)) {
-    stop("Seed table not provided")
+  if (is.null(hh_seed)) {
+    stop("hh_seed table not provided")
   }
-  if (is.null(targets)) {
-    stop("Targets not provided")
+  if (is.null(hh_targets)) {
+    stop("hh_targets not provided")
+  }
+  if (is.null(per_seed)) {
+    stop("per_seed table not provided")
+  }
+  if (is.null(per_targets)) {
+    stop("per_targets not provided")
   }
   
   # Check that there are no NA values in seed or targets
-  if (any(is.na(unlist(seed)))) {
-    stop("A seed table contains NAs")
+  if (any(is.na(unlist(hh_seed)))) {
+    stop("hh_seed table contains NAs")
   }
-  if (any(is.na(unlist(targets)))) {
-    stop("A targets table contains NAs")
+  if (any(is.na(unlist(hh_targets)))) {
+    stop("hh_targets table contains NAs")
+  }
+  if (any(is.na(unlist(per_seed)))) {
+    stop("per_seed table contains NAs")
+  }
+  if (any(is.na(unlist(per_targets)))) {
+    stop("per_targets table contains NAs")
   }
   
-  # Check that at least one observation of each marginal category exists
-  # in the seed table.  Otherwise, the process produces wrong answers without
-  # throwing errors.
-  for (name in names(targets)) {
-    col_names <- colnames(targets[[name]])
-    col_names <- type.convert(col_names[!col_names == "cluster"], as.is = TRUE)
+  # Check that the person seed table does not have any geo columns
+  check <- grepl("geo_", colnames(per_seed))
+  if (any(check)) {
+    stop("Do not include geo fields in the per_seed table (hh_seed only).")
+  }
+  
+  # check hh tables for completeness
+  for (name in names(hh_targets)) {
+    tbl <- hh_targets[[name]]
     
-    test <- match(col_names, seed[[name]])
-    if (any(is.na(test))) {
-      prob_cat <- col_names[which(is.na(test))]
-      stop("Marginal ", name, "; category ", prob_cat[1], " is missing from seed table")
+    # Check that each target table has a geo field
+    check <- grepl("geo_", colnames(tbl))
+    if (!any(check)) {
+      stop("hh_target table '", name, "' does not have a geo column (must start with 'geo_')")
+    }
+    
+    # Get the name of the geo field
+    pos <- grep("geo_", colnames(tbl))
+    geo_colname <- colnames(tbl)[pos]
+    
+    # Get vector of other column names
+    col_names <- colnames(tbl)
+    col_names <- type.convert(col_names[!col_names == geo_colname], as.is = TRUE)
+    
+    for (geo in hh_seed[, geo_colname]){
+      test <- match(col_names, hh_seed[[name]][hh_seed[, geo_colname] == geo])
+      if (any(is.na(test))) {
+        prob_cat <- col_names[which(is.na(test))]
+        stop(
+          "Marginal ", name, "; category ", prob_cat[1], " is missing from ",
+          geo_colname, " ", geo, " in the hh_seed table."
+        )
+      }   
     }
   }
   
-  # If the seed table includes a cluster column (assigning certain seed
-  # records to specific clusters), repeat the above test to make sure that
-  # each cluster has every observation.
-  if ("cluster" %in% colnames(seed)){
-    for (name in names(targets)) {
-      col_names <- colnames(targets[[name]])
-      col_names <- type.convert(col_names[!col_names == "cluster"], as.is = TRUE)
-      
-      for (cluster in seed$cluster){
-        test <- match(col_names, seed[[name]][seed$cluster == cluster])
-        if (any(is.na(test))) {
-          prob_cat <- col_names[which(is.na(test))]
-          stop("Marginal ", name, "; category ", prob_cat[1], " is missing from cluster ", cluster, " in the seed table.")
-        }   
-      }
+  # check the per tables for completeness
+  for (name in names(per_targets)) {
+    tbl <- per_targets[[name]]
+    
+    # Check that each target table has a geo field
+    check <- grepl("geo_", colnames(tbl))
+    if (!any(check)) {
+      stop("hh_target table '", name, "' does not have a geo column (must start with 'geo_')")
+    }
+    
+    # Get the name of the geo field
+    pos <- grep("geo_", colnames(tbl))
+    geo_colname <- colnames(tbl)[pos]
+    
+    # Add the geo field from the hh_seed before checking
+    per_seed <- per_seed %>%
+      dplyr::left_join(
+        hh_seed %>% dplyr::select(hhid, geo_colname),
+        by = "hhid"
+      )
+    
+    # Get vector of other column names
+    col_names <- colnames(tbl)
+    col_names <- type.convert(col_names[!col_names == geo_colname], as.is = TRUE)
+    
+    for (geo in per_seed[, geo_colname]){
+      test <- match(col_names, per_seed[[name]][per_seed[, geo_colname] == geo])
+      if (any(is.na(test))) {
+        prob_cat <- col_names[which(is.na(test))]
+        stop(
+          "Marginal ", name, "; category ", prob_cat[1], " is missing from ",
+          geo_colname, " ", geo, " in the per_seed table."
+        )
+      }   
     }
   }
 }
