@@ -9,8 +9,6 @@
 #' 
 #' @references \url{http://www.scag.ca.gov/Documents/PopulationSynthesizerPaper_TRB.pdf}
 #' 
-#' @inheritParams ipf
-#' 
 #' @param hh_seed Same as \code{seed} in \link[ipfr]{ipf}. Each row is a
 #' household. Must contain an \code{hhid} column.
 #' 
@@ -28,13 +26,32 @@
 #'   require more iterations but are less likely to overfit a single marginal
 #'   distribution at the expense of the others. Defaults to 0.75.
 #' 
+#' @param relative_gap After each iteration, the weights are compared to the
+#' previous weights and an RMSE metric is calculated. If the RMSE is less than
+#' the \code{relative_gap} threshold, then the process terminates.
+#' 
+#' @param max_iterations maximimum number of iterations to perform, even if 
+#'    \code{relative_gap} is not reached.
+#'    
+#' @param absolute_diff Upon completion, the \code{ipu()} function will report
+#'   the worst-performing marginal category and geography based on the percent
+#'   difference from the target. \code{absolute_diff} is a threshold below which
+#'   percent differences don't matter.
+#'   
+#'   For example, if if a target value was 2, and the expanded weights equaled
+#'   1, that's a 100% difference, but is not important because the absolute value
+#'   is only 1.
+#'   
+#'   Defaults to 10.
+#'   
+#' 
 #' @return the \code{hh_seed} with a revised weight column.
 #' 
 #' @export
 #' 
 #' @importFrom magrittr "%>%"
 ipu <- function(hh_seed, hh_targets, per_seed, per_targets, damp_factor = .75,
-                relative_gap = 0.01, absolute_gap = 1, max_iterations = 100,
+                relative_gap = 0.01,max_iterations = 100, absolute_diff = 10,
                 min_weight = .0001, verbose = FALSE){
   
   # Check hh and person tables
@@ -134,8 +151,8 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets, damp_factor = .75,
         dplyr::select(-factor)
     }
     
-    # Determine relative gaps (by geo field)
-    rel_gap <- 0
+    # Determine percent differences (by geo field)
+    pct_diff <- 0
     for (seed_attribute in seed_attribute_cols) {
       # create lookups for targets list
       target_tbl_name <- strsplit(seed_attribute, ".", fixed = TRUE)[[1]][1]
@@ -147,7 +164,7 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets, damp_factor = .75,
       pos <- grep("geo_", colnames(target_tbl))
       geo_colname <- colnames(target_tbl)[pos]
       
-      gap_tbl <- final %>%
+      diff_tbl <- final %>%
         dplyr::filter((!!as.name(seed_attribute)) > 0) %>%
         dplyr::left_join(target_tbl, by = geo_colname) %>%
         dplyr::select(
@@ -155,20 +172,20 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets, damp_factor = .75,
         ) %>%
         dplyr::group_by(geo) %>%
         dplyr::mutate(
-          abs_gap = abs((target - sum(attr * weight))),
-          rel_gap = abs_gap / (target + .0000001) # avoid dividing by zero
+          abs_diff = abs((target - sum(attr * weight))),
+          pct_diff = abs_diff / (target + .0000001) # avoid dividing by zero
         ) %>%
-        # Removes rows where the absolute gap is smaller than 'absolute_gap'
-        dplyr::filter(abs_gap > absolute_gap) %>%
+        # Removes rows where the absolute gap is smaller than 'absolute_diff'
+        dplyr::filter(abs_diff > absolute_diff) %>%
         dplyr::slice(1) %>%
         dplyr::ungroup()
       
-      # If any records are left in the gap_tbl, record worst relative gap and
-      # save that gap table for reporting out.
-      if (nrow(gap_tbl) > 0) {
-        if (max(gap_tbl$rel_gap) > rel_gap) {
-          rel_gap <- max(gap_tbl$rel_gap)
-          saved_gap_tbl <- gap_tbl
+      # If any records are left in the diff_tbl, record worst percent difference 
+      # and save that percent difference table for reporting.
+      if (nrow(diff_tbl) > 0) {
+        if (max(diff_tbl$pct_diff) > pct_diff) {
+          pct_diff <- max(diff_tbl$pct_diff)
+          saved_diff_tbl <- diff_tbl
           saved_category <- seed_attribute
           saved_geo <- geo_colname
         }
@@ -177,16 +194,23 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets, damp_factor = .75,
     }
     
     # Test for convergence
-    converged <- ifelse(rel_gap <= relative_gap, TRUE, FALSE)
+    if (iter > 1) {
+      rmse <- mlr::measureRMSE(prev_weights, final$weight)
+      converged <- ifelse(rmse <= relative_gap, TRUE, FALSE)
+    }
+    prev_weights <- final$weight
     iter <- iter + 1
   }
   
   if (verbose) {
-    position <- which(saved_gap_tbl$rel_gap == rel_gap)[1]
-    message("Max Rel Gap:", rel_gap)
-    message("Absolute Gap:", saved_gap_tbl$abs_gap[position])
-    message(saved_geo, ": ", saved_gap_tbl$geo[position])
-    message("Category:", saved_category)
+    message("Relative Gap: ", rmse)
+    message(ifelse(converged, "IPU converged", "IPU did not converge"))
+    message("Worst marginal stats:")
+    position <- which(saved_diff_tbl$pct_diff == pct_diff)[1]
+    message("Category: ", saved_category)
+    message(saved_geo, ": ", saved_diff_tbl$geo[position])
+    message("Max % Diff: ", round(pct_diff * 100, 2), "%")
+    message("Absolute Diff: ", round(saved_diff_tbl$abs_diff[position], 2))
     utils::flush.console()
   }
   
@@ -306,3 +330,5 @@ check_tables <- function(hh_seed, hh_targets, per_seed, per_targets){
     }
   }
 }
+
+

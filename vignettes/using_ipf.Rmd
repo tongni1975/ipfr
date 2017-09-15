@@ -401,7 +401,7 @@ per_targets$age_group <- data_frame(
 )
 ```
 
-Call the ipf function.
+Call the ipu function.
 
 ```{r}
 result <- ipu(hh_seed, hh_targets, per_seed, per_targets,
