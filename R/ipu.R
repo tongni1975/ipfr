@@ -38,6 +38,12 @@
 #'   
 #'   Defaults to 10.
 #'   
+#' @param min_weight Minimum weight to allow in any cell to prevent zero weights.
+#'    Set to .0001 by default.  Should be arbitrarily small compared to your 
+#'    seed table weights.
+#'   
+#' @param verbose Print details on the maximum expansion factor with each 
+#'    iteration? Default \code{FALSE}. 
 #' 
 #' @return the \code{hh_seed} with a revised weight column.
 #' 

@@ -5,7 +5,7 @@
 \title{Iterative Proportional Updating}
 \usage{
 ipu(hh_seed, hh_targets, per_seed, per_targets, relative_gap = 0.01,
-  max_iterations = 100, absolute_diff = 10, min_weight = 0.0001,
+  max_iterations = 100, absolute_diff = 10, min_weight = 1e-04,
   verbose = FALSE)
 }
 \arguments{
@@ -38,6 +38,13 @@ For example, if if a target value was 2, and the expanded weights equaled
 is only 1.
 
 Defaults to 10.}
+
+\item{min_weight}{Minimum weight to allow in any cell to prevent zero weights.
+Set to .0001 by default.  Should be arbitrarily small compared to your 
+seed table weights.}
+
+\item{verbose}{Print details on the maximum expansion factor with each 
+iteration? Default \code{FALSE}.}
 }
 \value{
 the \code{hh_seed} with a revised weight column.
