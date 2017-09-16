@@ -93,28 +93,36 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets, damp_factor = .75,
     )
   
   # combine the hh and per seed tables into a single table
+  # and add the geo information back.
   seed <- hh_seed_mod %>%
     dplyr::left_join(per_seed_mod, by = "hhid") %>%
-    dplyr::mutate(weight = 1)
+    dplyr::mutate(weight = 1)  %>%
+    dplyr::left_join(geo_equiv, by = "hhid")
   
   # store a vector of attribute column names to loop over later.
   # don't include 'hhid' or 'weight' in the vector.
+  geo_pos <- grep("geo_", colnames(seed))
   hhid_pos <- grep("hhid", colnames(seed))
   weight_pos <- grep("weight", colnames(seed))
-  seed_attribute_cols <- colnames(seed)[-c(hhid_pos, weight_pos)]
+  seed_attribute_cols <- colnames(seed)[-c(geo_pos, hhid_pos, weight_pos)]
   
-  # modify the targets to match the new seed column names
+  # modify the targets to match the new seed column names and
+  # join them to the seed table
   targets <- c(hh_targets, per_targets)
   for (name in names(targets)) {
-    targets[[name]] <- targets[[name]] %>%
+    # targets[[name]] <- targets[[name]] %>%
+    temp <- targets[[name]] %>%
       tidyr::gather(key = "key", value = "target", -dplyr::starts_with("geo_")) %>%
-      dplyr::mutate(key = paste0(!!name, ".", key, ".target"))
+      dplyr::mutate(key = paste0(!!name, ".", key, ".target")) %>%
+      spread(key = key, value = target)
+    
+    # Get the name of the geo column
+    pos <- grep("geo_", colnames(temp))
+    geo_colname <- colnames(temp)[pos]
+    
+    seed <- seed %>%
+      left_join(temp, by = geo_colname)
   }
-  
-  # Create a copy of the seed table that will have the final results.
-  # Add back in the geo information which will be needed for joining.
-  final <- seed %>%
-    dplyr::left_join(geo_equiv, by = "hhid")
   
   iter <- 1
   converged <- FALSE
@@ -124,26 +132,25 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets, damp_factor = .75,
       # create lookups for targets list
       target_tbl_name <- strsplit(seed_attribute, ".", fixed = TRUE)[[1]][1]
       target_name <- paste0(seed_attribute, ".", "target")
-      target_tbl <- targets[[target_tbl_name]] %>%
-        dplyr::filter(key == target_name)
+      target_tbl <- targets[[target_tbl_name]]
       
       # Get the name of the geo column
       pos <- grep("geo_", colnames(target_tbl))
       geo_colname <- colnames(target_tbl)[pos]
       
-      # Join the target table to the seed table
-      fac_tbl <- final %>%
+      # Calculate adjustment factor
+      fac_tbl <- seed %>%
         dplyr::filter((!!as.name(seed_attribute)) > 0) %>%
-        dplyr::left_join(target_tbl, by = geo_colname) %>%
         dplyr::select(
-          geo = !!geo_colname, hhid, attr = !!seed_attribute, weight, target
+          geo = !!geo_colname, hhid, attr = !!seed_attribute, weight, 
+          target = !!target_name
         ) %>%
         dplyr::group_by(geo) %>%
         dplyr::mutate(factor = (target) / sum(attr * weight) * damp_factor) %>%
         dplyr::ungroup() %>%
         dplyr::select(hhid, factor)
       
-      final <- final %>%
+      seed <- seed %>%
         dplyr::left_join(fac_tbl, by = "hhid") %>%
         dplyr::mutate(weight = ifelse(!is.na(factor), weight * factor, weight)) %>%
         # Implement the floor on minimum weight
@@ -157,18 +164,17 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets, damp_factor = .75,
       # create lookups for targets list
       target_tbl_name <- strsplit(seed_attribute, ".", fixed = TRUE)[[1]][1]
       target_name <- paste0(seed_attribute, ".", "target")
-      target_tbl <- targets[[target_tbl_name]] %>%
-        dplyr::filter(key == target_name)
+      target_tbl <- targets[[target_tbl_name]]
       
       # Get the name of the geo column
       pos <- grep("geo_", colnames(target_tbl))
       geo_colname <- colnames(target_tbl)[pos]
       
-      diff_tbl <- final %>%
+      diff_tbl <- seed %>%
         dplyr::filter((!!as.name(seed_attribute)) > 0) %>%
-        dplyr::left_join(target_tbl, by = geo_colname) %>%
         dplyr::select(
-          geo = !!geo_colname, hhid, attr = !!seed_attribute, weight, target
+          geo = !!geo_colname, hhid, attr = !!seed_attribute, weight,
+          target = !!target_name
         ) %>%
         dplyr::group_by(geo) %>%
         dplyr::mutate(
@@ -195,10 +201,10 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets, damp_factor = .75,
     
     # Test for convergence
     if (iter > 1) {
-      rmse <- mlr::measureRMSE(prev_weights, final$weight)
+      rmse <- mlr::measureRMSE(prev_weights, seed$weight)
       converged <- ifelse(rmse <= relative_gap, TRUE, FALSE)
     }
-    prev_weights <- final$weight
+    prev_weights <- seed$weight
     iter <- iter + 1
   }
   
@@ -214,7 +220,7 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets, damp_factor = .75,
     utils::flush.console()
   }
   
-  hh_seed$weight <- final$weight
+  hh_seed$weight <- seed$weight
   return(hh_seed)
   
 }
