@@ -4,8 +4,7 @@
 #' disparate sets of marginals need to be satisfied that do not agree on a
 #' single total. A common example is balance population data using household-
 #' and person-level marginal controls. This could be for survey expansion or
-#' synthetic population creation. The original Arizona IPU method is improved
-#' by dampening the adjustment factor.
+#' synthetic population creation.
 #' 
 #' @references \url{http://www.scag.ca.gov/Documents/PopulationSynthesizerPaper_TRB.pdf}
 #' 
@@ -20,11 +19,6 @@
 #' 
 #' @param per_targets Similar to \code{targets} from \link[ipfr]{ipf}, but for
 #' person-level targets.
-#' 
-#' @param damp_factor Should be a number between 0 and 1. Reduces the adjustment
-#'   factor calculated in each iteration before updating weights. Lower values
-#'   require more iterations but are less likely to overfit a single marginal
-#'   distribution at the expense of the others. Defaults to 0.75.
 #' 
 #' @param relative_gap After each iteration, the weights are compared to the
 #' previous weights and an RMSE metric is calculated. If the RMSE is less than
@@ -50,7 +44,7 @@
 #' @export
 #' 
 #' @importFrom magrittr "%>%"
-ipu <- function(hh_seed, hh_targets, per_seed, per_targets, damp_factor = .75,
+ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
                 relative_gap = 0.01,max_iterations = 100, absolute_diff = 10,
                 min_weight = .0001, verbose = FALSE){
   
@@ -147,7 +141,7 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets, damp_factor = .75,
         ) %>%
         dplyr::group_by(geo) %>%
         dplyr::mutate(
-          factor = target / sum(attr * weight) * damp_factor,
+          factor = target / sum(attr * weight),
           weight = ifelse(attr > 0, weight * factor, weight),
           # Implement the floor on minimum weight
           weight = pmax(weight, min_weight)

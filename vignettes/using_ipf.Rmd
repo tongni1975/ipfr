@@ -318,6 +318,7 @@ attributes that describe people (like age). This is possible with `ipfr`.
 First consider a household table of four households with varying sizes.
 
 ```{r}
+# generate all combinations of size, vehicles, and workers
 hh_seed <- expand.grid(
   geo_cluster = c(1, 2, 3),
   siz = c(1, 2, 3, 4),
@@ -325,6 +326,8 @@ hh_seed <- expand.grid(
   wrk = c(0, 1, 2)
 ) %>% 
   tbl_df() %>%
+  # Remove impossible combinations
+  filter(wrk <= siz) %>%
   mutate(hhid = seq(1, nrow(.))) %>%
   select(geo_cluster, hhid, siz, veh, wrk)
 
@@ -405,8 +408,7 @@ Call the ipu function.
 
 ```{r}
 result <- ipu(hh_seed, hh_targets, per_seed, per_targets,
-              damp_factor = 1, max_iterations = 50,
-              verbose = TRUE)
+              max_iterations = 100, verbose = TRUE)
 
 result %>%
   head() %>%
@@ -531,8 +533,8 @@ per_targets$age_group <- per_targets$age_group %>%
 Run `ipu()`.
 
 ```{r}
-result <- ipu(hh_seed, hh_targets, per_seed, per_targets, damp_factor = 1,
-              verbose = TRUE, max_iterations = 10)
+result <- ipu(hh_seed, hh_targets, per_seed, per_targets,
+              verbose = TRUE, max_iterations = 100)
 
 result %>%
   head() %>%
