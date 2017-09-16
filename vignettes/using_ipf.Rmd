@@ -309,283 +309,165 @@ that basic IPF procedure, all marginal distributions must describe the same thin
 (e.g. households). IPU allows you to say, for example, that a zone needs a total
 household count of 500, but also needs 800 people.
 
-## Example 1: Combining Household and Person Marginals
+## Example 1: The Arizona Paper Example
 
 In household survey expansion, it is common to want to control for certain
 features that describe households, (like size), while controlling for other
 attributes that describe people (like age). This is possible with `ipfr`.
 
-First consider a household table of four households with varying sizes.
+This example is taken directly from the Arizona paper on page 20:
+http://www.scag.ca.gov/Documents/PopulationSynthesizerPaper_TRB.pdf
 
-```{r}
-# generate all combinations of size, vehicles, and workers
-hh_seed <- expand.grid(
-  geo_cluster = c(1, 2, 3),
-  siz = c(1, 2, 3, 4),
-  veh = c(0, 1, 2),
-  wrk = c(0, 1, 2)
-) %>% 
-  tbl_df() %>%
-  # Remove impossible combinations
-  filter(wrk <= siz) %>%
-  mutate(hhid = seq(1, nrow(.))) %>%
-  select(geo_cluster, hhid, siz, veh, wrk)
+In this example, household type could represent size (e.g. 1-person and 2-person
+households). Person type could represent age groups (e.g. under 18, between
+18 and 50, and over 50).
 
-hh_seed[c(1:3, 45:48), ] %>%
-  htmlTable(
-    rnames = FALSE, caption = "Survey Household Table"
-  )
-```
+```{r example 1 inputs}
+hh_seed <- data_frame(
+  geo_region = 1,
+  hhid = c(1:8),
+  hhtype = c(1, 1, 1, 2, 2, 2, 2, 2)
+)
 
-That household table has an associated person table shown below. `age_group`
-takes on values between 1-4, and for clarity, let's say they represent the
-following:
+per_seed <- data_frame(
+  hhid = c(1, 1, 1, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 7, 7, 7, 7, 7, 8, 8),
+  pertype = c(1, 2, 3, 1, 3, 1, 1, 2, 1, 3, 3, 2, 2, 3, 1, 2, 1, 1, 2, 3, 3, 1, 2)
+)
 
-  * ag_1 Under 18
-  * ag_2 Between 18 and 25
-  * ag_3 Between 25 and 50
-  * ag_4 Over 50
-
-```{r}
-# pick a random number of persons per household
-per_seed <- hh_seed %>%
-  select(hhid, siz)
-
-# expand the data frame to be one row per person and pick a random
-# age group.
-per_seed <- per_seed[rep(per_seed$hhid, per_seed$siz), ] %>%
-  group_by(hhid) %>%
-  mutate(
-    perid = seq(1, n()),
-    age_group = sample(1:4, n(), replace = TRUE),
-    age_group = paste0("ag_", age_group)
-  ) %>%
-  select(-siz) %>%
-  ungroup()
-
-per_seed %>%
-  head() %>%
-  htmlTable(
-    rnames = FALSE, caption = "Survey Person Table"
-  )
-```
-
-Create separate targets for households and persons.
-
-```{r}
 hh_targets <- list()
-hh_targets$siz <- data_frame(
-  geo_cluster = c(1, 2, 3),
-  `1` = c(100, 150, 0),
-  `2` = c(100, 100, 0),
-  `3` = c(150, 100, 0),
-  `4` = c(150, 150, 0)
-)
-hh_targets$wrk <- data_frame(
-  geo_cluster = c(1, 2, 3),
-  `0` = c(100, 100, 0),
-  `1` = c(150, 100, 0),
-  `2` = c(250, 300, 0)
-)
-hh_targets$veh <- data_frame(
-  geo_cluster = c(1, 2, 3),
-  `0` = c(75, 175, 0),
-  `1` = c(175, 75, 0),
-  `2` = c(250, 250, 0)
+hh_targets$hhtype <- data_frame(
+  geo_region = 1,
+  `1` = 35,
+  `2` = 65
 )
 
 per_targets <- list()
-per_targets$age_group <- data_frame(
-  geo_cluster = c(1, 2, 3),
-  ag_1 = c(100, 150, 0),
-  ag_2 = c(300, 250, 0),
-  ag_3 = c(100, 150, 0),
-  ag_4 = c(300, 250, 0)
+per_targets$pertype <- data_frame(
+  geo_region = 1,
+  `1` = 91,
+  `2` = 65,
+  `3` = 104
 )
 ```
 
-Call the ipu function.
-
-```{r}
-result <- ipu(hh_seed, hh_targets, per_seed, per_targets,
-              max_iterations = 100, verbose = TRUE)
-
-result %>%
-  head() %>%
-  mutate(weight = round(weight, 2)) %>%
-  htmlTable(
-    rnames = FALSE, caption = "IPF Result"
-  )
+```{r example 1 ipu}
+result <- ipu(hh_seed, hh_targets, per_seed, per_targets, verbose = TRUE,
+              relative_gap = .0001, max_iterations = 600)
 ```
 
-After running for the default of 50 iterations, the weights
-are nearly balanced for both persons and households. The table
-below shows that the total number of households by cluster
-is nearing the target.
+After running for 415 iterations, the results shown below match those found in
+the paper. Running to a tighter convergence would result in an exact match, but
+would take longer.
 
-```{r}
-# summarize the hh targets to get total hh per cluster
-tot_hh_target <- hh_targets$siz %>%
-  gather(key = siz, value = target, -geo_cluster) %>%
-  group_by(geo_cluster) %>%
-  summarize(target = sum(target))
+```{r example 1 results}
+head(result)
 
-result %>%
-  group_by(geo_cluster) %>%
-  summarize(weight = round(sum(weight), 0)) %>%
-  left_join(tot_hh_target, by = "geo_cluster")
+result %>% group_by(hhtype) %>% summarize(weight = sum(weight))
 ```
 
-The second table below shows that the number of persons per
-cluster is also nearing its target.
 
-```{r}
-# summarize the person targets to get total persons
-# per cluster
-tot_per_target <- per_targets$age_group %>%
-  gather(key = age_group, value = target, -geo_cluster) %>%
-  group_by(geo_cluster) %>%
-  summarize(target = sum(target))
-  
-# Create a comparison table to the result
-per_seed %>%
-  left_join(
-    result %>% select(hhid, weight, geo_cluster),
-    by = "hhid"
-  ) %>%
-  group_by(geo_cluster) %>%
-  summarize(weight = round(sum(weight), 0)) %>%
-  left_join(tot_per_target, by = "geo_cluster") %>%
-  htmlTable(
-    rnames = FALSE, caption = "Comparing Persons per Cluster"
-  )
-```
+## Example 3: Different Geographies
 
-The final table shows more detail and compares the age
-distributions by cluster.
-
-```{r}
-# summarize the person targets to get persons by age
-tot_per_target <- per_targets$age_group %>%
-  gather(key = age_group, value = target, -geo_cluster) %>%
-  group_by(geo_cluster, age_group) %>%
-  summarize(target = sum(target))
-
-per_seed %>%
-  left_join(
-    result %>% select(hhid, weight, geo_cluster),
-    by = "hhid"
-  ) %>%
-  group_by(geo_cluster, age_group) %>%
-  summarize(weight = round(sum(weight), 0)) %>%
-  left_join(
-    tot_per_target, 
-    by = c("geo_cluster" = "geo_cluster", "age_group" = "age_group")
-  ) %>%
-  htmlTable(
-    rnames = FALSE,
-    caption = "Comparing Persons per Cluster and Age"
-  )
-```
-
-## Example 2: Different Geographies
-
-One of the latest enhancements to `ipu()` is to allow different geographies to
-be specified for different marginal tables. There are a few rules that make
-this possible, but in short, the geo field on each target table tells the
-algorithm which scale to constrain to.
+`ipu()` allows different geographies to be specified for different marginal
+tables. There are a few rules that make this possible, but in short, the geo
+field on each target table tells the algorithm which scale to constrain to.
 
 All of the following rules are checked by the algorithm and you will get a
 message telling you if you violated one.
 
+  * The household seed table must contain all geo fields used by any target table
+    and the `hhid` field.
   * All fields that designate geographies must start with "geo_"
     * geo_cluster
     * geo_region
     * geo_state
-  * The household seed table must contain all geo fields used by any target table
-    * (The household seed must still have the `hhid` column.)
-  * Do **not** put any geo fields on the the person seed table.
+  * Do **not** put any geo fields on the person seed table.
     * This prevents any errors/differences from breaking the algorithm.
   * Each target table must have a geo field that is present in the hh_seed
 
-In this example, the household targets will be applied at the cluster level
-as before, but the person (age) targets will be applied at the region only.
+To demonstrate, the Arizona example from example 1 is modified to add two
+different clusters for household controls but to still control the person
+targets at the regional level.
 
-Add a `geo_region` field to the `hh_seed` table.
+```{r example 2 inputs}
+# Same as example 1
+hh_seed <- data_frame(
+  geo_region = 1,
+  hhid = c(1:8),
+  hhtype = c(1, 1, 1, 2, 2, 2, 2, 2)
+)
 
-```{r}
-hh_seed$geo_region <- 1
+per_seed <- data_frame(
+  hhid = c(1, 1, 1, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 7, 7, 7, 7, 7, 8, 8),
+  pertype = c(1, 2, 3, 1, 3, 1, 1, 2, 1, 3, 3, 2, 2, 3, 1, 2, 1, 1, 2, 3, 3, 1, 2)
+)
 
-hh_seed %>%
-  head() %>%
-  htmlTable(rnames = FALSE, caption = "hh_seed with geo_region")
+hh_targets <- list()
+hh_targets$hhtype <- data_frame(
+  geo_region = 1,
+  `1` = 35,
+  `2` = 65
+)
+
+per_targets <- list()
+per_targets$pertype <- data_frame(
+  geo_region = 1,
+  `1` = 91,
+  `2` = 65,
+  `3` = 104
+)
+
+# Modifying example 1 for example 2
+
+# Repeat the hh_seed to create cluster 1 and 2 households
+hh_seed <- hh_seed %>%
+  rename(geo_cluster = geo_region)
+hh_seed <- bind_rows(
+  hh_seed,
+  hh_seed %>% 
+    mutate(geo_cluster = 2, hhid = hhid + 8)
+)
+hh_seed$geo_region = 1
+
+# Repeat the household targets for two clusters
+hh_targets$hhtype <- bind_rows(hh_targets$hhtype, hh_targets$hhtype)
+hh_targets$hhtype <- hh_targets$hhtype %>%
+  rename(geo_cluster = geo_region) %>%
+  mutate(geo_cluster = c(1, 2))
+hh_targets
+
+# Repeat the per_seed to create cluster 1 and 2 persons
+per_seed <- bind_rows(
+  per_seed,
+  per_seed %>% 
+    mutate(hhid = hhid + 8)
+)
+
+# Double the regional person targets
+per_targets$pertype <- per_targets$pertype %>%
+  mutate_at(
+    .vars = vars("1", "2", "3"),
+    .funs = funs(. * 2)
+  )
+per_targets
 ```
 
-Collapse the person age target table to the region.
-
-```{r}
-per_targets$age_group <- per_targets$age_group %>%
-  summarize_all(.funs = sum) %>%
-  rename(geo_region = geo_cluster) %>%
-  mutate(geo_region = 1)
+```{r example 2 ipu}
+result <- ipu(hh_seed, hh_targets, per_seed, per_targets, verbose = TRUE,
+              relative_gap = .0001, max_iterations = 600)
 ```
 
-Run `ipu()`.
-
-```{r}
-result <- ipu(hh_seed, hh_targets, per_seed, per_targets,
-              verbose = TRUE, max_iterations = 100)
-
-result %>%
-  head() %>%
-  htmlTable(rnames = FALSE, caption = "Example 2 Result")
-```
-
-I stopped the algorithm early (10 iterations) to show results that are not quite
-exact. Even so, they are already close. Summarize the household marginal
-distribution with the worst gap:
-
-```{r}
-tot_hh_target <- hh_targets$siz %>%
-  gather(key = siz, value = target, -geo_cluster) %>%
-  filter(siz == 1) %>%
-  group_by(geo_cluster) %>%
-  summarize(target = sum(target))
-
-result %>%
-  filter(siz == 1) %>%
-  group_by(geo_cluster) %>%
-  summarize(weight = round(sum(weight), 0)) %>%
-  left_join(tot_hh_target, by = "geo_cluster")
-```
-
-
-A summary of the person attributes shows them nearly matching at the regional level.
-
-```{r}
-# summarize the person targets to get persons by age
-tot_per_target <- per_targets$age_group %>%
-  gather(key = age_group, value = target, -geo_region)
+```{r example 2 results}
+result %>% group_by(hhtype) %>% summarize(weight = sum(weight))
 
 per_seed %>%
   left_join(
     result %>% select(hhid, weight),
     by = "hhid"
   ) %>%
-  group_by(age_group) %>%
-  summarize(weight = round(sum(weight), 0)) %>%
-  left_join(
-    tot_per_target, 
-    by = c("age_group" = "age_group")
-  ) %>%
-  select(-geo_region) %>%
-  htmlTable(
-    rnames = FALSE,
-    caption = "Comparing Persons per Cluster and Age"
-  )
+  group_by(pertype) %>%
+  summarize(weight = sum(weight))
 ```
-
-
 
 # How IPFR addresses common IPF problems
 
