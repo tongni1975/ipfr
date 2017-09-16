@@ -198,19 +198,18 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
     }
     
     # Test for convergence
-    if(verbose){
-      cat("\r Finished iteration ", iter)
-    }
     if (iter > 1) {
       rmse <- mlr::measureRMSE(prev_weights, seed$weight)
       converged <- ifelse(rmse <= relative_gap, TRUE, FALSE)
+      if(verbose){
+        cat("\r Finished iteration ", iter, ". RMSE = ", rmse)
+      }
     }
     prev_weights <- seed$weight
     iter <- iter + 1
   }
   
   if (verbose) {
-    message("Relative Gap: ", rmse)
     message(ifelse(converged, "IPU converged", "IPU did not converge"))
     message("Worst marginal stats:")
     position <- which(saved_diff_tbl$pct_diff == pct_diff)[1]
