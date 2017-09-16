@@ -114,14 +114,14 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets, damp_factor = .75,
     temp <- targets[[name]] %>%
       tidyr::gather(key = "key", value = "target", -dplyr::starts_with("geo_")) %>%
       dplyr::mutate(key = paste0(!!name, ".", key, ".target")) %>%
-      spread(key = key, value = target)
+      tidyr::spread(key = key, value = target)
     
     # Get the name of the geo column
     pos <- grep("geo_", colnames(temp))
     geo_colname <- colnames(temp)[pos]
     
     seed <- seed %>%
-      left_join(temp, by = geo_colname)
+      dplyr::left_join(temp, by = geo_colname)
   }
   
   iter <- 1
@@ -132,30 +132,28 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets, damp_factor = .75,
       # create lookups for targets list
       target_tbl_name <- strsplit(seed_attribute, ".", fixed = TRUE)[[1]][1]
       target_name <- paste0(seed_attribute, ".", "target")
-      target_tbl <- targets[[target_tbl_name]]
       
       # Get the name of the geo column
+      target_tbl <- targets[[target_tbl_name]]
       pos <- grep("geo_", colnames(target_tbl))
       geo_colname <- colnames(target_tbl)[pos]
       
-      # Calculate adjustment factor
-      fac_tbl <- seed %>%
-        dplyr::filter((!!as.name(seed_attribute)) > 0) %>%
-        dplyr::select(
-          geo = !!geo_colname, hhid, attr = !!seed_attribute, weight, 
-          target = !!target_name
+      # Adjust weights
+      seed <- seed %>%
+        dplyr::mutate(
+          geo = !!as.name(geo_colname),
+          attr = !!as.name(seed_attribute),
+          target = !!as.name(target_name)
         ) %>%
         dplyr::group_by(geo) %>%
-        dplyr::mutate(factor = (target) / sum(attr * weight) * damp_factor) %>%
+        dplyr::mutate(
+          factor = target / sum(attr * weight) * damp_factor,
+          weight = ifelse(attr > 0, weight * factor, weight),
+          # Implement the floor on minimum weight
+          weight = pmax(weight, min_weight)
+        ) %>%
         dplyr::ungroup() %>%
-        dplyr::select(hhid, factor)
-      
-      seed <- seed %>%
-        dplyr::left_join(fac_tbl, by = "hhid") %>%
-        dplyr::mutate(weight = ifelse(!is.na(factor), weight * factor, weight)) %>%
-        # Implement the floor on minimum weight
-        dplyr::mutate(weight = pmax(weight, min_weight)) %>%
-        dplyr::select(-factor)
+        dplyr::select(-geo, -attr, -target, -factor)
     }
     
     # Determine percent differences (by geo field)
@@ -200,6 +198,9 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets, damp_factor = .75,
     }
     
     # Test for convergence
+    if(verbose){
+      cat("\r Finished iteration ", iter)
+    }
     if (iter > 1) {
       rmse <- mlr::measureRMSE(prev_weights, seed$weight)
       converged <- ifelse(rmse <= relative_gap, TRUE, FALSE)

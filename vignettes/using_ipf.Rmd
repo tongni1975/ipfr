@@ -404,11 +404,9 @@ per_targets$age_group <- data_frame(
 Call the ipu function.
 
 ```{r}
-start <- proc.time()
 result <- ipu(hh_seed, hh_targets, per_seed, per_targets,
               damp_factor = 1, max_iterations = 50,
               verbose = TRUE)
-proc.time() - start
 
 result %>%
   head() %>%
