@@ -2,17 +2,21 @@
 #' 
 #' @description A special case of iterative proportional fitting. It can satisfy
 #'   two, disparate sets of marginals that do not agree on a single total. A
-#'   common example is balance population data using household- and person-level
+#'   common example is balancing population data using household- and person-level
 #'   marginal controls. This could be for survey expansion or synthetic
-#'   population creation. The second set of marginal/seed data is optional.
+#'   population creation. The second set of marginal/seed data is optional, meaning
+#'   it can also be used for more basic IPF tasks.
+#'   
+#'   Vignette: \url{http://pbsag.github.io/ipfr/}
 #' 
 #' @references \url{http://www.scag.ca.gov/Documents/PopulationSynthesizerPaper_TRB.pdf}
 #' 
 #' @param primary_seed In population synthesis or household survey expansion, 
-#'   this would be the household seed table (each record would represent a
-#'   household). It could also be a trip table, where each row represents an
-#'   origin-destination pair. Must contain an \code{hhid} field that is unique
-#'   for each row. Must also contain a geography field that starts with "geo_".
+#'   this would be the household seed table (each record would represent a 
+#'   household). It could also be a trip table, where each row represents an 
+#'   origin-destination pair. Must contain a \code{pid} ("primary ID") field
+#'   that is unique for each row. Must also contain a geography field that
+#'   starts with "geo_".
 #' 
 #' @param primary_targets A \code{named list} of data frames.  Each name in the 
 #'   list defines a marginal dimension and must match a column from the 
@@ -24,7 +28,7 @@
 #' 
 #' @param secondary_seed Most commonly, if the primary_seed describes households, the 
 #'   secondary seed table would describe a unique person with each row. Must
-#'   also contain the \code{hhid} column that links each person to their 
+#'   also contain the \code{pid} column that links each person to their 
 #'   respective household in \code{primary_seed}. Must not contain any geography
 #'   fields (starting with "geo_").
 #' 
@@ -80,7 +84,7 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
   # Pull off the geo information into a separate equivalency table
   # to be used as needed.
   geo_equiv <- primary_seed %>%
-    dplyr::select(dplyr::starts_with("geo_"), "hhid")
+    dplyr::select(dplyr::starts_with("geo_"), "pid")
   primary_seed_mod <- primary_seed %>%
     dplyr::select(-dplyr::starts_with("geo_"))
   
@@ -88,8 +92,8 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
   # expand standard columns into dummy columns.
   col_names <- names(primary_targets)
   primary_seed_mod <- primary_seed_mod %>%
-    # Keep only the fields of interest (marginal columns and hhid)
-    dplyr::select(dplyr::one_of(c(col_names, "hhid"))) %>%
+    # Keep only the fields of interest (marginal columns and pid)
+    dplyr::select(dplyr::one_of(c(col_names, "pid"))) %>%
     # Convert to factors and then to dummy columns
     dplyr::mutate_at(
       .vars = col_names,
@@ -102,20 +106,20 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
     col_names <- names(secondary_targets)
     secondary_seed_mod <- secondary_seed %>%
       # Keep only the fields of interest
-      dplyr::select(dplyr::one_of(c(col_names, "hhid"))) %>%
+      dplyr::select(dplyr::one_of(c(col_names, "pid"))) %>%
       dplyr::mutate_at(
         .vars = col_names,
         .funs = dplyr::funs(as.factor(.))
       ) %>%
       mlr::createDummyFeatures() %>%
-      dplyr::group_by(hhid) %>%
+      dplyr::group_by(pid) %>%
       dplyr::summarize_all(
         .funs = sum
       )
     
     # combine the hh and per seed tables into a single table
     seed <- primary_seed_mod %>%
-      dplyr::left_join(secondary_seed_mod, by = "hhid")
+      dplyr::left_join(secondary_seed_mod, by = "pid")
   } else {
     seed <- primary_seed_mod
   }
@@ -123,14 +127,14 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
   # Add the geo information back.
   seed <- seed %>%
     dplyr::mutate(weight = 1)  %>%
-    dplyr::left_join(geo_equiv, by = "hhid")
+    dplyr::left_join(geo_equiv, by = "pid")
   
   # store a vector of attribute column names to loop over later.
-  # don't include 'hhid' or 'weight' in the vector.
+  # don't include 'pid' or 'weight' in the vector.
   geo_pos <- grep("geo_", colnames(seed))
-  hhid_pos <- grep("hhid", colnames(seed))
+  pid_pos <- grep("pid", colnames(seed))
   weight_pos <- grep("weight", colnames(seed))
-  seed_attribute_cols <- colnames(seed)[-c(geo_pos, hhid_pos, weight_pos)]
+  seed_attribute_cols <- colnames(seed)[-c(geo_pos, pid_pos, weight_pos)]
   
   # modify the targets to match the new seed column names and
   # join them to the seed table
@@ -201,7 +205,7 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
       diff_tbl <- seed %>%
         dplyr::filter((!!as.name(seed_attribute)) > 0) %>%
         dplyr::select(
-          geo = !!geo_colname, hhid, attr = !!seed_attribute, weight,
+          geo = !!geo_colname, pid, attr = !!seed_attribute, weight,
           target = !!target_name
         ) %>%
         dplyr::group_by(geo) %>%
@@ -353,8 +357,8 @@ check_tables <- function(primary_seed, primary_targets, secondary_seed = NULL, s
       # Add the geo field from the primary_seed before checking
       secondary_seed <- secondary_seed %>%
         dplyr::left_join(
-          primary_seed %>% dplyr::select(hhid, geo_colname),
-          by = "hhid"
+          primary_seed %>% dplyr::select(pid, geo_colname),
+          by = "pid"
         )
       
       # Get vector of other column names
