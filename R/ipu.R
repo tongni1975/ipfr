@@ -64,6 +64,25 @@
 #' 
 #' @export
 #' 
+#' @examples
+#' \dontrun{
+#' hh_seed <- data.frame(
+#'   hhid = c(1, 2, 3, 4),
+#'   siz = c(1, 2, 2, 1),
+#'   weight = c(1, 1, 1, 1),
+#'   geo_cluster = c(1, 1, 2, 2)
+#' )
+#' 
+#' hh_targets <- list()
+#' hh_targets$siz <- data.frame(
+#'   geo_cluster = c(1, 2),
+#'   `1` = c(75, 100),
+#'   `2` = c(25, 150)
+#' )
+#' 
+#' result <- ipu(hh_seed, hh_targets, max_iterations = 10)
+#' }
+#' 
 #' @importFrom magrittr "%>%"
 ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_targets = NULL,
                 relative_gap = 0.01, max_iterations = 100, absolute_diff = 10,
