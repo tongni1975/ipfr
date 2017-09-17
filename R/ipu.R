@@ -8,8 +8,6 @@
 #' 
 #' @references \url{http://www.scag.ca.gov/Documents/PopulationSynthesizerPaper_TRB.pdf}
 #' 
-#' @inheritParams ipf
-#' 
 #' @param hh_seed Same as \code{seed} in \link[ipfr]{ipf}. Each row is a
 #' household. Must contain an \code{hhid} column.
 #' 
@@ -22,13 +20,38 @@
 #' @param per_targets Similar to \code{targets} from \link[ipfr]{ipf}, but for
 #' person-level targets.
 #' 
+#' @param relative_gap After each iteration, the weights are compared to the
+#' previous weights and the %RMSE is calculated. If the %RMSE is less than
+#' the \code{relative_gap} threshold, then the process terminates.
+#' 
+#' @param max_iterations maximimum number of iterations to perform, even if 
+#'    \code{relative_gap} is not reached.
+#'    
+#' @param absolute_diff Upon completion, the \code{ipu()} function will report
+#'   the worst-performing marginal category and geography based on the percent
+#'   difference from the target. \code{absolute_diff} is a threshold below which
+#'   percent differences don't matter.
+#'   
+#'   For example, if if a target value was 2, and the expanded weights equaled
+#'   1, that's a 100% difference, but is not important because the absolute value
+#'   is only 1.
+#'   
+#'   Defaults to 10.
+#'   
+#' @param min_weight Minimum weight to allow in any cell to prevent zero weights.
+#'    Set to .0001 by default.  Should be arbitrarily small compared to your 
+#'    seed table weights.
+#'   
+#' @param verbose Print details on the maximum expansion factor with each 
+#'    iteration? Default \code{FALSE}. 
+#' 
 #' @return the \code{hh_seed} with a revised weight column.
 #' 
 #' @export
 #' 
 #' @importFrom magrittr "%>%"
 ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
-                relative_gap = 0.01, absolute_gap = 1, max_iterations = 50,
+                relative_gap = 0.01,max_iterations = 100, absolute_diff = 10,
                 min_weight = .0001, verbose = FALSE){
   
   # Check hh and person tables
@@ -70,28 +93,36 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
     )
   
   # combine the hh and per seed tables into a single table
+  # and add the geo information back.
   seed <- hh_seed_mod %>%
     dplyr::left_join(per_seed_mod, by = "hhid") %>%
-    dplyr::mutate(weight = 1)
+    dplyr::mutate(weight = 1)  %>%
+    dplyr::left_join(geo_equiv, by = "hhid")
   
   # store a vector of attribute column names to loop over later.
   # don't include 'hhid' or 'weight' in the vector.
+  geo_pos <- grep("geo_", colnames(seed))
   hhid_pos <- grep("hhid", colnames(seed))
   weight_pos <- grep("weight", colnames(seed))
-  seed_attribute_cols <- colnames(seed)[-c(hhid_pos, weight_pos)]
+  seed_attribute_cols <- colnames(seed)[-c(geo_pos, hhid_pos, weight_pos)]
   
-  # modify the targets to match the new seed column names
+  # modify the targets to match the new seed column names and
+  # join them to the seed table
   targets <- c(hh_targets, per_targets)
   for (name in names(targets)) {
-    targets[[name]] <- targets[[name]] %>%
+    # targets[[name]] <- targets[[name]] %>%
+    temp <- targets[[name]] %>%
       tidyr::gather(key = "key", value = "target", -dplyr::starts_with("geo_")) %>%
-      dplyr::mutate(key = paste0(!!name, ".", key, ".target"))
+      dplyr::mutate(key = paste0(!!name, ".", key, ".target")) %>%
+      tidyr::spread(key = key, value = target)
+    
+    # Get the name of the geo column
+    pos <- grep("geo_", colnames(temp))
+    geo_colname <- colnames(temp)[pos]
+    
+    seed <- seed %>%
+      dplyr::left_join(temp, by = geo_colname)
   }
-  
-  # Create a copy of the seed table that will have the final results.
-  # Add back in the geo information which will be needed for joining.
-  final <- seed %>%
-    dplyr::left_join(geo_equiv, by = "hhid")
   
   iter <- 1
   converged <- FALSE
@@ -101,68 +132,64 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
       # create lookups for targets list
       target_tbl_name <- strsplit(seed_attribute, ".", fixed = TRUE)[[1]][1]
       target_name <- paste0(seed_attribute, ".", "target")
-      target_tbl <- targets[[target_tbl_name]] %>%
-        dplyr::filter(key == target_name)
       
       # Get the name of the geo column
+      target_tbl <- targets[[target_tbl_name]]
       pos <- grep("geo_", colnames(target_tbl))
       geo_colname <- colnames(target_tbl)[pos]
       
-      # Join the target table to the seed table
-      fac_tbl <- final %>%
-        dplyr::filter((!!as.name(seed_attribute)) > 0) %>%
-        dplyr::left_join(target_tbl, by = geo_colname) %>%
-        dplyr::select(
-          geo = !!geo_colname, hhid, attr = !!seed_attribute, weight, target
+      # Adjust weights
+      seed <- seed %>%
+        dplyr::mutate(
+          geo = !!as.name(geo_colname),
+          attr = !!as.name(seed_attribute),
+          target = !!as.name(target_name)
         ) %>%
         dplyr::group_by(geo) %>%
-        dplyr::mutate(factor = (target) / sum(attr * weight)) %>%
+        dplyr::mutate(
+          factor = target / sum(attr * weight),
+          weight = ifelse(attr > 0, weight * factor, weight),
+          # Implement the floor on minimum weight
+          weight = pmax(weight, min_weight)
+        ) %>%
         dplyr::ungroup() %>%
-        dplyr::select(hhid, factor)
-      
-      final <- final %>%
-        dplyr::left_join(fac_tbl, by = "hhid") %>%
-        dplyr::mutate(weight = ifelse(!is.na(factor), weight * factor, weight)) %>%
-        # Implement the floor on minimum weight
-        dplyr::mutate(weight = pmax(weight, min_weight)) %>%
-        dplyr::select(-factor)
+        dplyr::select(-geo, -attr, -target, -factor)
     }
     
-    # Determine relative gaps (by geo field)
-    rel_gap <- 0
+    # Determine percent differences (by geo field)
+    pct_diff <- 0
     for (seed_attribute in seed_attribute_cols) {
       # create lookups for targets list
       target_tbl_name <- strsplit(seed_attribute, ".", fixed = TRUE)[[1]][1]
       target_name <- paste0(seed_attribute, ".", "target")
-      target_tbl <- targets[[target_tbl_name]] %>%
-        dplyr::filter(key == target_name)
+      target_tbl <- targets[[target_tbl_name]]
       
       # Get the name of the geo column
       pos <- grep("geo_", colnames(target_tbl))
       geo_colname <- colnames(target_tbl)[pos]
       
-      gap_tbl <- final %>%
+      diff_tbl <- seed %>%
         dplyr::filter((!!as.name(seed_attribute)) > 0) %>%
-        dplyr::left_join(target_tbl, by = geo_colname) %>%
         dplyr::select(
-          geo = !!geo_colname, hhid, attr = !!seed_attribute, weight, target
+          geo = !!geo_colname, hhid, attr = !!seed_attribute, weight,
+          target = !!target_name
         ) %>%
         dplyr::group_by(geo) %>%
         dplyr::mutate(
-          abs_gap = abs((target - sum(attr * weight))),
-          rel_gap = abs_gap / (target + .0000001) # avoid dividing by zero
+          abs_diff = abs((target - sum(attr * weight))),
+          pct_diff = abs_diff / (target + .0000001) # avoid dividing by zero
         ) %>%
-        # Removes rows where the absolute gap is smaller than 'absolute_gap'
-        dplyr::filter(abs_gap > absolute_gap) %>%
+        # Removes rows where the absolute gap is smaller than 'absolute_diff'
+        dplyr::filter(abs_diff > absolute_diff) %>%
         dplyr::slice(1) %>%
         dplyr::ungroup()
       
-      # If any records are left in the gap_tbl, record worst relative gap and
-      # save that gap table for reporting out.
-      if (nrow(gap_tbl) > 0) {
-        if (max(gap_tbl$rel_gap) > rel_gap) {
-          rel_gap <- max(gap_tbl$rel_gap)
-          saved_gap_tbl <- gap_tbl
+      # If any records are left in the diff_tbl, record worst percent difference 
+      # and save that percent difference table for reporting.
+      if (nrow(diff_tbl) > 0) {
+        if (max(diff_tbl$pct_diff) > pct_diff) {
+          pct_diff <- max(diff_tbl$pct_diff)
+          saved_diff_tbl <- diff_tbl
           saved_category <- seed_attribute
           saved_geo <- geo_colname
         }
@@ -171,20 +198,30 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
     }
     
     # Test for convergence
-    converged <- ifelse(rel_gap <= relative_gap, TRUE, FALSE)
+    if (iter > 1) {
+      rmse <- mlr::measureRMSE(prev_weights, seed$weight)
+      pct_rmse <- rmse / mean(prev_weights) * 100
+      converged <- ifelse(pct_rmse <= relative_gap, TRUE, FALSE)
+      if(verbose){
+        cat("\r Finished iteration ", iter, ". %RMSE = ", pct_rmse)
+      }
+    }
+    prev_weights <- seed$weight
     iter <- iter + 1
   }
   
   if (verbose) {
-    position <- which(saved_gap_tbl$rel_gap == rel_gap)[1]
-    message("Max Rel Gap:", rel_gap)
-    message("Absolute Gap:", saved_gap_tbl$abs_gap[position])
-    message(saved_geo, ": ", saved_gap_tbl$geo[position])
-    message("Category:", saved_category)
+    message(ifelse(converged, "IPU converged", "IPU did not converge"))
+    message("Worst marginal stats:")
+    position <- which(saved_diff_tbl$pct_diff == pct_diff)[1]
+    message("Category: ", saved_category)
+    message(saved_geo, ": ", saved_diff_tbl$geo[position])
+    message("Max % Diff: ", round(pct_diff * 100, 2), "%")
+    message("Absolute Diff: ", round(saved_diff_tbl$abs_diff[position], 2))
     utils::flush.console()
   }
   
-  hh_seed$weight <- final$weight
+  hh_seed$weight <- seed$weight
   return(hh_seed)
   
 }
@@ -300,3 +337,5 @@ check_tables <- function(hh_seed, hh_targets, per_seed, per_targets){
     }
   }
 }
+
+

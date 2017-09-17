@@ -5,7 +5,7 @@
 \title{Iterative Proportional Updating}
 \usage{
 ipu(hh_seed, hh_targets, per_seed, per_targets, relative_gap = 0.01,
-  absolute_gap = 1, max_iterations = 50, min_weight = 0.0001,
+  max_iterations = 100, absolute_diff = 10, min_weight = 1e-04,
   verbose = FALSE)
 }
 \arguments{
@@ -21,20 +21,23 @@ respective household in \code{hh_seed}.}
 \item{per_targets}{Similar to \code{targets} from \link[ipfr]{ipf}, but for
 person-level targets.}
 
-\item{relative_gap}{target for convergence.  Maximum percent change to allow
-any seed weight to move by while considering the process converged.  By 
-default, if no weights change by more than 1%, the process has converged.
-The process is said to be converged if either \code{relative_gap} or 
-\code{absolute_gap} parameters have been met.}
-
-\item{absolute_gap}{target for convergence.  Maximum absolute change to allow
-any seed weight to move by while considering the process converged.  By 
-default, if no weights change by more than 10, the process has converged.
-The process is said to be converged if either \code{relative_gap} or 
-\code{absolute_gap} parameters have been met.}
+\item{relative_gap}{After each iteration, the weights are compared to the
+previous weights and the %RMSE is calculated. If the %RMSE is less than
+the \code{relative_gap} threshold, then the process terminates.}
 
 \item{max_iterations}{maximimum number of iterations to perform, even if 
-convergence is not reached.}
+\code{relative_gap} is not reached.}
+
+\item{absolute_diff}{Upon completion, the \code{ipu()} function will report
+the worst-performing marginal category and geography based on the percent
+difference from the target. \code{absolute_diff} is a threshold below which
+percent differences don't matter.
+
+For example, if if a target value was 2, and the expanded weights equaled
+1, that's a 100% difference, but is not important because the absolute value
+is only 1.
+
+Defaults to 10.}
 
 \item{min_weight}{Minimum weight to allow in any cell to prevent zero weights.
 Set to .0001 by default.  Should be arbitrarily small compared to your 
