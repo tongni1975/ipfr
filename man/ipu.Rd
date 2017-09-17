@@ -74,7 +74,7 @@ A special case of iterative proportional fitting. It can satisfy
 \examples{
 \dontrun{
 hh_seed <- data.frame(
-  hhid = c(1, 2, 3, 4),
+  pid = c(1, 2, 3, 4),
   siz = c(1, 2, 2, 1),
   weight = c(1, 1, 1, 1),
   geo_cluster = c(1, 1, 2, 2)

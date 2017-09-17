@@ -77,14 +77,17 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <ul>
 <li><a href="#introduction">Introduction</a></li>
 <li><a href="#ipu">IPU</a><ul>
-<li><a href="#example-1-simple-example">Example 1: Simple Example</a></li>
+<li><a href="#example-1-simple-example">Example 1: Simple Example</a><ul>
+<li><a href="#seed-table-creation">Seed table creation</a></li>
+<li><a href="#target-creation">Target creation</a></li>
+</ul></li>
 <li><a href="#example-2-the-arizona-paper-example">Example 2: The Arizona Paper Example</a></li>
 <li><a href="#example-3-using-multiple-geographies">Example 3: Using Multiple Geographies</a></li>
 </ul></li>
 <li><a href="#ipf">IPF</a><ul>
 <li><a href="#example-1-basics">Example 1: Basics</a><ul>
-<li><a href="#seed-table-creation">Seed table creation</a></li>
-<li><a href="#target-creation">Target creation</a></li>
+<li><a href="#seed-table-creation-1">Seed table creation</a></li>
+<li><a href="#target-creation-1">Target creation</a></li>
 <li><a href="#the-goal">The Goal</a></li>
 <li><a href="#using-ipf">Using IPF</a></li>
 <li><a href="#summarizing-results">Summarizing Results</a></li>
@@ -102,7 +105,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <div id="introduction" class="section level1">
 <h1>Introduction</h1>
-<p>This package provides a generic implimentation of the iterative proportional fitting algorithm or <a href="https://en.wikipedia.org/wiki/Iterative_proportional_fitting">IPF</a> in the <code>ipf()</code> function. It also provides an iterative proportional updating algorithm (<a href="http://www.scag.ca.gov/Documents/PopulationSynthesizerPaper_TRB.pdf">IPU</a>) for balancing household- and person-level marginals in the <code>ipu()</code> function.</p>
+<p>This package provides a generic implimentation of the iterative proportional fitting algorithm or <a href="https://en.wikipedia.org/wiki/Iterative_proportional_fitting">IPF</a> in the <code>ipf()</code> function. It also provides an iterative proportional updating algorithm based on on the paper from Arizona State University (<a href="http://www.scag.ca.gov/Documents/PopulationSynthesizerPaper_TRB.pdf">IPU</a>) for balancing household- and person-level marginals in the <code>ipu()</code> function.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(dplyr)
 <span class="kw">library</span>(tidyr)
 <span class="kw">library</span>(ipfr)
@@ -113,6 +116,20 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <p>Iterative proportional updating is a method developed by Arizona State University that allows the IPF procedure to match household- and person-level marginals. In the basic IPF procedure, all marginal distributions must describe the same thing (e.g. households). IPU allows you to say, for example, that a zone needs a total household count of 500, but also needs 800 people.</p>
 <div id="example-1-simple-example" class="section level2">
 <h2>Example 1: Simple Example</h2>
+<p>This example creates a random seed table and target values to illustrate how the package is used. The targets are specified for two separate geographies (<code>geo_clusters</code>). Any field name can be used as long as it:</p>
+<ul>
+<li>starts with “geo_”</li>
+<li>Is included in both the target table(s) and seed table</li>
+</ul>
+<p>This simple example only has one target marginal distribution, and could be solved directly without <code>ipu</code>. However, it is designed to show the basics needed to run the function.</p>
+<div id="seed-table-creation" class="section level3">
+<h3>Seed table creation</h3>
+<p>The seed table is the starting point for the IPF procedure. In this example, we make up some survey data.</p>
+<ul>
+<li>Each row represents a household</li>
+<li>The household ID column is named/renamed to <code>pid</code> (“primary ID”)</li>
+<li>The geography field is inlcluded and starts with “geo_” (<code>geo_cluster</code>)</li>
+</ul>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">hh_seed &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
   <span class="dt">pid =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>),
   <span class="dt">siz =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">1</span>),
@@ -162,17 +179,67 @@ Seed Table with Cluster Appended</td></tr>
 </tr>
 </tbody>
 </table>
-<p>New targets are specified for each cluster:</p>
+</div>
+<div id="target-creation" class="section level3">
+<h3>Target creation</h3>
+<p>The number of households by size (e.g., 1-person, 2-person, etc.) is referred to as a marginal distribution. Often, from the Census, we know the total number of households by each individual marginal. For example, we know the number of households by size:</p>
+<ul>
+<li>1 person households
+<ul>
+<li>75 in geographic cluster 1</li>
+<li>100 in cluster 2</li>
+</ul></li>
+<li>2 personshouseholds
+<ul>
+<li>25 in cluster 1</li>
+<li>150 in cluster 2</li>
+</ul></li>
+</ul>
+<p>This information becomes the target that the IPU process tries to match.</p>
+<p>Marginal targets are specified below for each cluster:</p>
+<ul>
+<li>The geography field <code>geo_cluster</code> matches the seed table</li>
+<li>The name of the table in the list links it to the <code>siz</code> column of the seed</li>
+<li>The column names are the values that show up in the seed’s <code>siz</code> column</li>
+</ul>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">hh_targets &lt;-<span class="st"> </span><span class="kw">list</span>()
 hh_targets$siz &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
   <span class="dt">geo_cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>),
   <span class="st">`</span><span class="dt">1</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">75</span>, <span class="dv">100</span>),
   <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">25</span>, <span class="dv">150</span>)
-)</code></pre></div>
-<p>Run <code>ipu()</code>. Note that it picks up a new error. When providing cluster values in the seed table, <code>ipfr</code> checks to make sure that every marginal category appears in every cluster. In this case, the full seed table does contain both size 1 and 2 records, but cluster 2 only has size 1.</p>
+)
+
+hh_targets$siz %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Target Table&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='3' style='text-align: left;'>
+Target Table</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>geo_cluster</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>1</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>75</td>
+<td style='text-align: center;'>25</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>2</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>100</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>150</td>
+</tr>
+</tbody>
+</table>
+<p>Run <code>ipu()</code>. Note that it throws an error. When providing cluster values in the seed table, <code>ipfr</code> checks to make sure that every marginal category appears in every cluster. In this case, the seed table does not have a 2-person household in cluster 2. This makes it impossible to match that marginal target.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets, <span class="dt">max_iterations =</span> <span class="dv">10</span>)</code></pre></div>
-<pre><code>## Error in check_tables(primary_seed, primary_targets): Marginal siz; category 2 is missing from geo_cluster 2 in the primary_seed table.</code></pre>
-<p>Fix the seed table and re-run <code>ipf</code>.</p>
+<pre><code>## Error in check_tables(primary_seed, primary_targets): Marginal siz, category 2 is missing from geo_cluster 2 in the primary_seed table.</code></pre>
+<p>Fix the seed table and re-run <code>ipu</code>. The results match the targets we provided.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">hh_seed &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
   <span class="dt">pid =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>),
   <span class="dt">siz =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">1</span>),
@@ -180,13 +247,65 @@ hh_targets$siz &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
   <span class="dt">geo_cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>)
 )
 
-result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets, <span class="dt">max_iterations =</span> <span class="dv">10</span>)</code></pre></div>
+result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets, <span class="dt">max_iterations =</span> <span class="dv">10</span>)
+
+result %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Result&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='4' style='text-align: left;'>
+Result</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>pid</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>siz</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>weight</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>geo_cluster</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>75</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>25</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>3</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>150</td>
+<td style='text-align: center;'>2</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>4</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>1</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>100</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>2</td>
+</tr>
+</tbody>
+</table>
+</div>
 </div>
 <div id="example-2-the-arizona-paper-example" class="section level2">
 <h2>Example 2: The Arizona Paper Example</h2>
 <p>In household survey expansion, it is common to want to control for certain features that describe households, (like size), while controlling for other attributes that describe people (like age). This is possible with the <code>ipu()</code> function.</p>
 <p>This example is taken directly from the Arizona paper on page 20: <a href="http://www.scag.ca.gov/Documents/PopulationSynthesizerPaper_TRB.pdf" class="uri">http://www.scag.ca.gov/Documents/PopulationSynthesizerPaper_TRB.pdf</a></p>
 <p>In this example, household type could represent size (e.g. 1-person and 2-person households). Person type could represent age groups (e.g. under 18, between 18 and 50, and over 50).</p>
+<p>The code block below re-creates the seed and target tables for both persons and households.</p>
+<ul>
+<li>Only a single geography is used (<code>geo_region</code>)</li>
+<li>Both seed tables have the <code>pid</code> field
+<ul>
+<li>The <code>pid</code> field in the persons seed table links to the household seed</li>
+</ul></li>
+</ul>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">hh_seed &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
   <span class="dt">geo_region =</span> <span class="dv">1</span>,
   <span class="dt">pid =</span> <span class="kw">c</span>(<span class="dv">1</span>:<span class="dv">8</span>),
@@ -213,8 +332,7 @@ per_targets$pertype &lt;-<span class="st"> </span><span class="kw">data_frame</s
   <span class="st">`</span><span class="dt">3</span><span class="st">`</span> =<span class="st"> </span><span class="dv">104</span>
 )</code></pre></div>
 <p>In the interst of keeping vignette build time short, the <code>ipu()</code> algorithm is only run for 10 iterations. After running for 400 or more iterations, the results match closely to those shown in the paper.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets, per_seed, per_targets,
-              <span class="dt">relative_gap =</span> .<span class="dv">0001</span>, <span class="dt">max_iterations =</span> <span class="dv">10</span>)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets, per_seed, per_targets, <span class="dt">max_iterations =</span> <span class="dv">10</span>)</code></pre></div>
 <p>The first table shows a sample of the result. The second table shows how well the results match targets when summarized. Feel free to run the code chunk above for 400 or more iterations and then look again.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">head</span>(result) %&gt;%
 <span class="st">  </span><span class="kw">htmlTable</span>(
@@ -302,48 +420,21 @@ Summary of Resulting Weights by Geography</td></tr>
 <p><code>ipu()</code> allows different geographies to be specified for different marginal tables. There are a few rules that make this possible, but in short, the geo field on each target table tells the algorithm which scale to constrain to.</p>
 <p>All of the following rules are checked by the algorithm a warning message will show if one is violated.</p>
 <ul>
-<li>The household seed table must contain all geo fields used by any target table and the <code>pid</code> field.</li>
-<li>All fields that designate geographies must start with “geo_”
+<li>The primary/household seed table must contain all geo fields used by any target table and the <code>pid</code> field.
+<ul>
+<li>Do <strong>not</strong> put any geo fields on the secondary/person seed table.</li>
+<li>This prevents potential errors/inconsistencies between seed tables.</li>
+</ul></li>
+<li>All fields that designate geographies must start with “geo_” e.g.
 <ul>
 <li>geo_cluster</li>
 <li>geo_region</li>
 <li>geo_state</li>
 </ul></li>
-<li>Do <strong>not</strong> put any geo fields on the person seed table.
-<ul>
-<li>This prevents any errors/inconsistencies between seed tables.</li>
-</ul></li>
-<li>Each target table must have a geo field that is present in the hh_seed</li>
+<li>Each target table must have a geo field that is present in the primary seed table</li>
 </ul>
 <p>To demonstrate, the Arizona example from example 1 is modified to add two different clusters for household controls but to still control the person targets at the regional level.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Same as example 1</span>
-hh_seed &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
-  <span class="dt">geo_region =</span> <span class="dv">1</span>,
-  <span class="dt">pid =</span> <span class="kw">c</span>(<span class="dv">1</span>:<span class="dv">8</span>),
-  <span class="dt">hhtype =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">2</span>)
-)
-
-per_seed &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
-  <span class="dt">pid =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">5</span>, <span class="dv">5</span>, <span class="dv">5</span>, <span class="dv">6</span>, <span class="dv">6</span>, <span class="dv">7</span>, <span class="dv">7</span>, <span class="dv">7</span>, <span class="dv">7</span>, <span class="dv">7</span>, <span class="dv">8</span>, <span class="dv">8</span>),
-  <span class="dt">pertype =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">2</span>)
-)
-
-hh_targets &lt;-<span class="st"> </span><span class="kw">list</span>()
-hh_targets$hhtype &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
-  <span class="dt">geo_region =</span> <span class="dv">1</span>,
-  <span class="st">`</span><span class="dt">1</span><span class="st">`</span> =<span class="st"> </span><span class="dv">35</span>,
-  <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="dv">65</span>
-)
-
-per_targets &lt;-<span class="st"> </span><span class="kw">list</span>()
-per_targets$pertype &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
-  <span class="dt">geo_region =</span> <span class="dv">1</span>,
-  <span class="st">`</span><span class="dt">1</span><span class="st">`</span> =<span class="st"> </span><span class="dv">91</span>,
-  <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="dv">65</span>,
-  <span class="st">`</span><span class="dt">3</span><span class="st">`</span> =<span class="st"> </span><span class="dv">104</span>
-)
-
-<span class="co"># Modifying example 1 for example 2</span>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Modifying example 1 for example 2</span>
 
 <span class="co"># Repeat the hh_seed to create cluster 1 and 2 households</span>
 hh_seed &lt;-<span class="st"> </span>hh_seed %&gt;%
@@ -355,18 +446,141 @@ hh_seed &lt;-<span class="st"> </span><span class="kw">bind_rows</span>(
 )
 hh_seed$geo_region =<span class="st"> </span><span class="dv">1</span>
 
-<span class="co"># Repeat the household targets for two clusters</span>
+hh_seed %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Modified household seed table&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='4' style='text-align: left;'>
+Modified household seed table</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>geo_cluster</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>pid</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>hhtype</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>geo_region</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>3</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>4</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>5</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>6</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>7</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>8</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>9</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>10</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>11</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>12</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>13</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>14</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>15</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>2</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>16</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>2</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>1</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Repeat the household targets for two clusters</span>
 hh_targets$hhtype &lt;-<span class="st"> </span><span class="kw">bind_rows</span>(hh_targets$hhtype, hh_targets$hhtype)
 hh_targets$hhtype &lt;-<span class="st"> </span>hh_targets$hhtype %&gt;%
 <span class="st">  </span><span class="kw">rename</span>(<span class="dt">geo_cluster =</span> geo_region) %&gt;%
 <span class="st">  </span><span class="kw">mutate</span>(<span class="dt">geo_cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>))
-hh_targets</code></pre></div>
-<pre><code>## $hhtype
-## # A tibble: 2 x 3
-##   geo_cluster   `1`   `2`
-##         &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
-## 1           1    35    65
-## 2           2    35    65</code></pre>
+
+hh_targets %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Modified household targets&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='1' style='text-align: left;'>
+Modified household targets</td></tr>
+</thead>
+<tbody>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>list(geo_cluster = c(1, 2), `1` = c(35, 35), `2` = c(65, 65))</td>
+</tr>
+</tbody>
+</table>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Repeat the per_seed to create cluster 1 and 2 persons</span>
 per_seed &lt;-<span class="st"> </span><span class="kw">bind_rows</span>(
   per_seed,
@@ -374,41 +588,311 @@ per_seed &lt;-<span class="st"> </span><span class="kw">bind_rows</span>(
 <span class="st">    </span><span class="kw">mutate</span>(<span class="dt">pid =</span> pid +<span class="st"> </span><span class="dv">8</span>)
 )
 
-<span class="co"># Double the regional person targets</span>
+per_seed %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Modified person seed&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='2' style='text-align: left;'>
+Modified person seed</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>pid</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>pertype</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>2</td>
+</tr>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>3</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>3</td>
+</tr>
+<tr>
+<td style='text-align: center;'>3</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>3</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>3</td>
+<td style='text-align: center;'>2</td>
+</tr>
+<tr>
+<td style='text-align: center;'>4</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>4</td>
+<td style='text-align: center;'>3</td>
+</tr>
+<tr>
+<td style='text-align: center;'>4</td>
+<td style='text-align: center;'>3</td>
+</tr>
+<tr>
+<td style='text-align: center;'>5</td>
+<td style='text-align: center;'>2</td>
+</tr>
+<tr>
+<td style='text-align: center;'>5</td>
+<td style='text-align: center;'>2</td>
+</tr>
+<tr>
+<td style='text-align: center;'>5</td>
+<td style='text-align: center;'>3</td>
+</tr>
+<tr>
+<td style='text-align: center;'>6</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>6</td>
+<td style='text-align: center;'>2</td>
+</tr>
+<tr>
+<td style='text-align: center;'>7</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>7</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>7</td>
+<td style='text-align: center;'>2</td>
+</tr>
+<tr>
+<td style='text-align: center;'>7</td>
+<td style='text-align: center;'>3</td>
+</tr>
+<tr>
+<td style='text-align: center;'>7</td>
+<td style='text-align: center;'>3</td>
+</tr>
+<tr>
+<td style='text-align: center;'>8</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>8</td>
+<td style='text-align: center;'>2</td>
+</tr>
+<tr>
+<td style='text-align: center;'>9</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>9</td>
+<td style='text-align: center;'>2</td>
+</tr>
+<tr>
+<td style='text-align: center;'>9</td>
+<td style='text-align: center;'>3</td>
+</tr>
+<tr>
+<td style='text-align: center;'>10</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>10</td>
+<td style='text-align: center;'>3</td>
+</tr>
+<tr>
+<td style='text-align: center;'>11</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>11</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>11</td>
+<td style='text-align: center;'>2</td>
+</tr>
+<tr>
+<td style='text-align: center;'>12</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>12</td>
+<td style='text-align: center;'>3</td>
+</tr>
+<tr>
+<td style='text-align: center;'>12</td>
+<td style='text-align: center;'>3</td>
+</tr>
+<tr>
+<td style='text-align: center;'>13</td>
+<td style='text-align: center;'>2</td>
+</tr>
+<tr>
+<td style='text-align: center;'>13</td>
+<td style='text-align: center;'>2</td>
+</tr>
+<tr>
+<td style='text-align: center;'>13</td>
+<td style='text-align: center;'>3</td>
+</tr>
+<tr>
+<td style='text-align: center;'>14</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>14</td>
+<td style='text-align: center;'>2</td>
+</tr>
+<tr>
+<td style='text-align: center;'>15</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>15</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>15</td>
+<td style='text-align: center;'>2</td>
+</tr>
+<tr>
+<td style='text-align: center;'>15</td>
+<td style='text-align: center;'>3</td>
+</tr>
+<tr>
+<td style='text-align: center;'>15</td>
+<td style='text-align: center;'>3</td>
+</tr>
+<tr>
+<td style='text-align: center;'>16</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>16</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>2</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Double the regional person targets</span>
 per_targets$pertype &lt;-<span class="st"> </span>per_targets$pertype %&gt;%
 <span class="st">  </span><span class="kw">mutate_at</span>(
     <span class="dt">.vars =</span> <span class="kw">vars</span>(<span class="st">&quot;1&quot;</span>, <span class="st">&quot;2&quot;</span>, <span class="st">&quot;3&quot;</span>),
     <span class="dt">.funs =</span> <span class="kw">funs</span>(. *<span class="st"> </span><span class="dv">2</span>)
   )
-per_targets</code></pre></div>
-<pre><code>## $pertype
-## # A tibble: 1 x 4
-##   geo_region   `1`   `2`   `3`
-##        &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
-## 1          1   182   130   208</code></pre>
-<p>Run the IPU algorithm. Again, for vignette build time, only 10 iterations are performed. Run the code yourself with <code>max_iterations</code> set to 600 to see the converged result.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets, per_seed, per_targets,
-              <span class="dt">relative_gap =</span> .<span class="dv">0001</span>, <span class="dt">max_iterations =</span> <span class="dv">10</span>)</code></pre></div>
+
+per_targets %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Modified person targets&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='1' style='text-align: left;'>
+Modified person targets</td></tr>
+</thead>
+<tbody>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>list(geo_region = 1, `1` = 182, `2` = 130, `3` = 208)</td>
+</tr>
+</tbody>
+</table>
+<p>Run the IPU algorithm.</p>
+<ul>
+<li>The household seed is the <code>primary_seed</code></li>
+<li>Household target list is the <code>primary_target</code></li>
+<li>Person seed table is the <code>secondary_seed</code></li>
+<li>Person target list is the <code>secondary_target</code></li>
+</ul>
+<p>Again, for vignette build time, only 10 iterations are performed. Run the code yourself with <code>max_iterations</code> set to 600 to see the converged result.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets, per_seed, per_targets, <span class="dt">max_iterations =</span> <span class="dv">10</span>)</code></pre></div>
 <p>The tables below show the results compared back to targets. More iterations would make a better match.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result %&gt;%<span class="st"> </span><span class="kw">group_by</span>(hhtype) %&gt;%<span class="st"> </span><span class="kw">summarize</span>(<span class="dt">weight =</span> <span class="kw">sum</span>(weight))</code></pre></div>
-<pre><code>## # A tibble: 2 x 2
-##   hhtype    weight
-##    &lt;dbl&gt;     &lt;dbl&gt;
-## 1      1  61.62272
-## 2      2 114.76375</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result %&gt;%<span class="st"> </span>
+<span class="st">  </span><span class="kw">group_by</span>(geo_cluster, hhtype) %&gt;%<span class="st"> </span>
+<span class="st">  </span><span class="kw">summarize</span>(<span class="dt">weight =</span> <span class="kw">sum</span>(weight)) %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Household result&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='3' style='text-align: left;'>
+Household result</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>geo_cluster</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>hhtype</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>weight</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>30.8113603460086</td>
+</tr>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>57.3818762231669</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>30.8113603460086</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>2</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>2</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>57.3818762231669</td>
+</tr>
+</tbody>
+</table>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">per_seed %&gt;%
 <span class="st">  </span><span class="kw">left_join</span>(
     result %&gt;%<span class="st"> </span><span class="kw">select</span>(pid, weight),
     <span class="dt">by =</span> <span class="st">&quot;pid&quot;</span>
   ) %&gt;%
 <span class="st">  </span><span class="kw">group_by</span>(pertype) %&gt;%
-<span class="st">  </span><span class="kw">summarize</span>(<span class="dt">weight =</span> <span class="kw">sum</span>(weight))</code></pre></div>
-<pre><code>## # A tibble: 3 x 2
-##   pertype   weight
-##     &lt;dbl&gt;    &lt;dbl&gt;
-## 1       1 167.0452
-## 2       2 122.2286
-## 3       3 208.0000</code></pre>
+<span class="st">  </span><span class="kw">summarize</span>(<span class="dt">weight =</span> <span class="kw">sum</span>(weight)) %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Person result&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='2' style='text-align: left;'>
+Person result</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>pertype</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>weight</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>167.045230346044</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>122.228643647718</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>3</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>208</td>
+</tr>
+</tbody>
+</table>
 </div>
 </div>
 <div id="ipf" class="section level1">
@@ -424,7 +908,7 @@ per_targets</code></pre></div>
 <div id="example-1-basics" class="section level2">
 <h2>Example 1: Basics</h2>
 <p>This section creates a random seed table and target values to illustrate how the package is used. The targets are specified for three separate clusters, which could represent model TAZs, survey districts, or some other grouping of geographic areas.</p>
-<div id="seed-table-creation" class="section level3">
+<div id="seed-table-creation-1" class="section level3">
 <h3>Seed table creation</h3>
 <p>The seed table is the starting point for the IPF procedure. In this example, we will use a made up summary table of survey data. This fake table is a count of households by the number persons, workers and vehicles. A sample of the table is shown for illustration. The count is stored in the <code>weight</code> field.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">seed &lt;-<span class="st"> </span><span class="kw">expand.grid</span>(
@@ -490,7 +974,7 @@ seed %&gt;%
 </tbody>
 </table>
 </div>
-<div id="target-creation" class="section level3">
+<div id="target-creation-1" class="section level3">
 <h3>Target creation</h3>
 <p>The number of households by size (e.g., 1-person, 2-person, etc.) is referred to as a marginal distribution. Often, from the Census, we know the total number of households by each individual marginal. For example, we know the number of households by size:</p>
 <ul>
