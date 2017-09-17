@@ -8,14 +8,22 @@
 #' 
 #' @references \url{http://www.scag.ca.gov/Documents/PopulationSynthesizerPaper_TRB.pdf}
 #' 
-#' @param hh_seed Same as \code{seed} in \link[ipfr]{ipf}. Each row is a
-#' household. Must contain an \code{hhid} column.
+#' @param primary_seed In population synthesis or household survey expansion,
+#' this would be the household seed table (each record would represent a household). 
+#' It could also be a trip table, where each row represents an origin-destination
+#' pair. Must contain an \code{hhid} column that is unique for each row.
 #' 
-#' @param hh_targets Same as \code{targets} in \link[ipfr]{ipf}.
+#' @param primary_targets A \code{named list} of data frames.  Each name in the 
+#'   list defines a marginal dimension and must match a column from the 
+#'   \code{primary_seed} table. The data frame associated with each named list
+#'   element must contain a geography column (starts with "geo_"). Each row in
+#'   the target table defines a new geography (these could be TAZs, tracts,
+#'   clusters, etc.). The other column names define the marginal categories that
+#'   targets are provided for. The vignette provides more detail.
 #' 
 #' @param per_seed Seed table of person attributes. Each row is a person.
 #' Must also contain an \code{hhid} column that links each person to their
-#' respective household in \code{hh_seed}.
+#' respective household in \code{primary_seed}.
 #' 
 #' @param per_targets Similar to \code{targets} from \link[ipfr]{ipf}, but for
 #' person-level targets.
@@ -45,12 +53,12 @@
 #' @param verbose Print details on the maximum expansion factor with each 
 #'    iteration? Default \code{FALSE}. 
 #' 
-#' @return the \code{hh_seed} with a revised weight column.
+#' @return the \code{primary_seed} with a revised weight column.
 #' 
 #' @export
 #' 
 #' @importFrom magrittr "%>%"
-ipu <- function(hh_seed, hh_targets, per_seed = NULL, per_targets = NULL,
+ipu <- function(primary_seed, primary_targets, per_seed = NULL, per_targets = NULL,
                 relative_gap = 0.01, max_iterations = 100, absolute_diff = 10,
                 min_weight = .0001, verbose = FALSE){
   
@@ -61,22 +69,22 @@ ipu <- function(hh_seed, hh_targets, per_seed = NULL, per_targets = NULL,
   
   # Check hh and person tables
   if (!is.null(per_seed)) {
-    check_tables(hh_seed, hh_targets, per_seed, per_targets)
+    check_tables(primary_seed, primary_targets, per_seed, per_targets)
   } else {
-    check_tables(hh_seed, hh_targets)
+    check_tables(primary_seed, primary_targets)
   }
   
   # Pull off the geo information into a separate equivalency table
   # to be used as needed.
-  geo_equiv <- hh_seed %>%
+  geo_equiv <- primary_seed %>%
     dplyr::select(dplyr::starts_with("geo_"), "hhid")
-  hh_seed_mod <- hh_seed %>%
+  primary_seed_mod <- primary_seed %>%
     dplyr::select(-dplyr::starts_with("geo_"))
   
   # Modify the household seed to the required format. Use one-hot-encoding to
   # expand standard columns into dummy columns.
-  col_names <- names(hh_targets)
-  hh_seed_mod <- hh_seed_mod %>%
+  col_names <- names(primary_targets)
+  primary_seed_mod <- primary_seed_mod %>%
     # Keep only the fields of interest (marginal columns and hhid)
     dplyr::select(dplyr::one_of(c(col_names, "hhid"))) %>%
     # Convert to factors and then to dummy columns
@@ -103,10 +111,10 @@ ipu <- function(hh_seed, hh_targets, per_seed = NULL, per_targets = NULL,
       )
     
     # combine the hh and per seed tables into a single table
-    seed <- hh_seed_mod %>%
+    seed <- primary_seed_mod %>%
       dplyr::left_join(per_seed_mod, by = "hhid")
   } else {
-    seed <- hh_seed_mod
+    seed <- primary_seed_mod
   }
   
   # Add the geo information back.
@@ -124,9 +132,9 @@ ipu <- function(hh_seed, hh_targets, per_seed = NULL, per_targets = NULL,
   # modify the targets to match the new seed column names and
   # join them to the seed table
   if (!is.null(per_seed)) {
-    targets <- c(hh_targets, per_targets)
+    targets <- c(primary_targets, per_targets)
   } else {
-    targets <- hh_targets
+    targets <- primary_targets
   }
   for (name in names(targets)) {
     # targets[[name]] <- targets[[name]] %>%
@@ -240,8 +248,8 @@ ipu <- function(hh_seed, hh_targets, per_seed = NULL, per_targets = NULL,
     utils::flush.console()
   }
   
-  hh_seed$weight <- seed$weight
-  return(hh_seed)
+  primary_seed$weight <- seed$weight
+  return(primary_seed)
   
 }
 
@@ -253,34 +261,34 @@ ipu <- function(hh_seed, hh_targets, per_seed = NULL, per_targets = NULL,
 #'
 #' @inheritParams ipu
 
-check_tables <- function(hh_seed, hh_targets, per_seed = NULL, per_targets = NULL){
+check_tables <- function(primary_seed, primary_targets, per_seed = NULL, per_targets = NULL){
   
   # If person data is provided, both seed and targets must be
   if (xor(!is.null(per_seed), !is.null(per_targets))) {
     stop("You provided either per_seed or per_targets, but not both.")
   }
   
-  ## Household checks ##
+  ## Primary checks ##
   
   # Check that there are no NA values in seed or targets
-  if (any(is.na(unlist(hh_seed)))) {
-    stop("hh_seed table contains NAs")
+  if (any(is.na(unlist(primary_seed)))) {
+    stop("primary_seed table contains NAs")
   }
-  if (any(is.na(unlist(hh_targets)))) {
-    stop("hh_targets table contains NAs")
+  if (any(is.na(unlist(primary_targets)))) {
+    stop("primary_targets table contains NAs")
   }
   
   # check hh tables for correctness
-  for (name in names(hh_targets)) {
-    tbl <- hh_targets[[name]]
+  for (name in names(primary_targets)) {
+    tbl <- primary_targets[[name]]
     
     # Check that each target table has a geo field
     check <- grepl("geo_", colnames(tbl))
     if (!any(check)) {
-      stop("hh_target table '", name, "' does not have a geo column (must start with 'geo_')")
+      stop("primary_target table '", name, "' does not have a geo column (must start with 'geo_')")
     }
     if (sum(check) > 1) {
-      stop("hh_target table '", name, "' has more than one geo column (starts with 'geo_'")
+      stop("primary_target table '", name, "' has more than one geo column (starts with 'geo_'")
     }
     
     # Get the name of the geo field
@@ -292,13 +300,13 @@ check_tables <- function(hh_seed, hh_targets, per_seed = NULL, per_targets = NUL
     col_names <- type.convert(col_names[!col_names == geo_colname], as.is = TRUE)
     
     # Check that at least one observation of the current target is in every geo
-    for (geo in unique(unlist(hh_seed[, geo_colname]))){
-      test <- match(col_names, hh_seed[[name]][hh_seed[, geo_colname] == geo])
+    for (geo in unique(unlist(primary_seed[, geo_colname]))){
+      test <- match(col_names, primary_seed[[name]][primary_seed[, geo_colname] == geo])
       if (any(is.na(test))) {
         prob_cat <- col_names[which(is.na(test))]
         stop(
           "Marginal ", name, "; category ", prob_cat[1], " is missing from ",
-          geo_colname, " ", geo, " in the hh_seed table."
+          geo_colname, " ", geo, " in the primary_seed table."
         )
       }   
     }
@@ -319,7 +327,7 @@ check_tables <- function(hh_seed, hh_targets, per_seed = NULL, per_targets = NUL
     # Check that the person seed table does not have any geo columns
     check <- grepl("geo_", colnames(per_seed))
     if (any(check)) {
-      stop("Do not include geo fields in the per_seed table (hh_seed only).")
+      stop("Do not include geo fields in the per_seed table (primary_seed only).")
     }
     
     # check the per tables for correctness
@@ -339,10 +347,10 @@ check_tables <- function(hh_seed, hh_targets, per_seed = NULL, per_targets = NUL
       pos <- grep("geo_", colnames(tbl))
       geo_colname <- colnames(tbl)[pos]
       
-      # Add the geo field from the hh_seed before checking
+      # Add the geo field from the primary_seed before checking
       per_seed <- per_seed %>%
         dplyr::left_join(
-          hh_seed %>% dplyr::select(hhid, geo_colname),
+          primary_seed %>% dplyr::select(hhid, geo_colname),
           by = "hhid"
         )
       
