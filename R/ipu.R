@@ -21,7 +21,7 @@
 #' person-level targets.
 #' 
 #' @param relative_gap After each iteration, the weights are compared to the
-#' previous weights and an RMSE metric is calculated. If the RMSE is less than
+#' previous weights and the %RMSE is calculated. If the %RMSE is less than
 #' the \code{relative_gap} threshold, then the process terminates.
 #' 
 #' @param max_iterations maximimum number of iterations to perform, even if 
@@ -200,9 +200,10 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
     # Test for convergence
     if (iter > 1) {
       rmse <- mlr::measureRMSE(prev_weights, seed$weight)
-      converged <- ifelse(rmse <= relative_gap, TRUE, FALSE)
+      pct_rmse <- rmse / mean(prev_weights) * 100
+      converged <- ifelse(pct_rmse <= relative_gap, TRUE, FALSE)
       if(verbose){
-        cat("\r Finished iteration ", iter, ". RMSE = ", rmse)
+        cat("\r Finished iteration ", iter, ". %RMSE = ", pct_rmse)
       }
     }
     prev_weights <- seed$weight

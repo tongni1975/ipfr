@@ -22,7 +22,7 @@ respective household in \code{hh_seed}.}
 person-level targets.}
 
 \item{relative_gap}{After each iteration, the weights are compared to the
-previous weights and an RMSE metric is calculated. If the RMSE is less than
+previous weights and the %RMSE is calculated. If the %RMSE is less than
 the \code{relative_gap} threshold, then the process terminates.}
 
 \item{max_iterations}{maximimum number of iterations to perform, even if 
