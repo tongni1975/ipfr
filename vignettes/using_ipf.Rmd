@@ -350,15 +350,18 @@ per_targets$pertype <- data_frame(
 )
 ```
 
+In the interst of keeping vignette build time short, the `ipu()` algorithm is 
+only run for 10 iterations. After running for 400 or more iterations, the 
+results match closely to those shown in the paper.
+
 ```{r example 1 ipu}
 result <- ipu(hh_seed, hh_targets, per_seed, per_targets,
-              relative_gap = .0001, max_iterations = 600)
+              relative_gap = .0001, max_iterations = 10)
 ```
 
-After running for 415 iterations, the results shown below match those found in
-the paper. Running to a tighter convergence would result in an exact match, but
-would take longer. The second table shows that the results match the household
-type targets.
+The first table shows a sample of the result. The second table shows how well the
+results match targets when summarized. Feel free to run the code chunk above for
+400 or more iterations and then look again.
 
 ```{r example 1 results}
 head(result) %>%
@@ -462,14 +465,17 @@ per_targets$pertype <- per_targets$pertype %>%
 per_targets
 ```
 
-Run the IPU algorithm.
+Run the IPU algorithm. Again, for vignette build time, only 10 iterations are
+performed. Run the code yourself with `max_iterations` set to 600 to see the
+converged result.
 
 ```{r example 2 ipu}
 result <- ipu(hh_seed, hh_targets, per_seed, per_targets,
-              relative_gap = .0001, max_iterations = 600)
+              relative_gap = .0001, max_iterations = 10)
 ```
 
-The resulting weights match both the household and person targets.
+The tables below show the results compared back to targets. More iterations
+would make a better match.
 
 ```{r example 2 results}
 result %>% group_by(hhtype) %>% summarize(weight = sum(weight))
