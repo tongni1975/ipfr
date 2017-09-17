@@ -304,6 +304,16 @@ check_tables <- function(primary_seed, primary_targets, secondary_seed = NULL, s
     stop("primary_targets table contains NAs")
   }
   
+  # Check that primary_seed table has a pid field and that it has a unique
+  # value on each row.
+  if (!"pid" %in% colnames(primary_seed)) {
+    stop("The primary seed table does not have field 'pid'.")
+  }
+  unique_pids <- unique(primary_seed$pid)
+  if (length(unique_pids) != nrow(primary_seed)) {
+    stop("The primary seed's pid field has duplicate values.")
+  }
+  
   # check hh tables for correctness
   for (name in names(primary_targets)) {
     tbl <- primary_targets[[name]]
@@ -350,7 +360,12 @@ check_tables <- function(primary_seed, primary_targets, secondary_seed = NULL, s
       stop("secondary_targets table contains NAs")
     }
     
-    # Check that the person seed table does not have any geo columns
+    # Check that secondary seed table has a pid field
+    if (!"pid" %in% colnames(secondary_seed)) {
+      stop("The primary seed table does not have field 'pid'.")
+    }
+    
+    # Check that the secondary seed table does not have any geo columns
     check <- grepl("geo_", colnames(secondary_seed))
     if (any(check)) {
       stop("Do not include geo fields in the secondary_seed table (primary_seed only).")
