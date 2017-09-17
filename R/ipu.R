@@ -50,12 +50,21 @@
 #' @export
 #' 
 #' @importFrom magrittr "%>%"
-ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
-                relative_gap = 0.01,max_iterations = 100, absolute_diff = 10,
+ipu <- function(hh_seed, hh_targets, per_seed = NULL, per_targets = NULL,
+                relative_gap = 0.01, max_iterations = 100, absolute_diff = 10,
                 min_weight = .0001, verbose = FALSE){
   
+  # If person data is provided, both seed and targets must be
+  if (xor(!is.null(per_seed), !is.null(per_targets))) {
+    stop("You provided either per_seed or per_targets, but not both.")
+  }
+  
   # Check hh and person tables
-  check_tables(hh_seed, hh_targets, per_seed, per_targets)
+  if (!is.null(per_seed)) {
+    check_tables(hh_seed, hh_targets, per_seed, per_targets)
+  } else {
+    check_tables(hh_seed, hh_targets)
+  }
   
   # Pull off the geo information into a separate equivalency table
   # to be used as needed.
@@ -77,25 +86,31 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
     ) %>%
     mlr::createDummyFeatures()
   
-  # Modify the person seed table the same way, but sum by household ID
-  col_names <- names(per_targets)
-  per_seed_mod <- per_seed %>%
-    # Keep only the fields of interest
-    dplyr::select(dplyr::one_of(c(col_names, "hhid"))) %>%
-    dplyr::mutate_at(
-      .vars = col_names,
-      .funs = dplyr::funs(as.factor(.))
-    ) %>%
-    mlr::createDummyFeatures() %>%
-    dplyr::group_by(hhid) %>%
-    dplyr::summarize_all(
-      .funs = sum
-    )
+  if (!is.null(per_seed)) {
+    # Modify the person seed table the same way, but sum by household ID
+    col_names <- names(per_targets)
+    per_seed_mod <- per_seed %>%
+      # Keep only the fields of interest
+      dplyr::select(dplyr::one_of(c(col_names, "hhid"))) %>%
+      dplyr::mutate_at(
+        .vars = col_names,
+        .funs = dplyr::funs(as.factor(.))
+      ) %>%
+      mlr::createDummyFeatures() %>%
+      dplyr::group_by(hhid) %>%
+      dplyr::summarize_all(
+        .funs = sum
+      )
+    
+    # combine the hh and per seed tables into a single table
+    seed <- hh_seed_mod %>%
+      dplyr::left_join(per_seed_mod, by = "hhid")
+  } else {
+    seed <- hh_seed_mod
+  }
   
-  # combine the hh and per seed tables into a single table
-  # and add the geo information back.
-  seed <- hh_seed_mod %>%
-    dplyr::left_join(per_seed_mod, by = "hhid") %>%
+  # Add the geo information back.
+  seed <- seed %>%
     dplyr::mutate(weight = 1)  %>%
     dplyr::left_join(geo_equiv, by = "hhid")
   
@@ -108,7 +123,11 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
   
   # modify the targets to match the new seed column names and
   # join them to the seed table
-  targets <- c(hh_targets, per_targets)
+  if (!is.null(per_seed)) {
+    targets <- c(hh_targets, per_targets)
+  } else {
+    targets <- hh_targets
+  }
   for (name in names(targets)) {
     # targets[[name]] <- targets[[name]] %>%
     temp <- targets[[name]] %>%
@@ -234,21 +253,14 @@ ipu <- function(hh_seed, hh_targets, per_seed, per_targets,
 #'
 #' @inheritParams ipu
 
-check_tables <- function(hh_seed, hh_targets, per_seed, per_targets){
+check_tables <- function(hh_seed, hh_targets, per_seed = NULL, per_targets = NULL){
   
-  # Check check that seed and target are provided
-  if (is.null(hh_seed)) {
-    stop("hh_seed table not provided")
+  # If person data is provided, both seed and targets must be
+  if (xor(!is.null(per_seed), !is.null(per_targets))) {
+    stop("You provided either per_seed or per_targets, but not both.")
   }
-  if (is.null(hh_targets)) {
-    stop("hh_targets not provided")
-  }
-  if (is.null(per_seed)) {
-    stop("per_seed table not provided")
-  }
-  if (is.null(per_targets)) {
-    stop("per_targets not provided")
-  }
+  
+  ## Household checks ##
   
   # Check that there are no NA values in seed or targets
   if (any(is.na(unlist(hh_seed)))) {
@@ -257,20 +269,8 @@ check_tables <- function(hh_seed, hh_targets, per_seed, per_targets){
   if (any(is.na(unlist(hh_targets)))) {
     stop("hh_targets table contains NAs")
   }
-  if (any(is.na(unlist(per_seed)))) {
-    stop("per_seed table contains NAs")
-  }
-  if (any(is.na(unlist(per_targets)))) {
-    stop("per_targets table contains NAs")
-  }
   
-  # Check that the person seed table does not have any geo columns
-  check <- grepl("geo_", colnames(per_seed))
-  if (any(check)) {
-    stop("Do not include geo fields in the per_seed table (hh_seed only).")
-  }
-  
-  # check hh tables for completeness
+  # check hh tables for correctness
   for (name in names(hh_targets)) {
     tbl <- hh_targets[[name]]
     
@@ -278,6 +278,9 @@ check_tables <- function(hh_seed, hh_targets, per_seed, per_targets){
     check <- grepl("geo_", colnames(tbl))
     if (!any(check)) {
       stop("hh_target table '", name, "' does not have a geo column (must start with 'geo_')")
+    }
+    if (sum(check) > 1) {
+      stop("hh_target table '", name, "' has more than one geo column (starts with 'geo_'")
     }
     
     # Get the name of the geo field
@@ -288,7 +291,8 @@ check_tables <- function(hh_seed, hh_targets, per_seed, per_targets){
     col_names <- colnames(tbl)
     col_names <- type.convert(col_names[!col_names == geo_colname], as.is = TRUE)
     
-    for (geo in hh_seed[, geo_colname]){
+    # Check that at least one observation of the current target is in every geo
+    for (geo in unique(unlist(hh_seed[, geo_colname]))){
       test <- match(col_names, hh_seed[[name]][hh_seed[, geo_colname] == geo])
       if (any(is.na(test))) {
         prob_cat <- col_names[which(is.na(test))]
@@ -300,40 +304,63 @@ check_tables <- function(hh_seed, hh_targets, per_seed, per_targets){
     }
   }
   
-  # check the per tables for completeness
-  for (name in names(per_targets)) {
-    tbl <- per_targets[[name]]
-    
-    # Check that each target table has a geo field
-    check <- grepl("geo_", colnames(tbl))
-    if (!any(check)) {
-      stop("hh_target table '", name, "' does not have a geo column (must start with 'geo_')")
+  
+  ## Person checks (if provided) ##
+  
+  if (!is.null(per_seed)) {
+    # Check for NAs
+    if (any(is.na(unlist(per_seed)))) {
+      stop("per_seed table contains NAs")
+    }
+    if (any(is.na(unlist(per_targets)))) {
+      stop("per_targets table contains NAs")
     }
     
-    # Get the name of the geo field
-    pos <- grep("geo_", colnames(tbl))
-    geo_colname <- colnames(tbl)[pos]
+    # Check that the person seed table does not have any geo columns
+    check <- grepl("geo_", colnames(per_seed))
+    if (any(check)) {
+      stop("Do not include geo fields in the per_seed table (hh_seed only).")
+    }
     
-    # Add the geo field from the hh_seed before checking
-    per_seed <- per_seed %>%
-      dplyr::left_join(
-        hh_seed %>% dplyr::select(hhid, geo_colname),
-        by = "hhid"
-      )
-    
-    # Get vector of other column names
-    col_names <- colnames(tbl)
-    col_names <- type.convert(col_names[!col_names == geo_colname], as.is = TRUE)
-    
-    for (geo in per_seed[, geo_colname]){
-      test <- match(col_names, per_seed[[name]][per_seed[, geo_colname] == geo])
-      if (any(is.na(test))) {
-        prob_cat <- col_names[which(is.na(test))]
-        stop(
-          "Marginal ", name, "; category ", prob_cat[1], " is missing from ",
-          geo_colname, " ", geo, " in the per_seed table."
+    # check the per tables for correctness
+    for (name in names(per_targets)) {
+      tbl <- per_targets[[name]]
+      
+      # Check that each target table has a geo field
+      check <- grepl("geo_", colnames(tbl))
+      if (!any(check)) {
+        stop("per_target table '", name, "' does not have a geo column (must start with 'geo_')")
+      }
+      if (sum(check) > 1) {
+        stop("per_target table '", name, "' has more than one geo column (starts with 'geo_'")
+      }
+      
+      # Get the name of the geo field
+      pos <- grep("geo_", colnames(tbl))
+      geo_colname <- colnames(tbl)[pos]
+      
+      # Add the geo field from the hh_seed before checking
+      per_seed <- per_seed %>%
+        dplyr::left_join(
+          hh_seed %>% dplyr::select(hhid, geo_colname),
+          by = "hhid"
         )
-      }   
+      
+      # Get vector of other column names
+      col_names <- colnames(tbl)
+      col_names <- type.convert(col_names[!col_names == geo_colname], as.is = TRUE)
+      
+      # Check that at least one observation of the current target is in every geo
+      for (geo in unique(unlist(per_seed[, geo_colname]))){  
+        test <- match(col_names, per_seed[[name]][per_seed[, geo_colname] == geo])
+        if (any(is.na(test))) {
+          prob_cat <- col_names[which(is.na(test))]
+          stop(
+            "Marginal ", name, "; category ", prob_cat[1], " is missing from ",
+            geo_colname, " ", geo, " in the per_seed table."
+          )
+        }   
+      }
     }
   }
 }

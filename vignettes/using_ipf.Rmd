@@ -267,10 +267,10 @@ targets$siz <- data_frame(
 )
 ```
 
-Run `ipf`. Note that it picks up a new error. When providing cluster values in the seed
-table, `ipfr` checks to make sure that every marginal category appears in every cluster.
-In this case, the full seed table does contain both size 1 and 2 records, but cluster
-2 only has size 1.
+Run `ipf`. Note that it picks up a new error. When providing cluster values in
+the seed table, `ipfr` checks to make sure that every marginal category appears
+in every cluster. In this case, the full seed table does contain both size 1 and
+2 records, but cluster 2 only has size 1.
 
 ```{r}
 result <- ipf(seed = seed, targets = targets)
@@ -309,7 +309,56 @@ the basic IPF procedure, all marginal distributions must describe the same thing
 (e.g. households). IPU allows you to say, for example, that a zone needs a total
 household count of 500, but also needs 800 people.
 
-## Example 1: The Arizona Paper Example
+## Example 1: Simple Example
+
+```{r}
+hh_seed <- data_frame(
+  hhid = c(1, 2, 3, 4),
+  siz = c(1, 2, 1, 1),
+  weight = c(1, 1, 1, 1),
+  geo_cluster = c(1, 1, 2, 2)
+)
+
+hh_seed %>%
+  htmlTable(
+    rnames = FALSE, caption = "Seed Table with Cluster Appended"
+  )
+```
+
+New targets are specified for each cluster:
+
+```{r}
+hh_targets <- list()
+hh_targets$siz <- data_frame(
+  geo_cluster = c(1, 2),
+  `1` = c(75, 100),
+  `2` = c(25, 150)
+)
+```
+
+Run `ipu()`. Note that it picks up a new error. When providing cluster values in
+the seed table, `ipfr` checks to make sure that every marginal category appears
+in every cluster. In this case, the full seed table does contain both size 1 and
+2 records, but cluster 2 only has size 1.
+
+```{r}
+result <- ipu(hh_seed, hh_targets, max_iterations = 10)
+```
+
+Fix the seed table and re-run `ipf`.
+
+```{r}
+hh_seed <- data_frame(
+  hhid = c(1, 2, 3, 4),
+  siz = c(1, 2, 2, 1),
+  weight = c(1, 1, 1, 1),
+  geo_cluster = c(1, 1, 2, 2)
+)
+
+result <- ipu(hh_seed, hh_targets, max_iterations = 10)
+```
+
+## Example 2: The Arizona Paper Example
 
 In household survey expansion, it is common to want to control for certain
 features that describe households, (like size), while controlling for other
@@ -379,7 +428,7 @@ result %>%
 ```
 
 
-## Example 2: Using Multiple Geographies
+## Example 3: Using Multiple Geographies
 
 `ipu()` allows different geographies to be specified for different marginal
 tables. There are a few rules that make this possible, but in short, the geo
