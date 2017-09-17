@@ -222,7 +222,7 @@ targets$veh %>%
 ```
 
 ```{r}
-# Saving seed and target for examples after example 2.
+# Saving seed and target for later examples.
 first_seed <- seed
 first_targets <- targets
 ```
@@ -256,7 +256,7 @@ seed %>%
   )
 ```
 
-New targets are specified:
+New targets are specified for each cluster:
 
 ```{r}
 targets <- list()
@@ -305,7 +305,7 @@ result %>%
 
 Iterative proportional updating is a method developed by Arizona State University
 that allows the IPF procedure to match household- and person-level marginals. In
-that basic IPF procedure, all marginal distributions must describe the same thing
+the basic IPF procedure, all marginal distributions must describe the same thing
 (e.g. households). IPU allows you to say, for example, that a zone needs a total
 household count of 500, but also needs 800 people.
 
@@ -313,7 +313,7 @@ household count of 500, but also needs 800 people.
 
 In household survey expansion, it is common to want to control for certain
 features that describe households, (like size), while controlling for other
-attributes that describe people (like age). This is possible with `ipfr`.
+attributes that describe people (like age). This is possible with the `ipu()` function.
 
 This example is taken directly from the Arizona paper on page 20:
 http://www.scag.ca.gov/Documents/PopulationSynthesizerPaper_TRB.pdf
@@ -351,29 +351,39 @@ per_targets$pertype <- data_frame(
 ```
 
 ```{r example 1 ipu}
-result <- ipu(hh_seed, hh_targets, per_seed, per_targets, verbose = TRUE,
+result <- ipu(hh_seed, hh_targets, per_seed, per_targets,
               relative_gap = .0001, max_iterations = 600)
 ```
 
 After running for 415 iterations, the results shown below match those found in
 the paper. Running to a tighter convergence would result in an exact match, but
-would take longer.
+would take longer. The second table shows that the results match the household
+type targets.
 
 ```{r example 1 results}
-head(result)
+head(result) %>%
+  htmlTable(
+    rnames = FALSE, caption = "Sample of Resulting Seeds"
+  )
+  
 
-result %>% group_by(hhtype) %>% summarize(weight = sum(weight))
+result %>% 
+  group_by(hhtype) %>% 
+  summarize(weight = sum(weight)) %>%
+  htmlTable(
+    rnames = FALSE, caption = "Summary of Resulting Weights by Geography"
+  )
 ```
 
 
-## Example 3: Different Geographies
+## Example 2: Using Multiple Geographies
 
 `ipu()` allows different geographies to be specified for different marginal
 tables. There are a few rules that make this possible, but in short, the geo
 field on each target table tells the algorithm which scale to constrain to.
 
-All of the following rules are checked by the algorithm and you will get a
-message telling you if you violated one.
+All of the following rules are checked by the algorithm a warning message will
+show if one is violated.
 
   * The household seed table must contain all geo fields used by any target table
     and the `hhid` field.
@@ -382,7 +392,7 @@ message telling you if you violated one.
     * geo_region
     * geo_state
   * Do **not** put any geo fields on the person seed table.
-    * This prevents any errors/differences from breaking the algorithm.
+    * This prevents any errors/inconsistencies between seed tables.
   * Each target table must have a geo field that is present in the hh_seed
 
 To demonstrate, the Arizona example from example 1 is modified to add two
@@ -452,10 +462,14 @@ per_targets$pertype <- per_targets$pertype %>%
 per_targets
 ```
 
+Run the IPU algorithm.
+
 ```{r example 2 ipu}
-result <- ipu(hh_seed, hh_targets, per_seed, per_targets, verbose = TRUE,
+result <- ipu(hh_seed, hh_targets, per_seed, per_targets,
               relative_gap = .0001, max_iterations = 600)
 ```
+
+The resulting weights match both the household and person targets.
 
 ```{r example 2 results}
 result %>% group_by(hhtype) %>% summarize(weight = sum(weight))
