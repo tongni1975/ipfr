@@ -67,7 +67,7 @@
 #' @examples
 #' \dontrun{
 #' hh_seed <- data.frame(
-#'   hhid = c(1, 2, 3, 4),
+#'   pid = c(1, 2, 3, 4),
 #'   siz = c(1, 2, 2, 1),
 #'   weight = c(1, 1, 1, 1),
 #'   geo_cluster = c(1, 1, 2, 2)
@@ -107,7 +107,7 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
   primary_seed_mod <- primary_seed %>%
     dplyr::select(-dplyr::starts_with("geo_"))
   
-  # Modify the household seed to the required format. Use one-hot-encoding to
+  # Modify the primary seed to the required format. Use one-hot-encoding to
   # expand standard columns into dummy columns.
   col_names <- names(primary_targets)
   primary_seed_mod <- primary_seed_mod %>%
@@ -121,7 +121,7 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
     mlr::createDummyFeatures()
   
   if (!is.null(secondary_seed)) {
-    # Modify the person seed table the same way, but sum by household ID
+    # Modify the person seed table the same way, but sum by primary ID
     col_names <- names(secondary_targets)
     secondary_seed_mod <- secondary_seed %>%
       # Keep only the fields of interest
