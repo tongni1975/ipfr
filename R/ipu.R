@@ -341,7 +341,7 @@ check_tables <- function(primary_seed, primary_targets, secondary_seed = NULL, s
       if (any(is.na(test))) {
         prob_cat <- col_names[which(is.na(test))]
         stop(
-          "Marginal ", name, "; category ", prob_cat[1], " is missing from ",
+          "Marginal ", name, ", category ", prob_cat[1], " is missing from ",
           geo_colname, " ", geo, " in the primary_seed table."
         )
       }   
@@ -405,7 +405,7 @@ check_tables <- function(primary_seed, primary_targets, secondary_seed = NULL, s
         if (any(is.na(test))) {
           prob_cat <- col_names[which(is.na(test))]
           stop(
-            "Marginal ", name, "; category ", prob_cat[1], " is missing from ",
+            "Marginal ", name, ", category ", prob_cat[1], " is missing from ",
             geo_colname, " ", geo, " in the secondary_seed table."
           )
         }   
