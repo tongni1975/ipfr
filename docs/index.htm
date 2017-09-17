@@ -12,7 +12,7 @@
 
 <meta name="author" content="Kyle Ward" />
 
-<meta name="date" content="2017-09-16" />
+<meta name="date" content="2017-09-17" />
 
 <title>Using ipf</title>
 
@@ -70,12 +70,17 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <h1 class="title toc-ignore">Using ipf</h1>
 <h4 class="author"><em>Kyle Ward</em></h4>
-<h4 class="date"><em>2017-09-16</em></h4>
+<h4 class="date"><em>2017-09-17</em></h4>
 
 
 <div id="TOC">
 <ul>
 <li><a href="#introduction">Introduction</a></li>
+<li><a href="#ipu">IPU</a><ul>
+<li><a href="#example-1-simple-example">Example 1: Simple Example</a></li>
+<li><a href="#example-2-the-arizona-paper-example">Example 2: The Arizona Paper Example</a></li>
+<li><a href="#example-3-using-multiple-geographies">Example 3: Using Multiple Geographies</a></li>
+</ul></li>
 <li><a href="#ipf">IPF</a><ul>
 <li><a href="#example-1-basics">Example 1: Basics</a><ul>
 <li><a href="#seed-table-creation">Seed table creation</a></li>
@@ -85,10 +90,6 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#summarizing-results">Summarizing Results</a></li>
 </ul></li>
 <li><a href="#example-2-survey-expansion-using-geographical-clusters">Example 2: Survey Expansion using Geographical Clusters</a></li>
-</ul></li>
-<li><a href="#ipu">IPU</a><ul>
-<li><a href="#example-1-the-arizona-paper-example">Example 1: The Arizona Paper Example</a></li>
-<li><a href="#example-2-using-multiple-geographies">Example 2: Using Multiple Geographies</a></li>
 </ul></li>
 <li><a href="#how-ipfr-addresses-common-ipf-problems">How IPFR addresses common IPF problems</a><ul>
 <li><a href="#zero-weights">Zero weights</a></li>
@@ -102,9 +103,317 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <div id="introduction" class="section level1">
 <h1>Introduction</h1>
 <p>This package provides a generic implimentation of the iterative proportional fitting algorithm or <a href="https://en.wikipedia.org/wiki/Iterative_proportional_fitting">IPF</a> in the <code>ipf()</code> function. It also provides an iterative proportional updating algorithm (<a href="http://www.scag.ca.gov/Documents/PopulationSynthesizerPaper_TRB.pdf">IPU</a>) for balancing household- and person-level marginals in the <code>ipu()</code> function.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(dplyr)
+<span class="kw">library</span>(tidyr)
+<span class="kw">library</span>(ipfr)
+<span class="kw">library</span>(htmlTable)</code></pre></div>
+</div>
+<div id="ipu" class="section level1">
+<h1>IPU</h1>
+<p>Iterative proportional updating is a method developed by Arizona State University that allows the IPF procedure to match household- and person-level marginals. In the basic IPF procedure, all marginal distributions must describe the same thing (e.g. households). IPU allows you to say, for example, that a zone needs a total household count of 500, but also needs 800 people.</p>
+<div id="example-1-simple-example" class="section level2">
+<h2>Example 1: Simple Example</h2>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">hh_seed &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">pid =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>),
+  <span class="dt">siz =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">1</span>),
+  <span class="dt">weight =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>),
+  <span class="dt">geo_cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>)
+)
+
+hh_seed %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Seed Table with Cluster Appended&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='4' style='text-align: left;'>
+Seed Table with Cluster Appended</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>pid</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>siz</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>weight</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>geo_cluster</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+</tr>
+<tr>
+<td style='text-align: center;'>3</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>2</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>4</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>1</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>1</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>2</td>
+</tr>
+</tbody>
+</table>
+<p>New targets are specified for each cluster:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">hh_targets &lt;-<span class="st"> </span><span class="kw">list</span>()
+hh_targets$siz &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">geo_cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>),
+  <span class="st">`</span><span class="dt">1</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">75</span>, <span class="dv">100</span>),
+  <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">25</span>, <span class="dv">150</span>)
+)</code></pre></div>
+<p>Run <code>ipu()</code>. Note that it picks up a new error. When providing cluster values in the seed table, <code>ipfr</code> checks to make sure that every marginal category appears in every cluster. In this case, the full seed table does contain both size 1 and 2 records, but cluster 2 only has size 1.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets, <span class="dt">max_iterations =</span> <span class="dv">10</span>)</code></pre></div>
+<pre><code>## Error in check_tables(primary_seed, primary_targets): Marginal siz; category 2 is missing from geo_cluster 2 in the primary_seed table.</code></pre>
+<p>Fix the seed table and re-run <code>ipf</code>.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">hh_seed &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">pid =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>),
+  <span class="dt">siz =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">1</span>),
+  <span class="dt">weight =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>),
+  <span class="dt">geo_cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>)
+)
+
+result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets, <span class="dt">max_iterations =</span> <span class="dv">10</span>)</code></pre></div>
+</div>
+<div id="example-2-the-arizona-paper-example" class="section level2">
+<h2>Example 2: The Arizona Paper Example</h2>
+<p>In household survey expansion, it is common to want to control for certain features that describe households, (like size), while controlling for other attributes that describe people (like age). This is possible with the <code>ipu()</code> function.</p>
+<p>This example is taken directly from the Arizona paper on page 20: <a href="http://www.scag.ca.gov/Documents/PopulationSynthesizerPaper_TRB.pdf" class="uri">http://www.scag.ca.gov/Documents/PopulationSynthesizerPaper_TRB.pdf</a></p>
+<p>In this example, household type could represent size (e.g. 1-person and 2-person households). Person type could represent age groups (e.g. under 18, between 18 and 50, and over 50).</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">hh_seed &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">geo_region =</span> <span class="dv">1</span>,
+  <span class="dt">pid =</span> <span class="kw">c</span>(<span class="dv">1</span>:<span class="dv">8</span>),
+  <span class="dt">hhtype =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">2</span>)
+)
+
+per_seed &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">pid =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">5</span>, <span class="dv">5</span>, <span class="dv">5</span>, <span class="dv">6</span>, <span class="dv">6</span>, <span class="dv">7</span>, <span class="dv">7</span>, <span class="dv">7</span>, <span class="dv">7</span>, <span class="dv">7</span>, <span class="dv">8</span>, <span class="dv">8</span>),
+  <span class="dt">pertype =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">2</span>)
+)
+
+hh_targets &lt;-<span class="st"> </span><span class="kw">list</span>()
+hh_targets$hhtype &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">geo_region =</span> <span class="dv">1</span>,
+  <span class="st">`</span><span class="dt">1</span><span class="st">`</span> =<span class="st"> </span><span class="dv">35</span>,
+  <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="dv">65</span>
+)
+
+per_targets &lt;-<span class="st"> </span><span class="kw">list</span>()
+per_targets$pertype &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">geo_region =</span> <span class="dv">1</span>,
+  <span class="st">`</span><span class="dt">1</span><span class="st">`</span> =<span class="st"> </span><span class="dv">91</span>,
+  <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="dv">65</span>,
+  <span class="st">`</span><span class="dt">3</span><span class="st">`</span> =<span class="st"> </span><span class="dv">104</span>
+)</code></pre></div>
+<p>In the interst of keeping vignette build time short, the <code>ipu()</code> algorithm is only run for 10 iterations. After running for 400 or more iterations, the results match closely to those shown in the paper.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets, per_seed, per_targets,
+              <span class="dt">relative_gap =</span> .<span class="dv">0001</span>, <span class="dt">max_iterations =</span> <span class="dv">10</span>)</code></pre></div>
+<p>The first table shows a sample of the result. The second table shows how well the results match targets when summarized. Feel free to run the code chunk above for 400 or more iterations and then look again.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">head</span>(result) %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Sample of Resulting Seeds&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='4' style='text-align: left;'>
+Sample of Resulting Seeds</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>geo_region</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>pid</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>hhtype</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>weight</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>6.24866346008096</td>
+</tr>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>20.1044448014115</td>
+</tr>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>3</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>4.45825208451616</td>
+</tr>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>4</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>23.3656097063124</td>
+</tr>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>5</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>16.3911397624073</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>1</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>6</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>2</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>5.18143023635475</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result %&gt;%<span class="st"> </span>
+<span class="st">  </span><span class="kw">group_by</span>(hhtype) %&gt;%<span class="st"> </span>
+<span class="st">  </span><span class="kw">summarize</span>(<span class="dt">weight =</span> <span class="kw">sum</span>(weight)) %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Summary of Resulting Weights by Geography&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='2' style='text-align: left;'>
+Summary of Resulting Weights by Geography</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>hhtype</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>weight</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>30.8113603460086</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>2</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>57.3818762231669</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="example-3-using-multiple-geographies" class="section level2">
+<h2>Example 3: Using Multiple Geographies</h2>
+<p><code>ipu()</code> allows different geographies to be specified for different marginal tables. There are a few rules that make this possible, but in short, the geo field on each target table tells the algorithm which scale to constrain to.</p>
+<p>All of the following rules are checked by the algorithm a warning message will show if one is violated.</p>
+<ul>
+<li>The household seed table must contain all geo fields used by any target table and the <code>pid</code> field.</li>
+<li>All fields that designate geographies must start with “geo_”
+<ul>
+<li>geo_cluster</li>
+<li>geo_region</li>
+<li>geo_state</li>
+</ul></li>
+<li>Do <strong>not</strong> put any geo fields on the person seed table.
+<ul>
+<li>This prevents any errors/inconsistencies between seed tables.</li>
+</ul></li>
+<li>Each target table must have a geo field that is present in the hh_seed</li>
+</ul>
+<p>To demonstrate, the Arizona example from example 1 is modified to add two different clusters for household controls but to still control the person targets at the regional level.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Same as example 1</span>
+hh_seed &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">geo_region =</span> <span class="dv">1</span>,
+  <span class="dt">pid =</span> <span class="kw">c</span>(<span class="dv">1</span>:<span class="dv">8</span>),
+  <span class="dt">hhtype =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">2</span>)
+)
+
+per_seed &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">pid =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">5</span>, <span class="dv">5</span>, <span class="dv">5</span>, <span class="dv">6</span>, <span class="dv">6</span>, <span class="dv">7</span>, <span class="dv">7</span>, <span class="dv">7</span>, <span class="dv">7</span>, <span class="dv">7</span>, <span class="dv">8</span>, <span class="dv">8</span>),
+  <span class="dt">pertype =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">2</span>)
+)
+
+hh_targets &lt;-<span class="st"> </span><span class="kw">list</span>()
+hh_targets$hhtype &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">geo_region =</span> <span class="dv">1</span>,
+  <span class="st">`</span><span class="dt">1</span><span class="st">`</span> =<span class="st"> </span><span class="dv">35</span>,
+  <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="dv">65</span>
+)
+
+per_targets &lt;-<span class="st"> </span><span class="kw">list</span>()
+per_targets$pertype &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">geo_region =</span> <span class="dv">1</span>,
+  <span class="st">`</span><span class="dt">1</span><span class="st">`</span> =<span class="st"> </span><span class="dv">91</span>,
+  <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="dv">65</span>,
+  <span class="st">`</span><span class="dt">3</span><span class="st">`</span> =<span class="st"> </span><span class="dv">104</span>
+)
+
+<span class="co"># Modifying example 1 for example 2</span>
+
+<span class="co"># Repeat the hh_seed to create cluster 1 and 2 households</span>
+hh_seed &lt;-<span class="st"> </span>hh_seed %&gt;%
+<span class="st">  </span><span class="kw">rename</span>(<span class="dt">geo_cluster =</span> geo_region)
+hh_seed &lt;-<span class="st"> </span><span class="kw">bind_rows</span>(
+  hh_seed,
+  hh_seed %&gt;%<span class="st"> </span>
+<span class="st">    </span><span class="kw">mutate</span>(<span class="dt">geo_cluster =</span> <span class="dv">2</span>, <span class="dt">pid =</span> pid +<span class="st"> </span><span class="dv">8</span>)
+)
+hh_seed$geo_region =<span class="st"> </span><span class="dv">1</span>
+
+<span class="co"># Repeat the household targets for two clusters</span>
+hh_targets$hhtype &lt;-<span class="st"> </span><span class="kw">bind_rows</span>(hh_targets$hhtype, hh_targets$hhtype)
+hh_targets$hhtype &lt;-<span class="st"> </span>hh_targets$hhtype %&gt;%
+<span class="st">  </span><span class="kw">rename</span>(<span class="dt">geo_cluster =</span> geo_region) %&gt;%
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">geo_cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>))
+hh_targets</code></pre></div>
+<pre><code>## $hhtype
+## # A tibble: 2 x 3
+##   geo_cluster   `1`   `2`
+##         &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1           1    35    65
+## 2           2    35    65</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Repeat the per_seed to create cluster 1 and 2 persons</span>
+per_seed &lt;-<span class="st"> </span><span class="kw">bind_rows</span>(
+  per_seed,
+  per_seed %&gt;%<span class="st"> </span>
+<span class="st">    </span><span class="kw">mutate</span>(<span class="dt">pid =</span> pid +<span class="st"> </span><span class="dv">8</span>)
+)
+
+<span class="co"># Double the regional person targets</span>
+per_targets$pertype &lt;-<span class="st"> </span>per_targets$pertype %&gt;%
+<span class="st">  </span><span class="kw">mutate_at</span>(
+    <span class="dt">.vars =</span> <span class="kw">vars</span>(<span class="st">&quot;1&quot;</span>, <span class="st">&quot;2&quot;</span>, <span class="st">&quot;3&quot;</span>),
+    <span class="dt">.funs =</span> <span class="kw">funs</span>(. *<span class="st"> </span><span class="dv">2</span>)
+  )
+per_targets</code></pre></div>
+<pre><code>## $pertype
+## # A tibble: 1 x 4
+##   geo_region   `1`   `2`   `3`
+##        &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1          1   182   130   208</code></pre>
+<p>Run the IPU algorithm. Again, for vignette build time, only 10 iterations are performed. Run the code yourself with <code>max_iterations</code> set to 600 to see the converged result.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets, per_seed, per_targets,
+              <span class="dt">relative_gap =</span> .<span class="dv">0001</span>, <span class="dt">max_iterations =</span> <span class="dv">10</span>)</code></pre></div>
+<p>The tables below show the results compared back to targets. More iterations would make a better match.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result %&gt;%<span class="st"> </span><span class="kw">group_by</span>(hhtype) %&gt;%<span class="st"> </span><span class="kw">summarize</span>(<span class="dt">weight =</span> <span class="kw">sum</span>(weight))</code></pre></div>
+<pre><code>## # A tibble: 2 x 2
+##   hhtype    weight
+##    &lt;dbl&gt;     &lt;dbl&gt;
+## 1      1  61.62272
+## 2      2 114.76375</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">per_seed %&gt;%
+<span class="st">  </span><span class="kw">left_join</span>(
+    result %&gt;%<span class="st"> </span><span class="kw">select</span>(pid, weight),
+    <span class="dt">by =</span> <span class="st">&quot;pid&quot;</span>
+  ) %&gt;%
+<span class="st">  </span><span class="kw">group_by</span>(pertype) %&gt;%
+<span class="st">  </span><span class="kw">summarize</span>(<span class="dt">weight =</span> <span class="kw">sum</span>(weight))</code></pre></div>
+<pre><code>## # A tibble: 3 x 2
+##   pertype   weight
+##     &lt;dbl&gt;    &lt;dbl&gt;
+## 1       1 167.0452
+## 2       2 122.2286
+## 3       3 208.0000</code></pre>
+</div>
 </div>
 <div id="ipf" class="section level1">
 <h1>IPF</h1>
+<p><strong>Note: <code>ipf()</code> is being deprecated in favor of <code>ipu()</code>.</strong></p>
 <p>The <code>ipf()</code> function is intended for basic IPF operations. It has many applications in different fields, but in transportation, you can use it to:</p>
 <ul>
 <li>Grow a base year through-trip table to future year station volumes.</li>
@@ -118,12 +427,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <div id="seed-table-creation" class="section level3">
 <h3>Seed table creation</h3>
 <p>The seed table is the starting point for the IPF procedure. In this example, we will use a made up summary table of survey data. This fake table is a count of households by the number persons, workers and vehicles. A sample of the table is shown for illustration. The count is stored in the <code>weight</code> field.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(dplyr)
-<span class="kw">library</span>(tidyr)
-<span class="kw">library</span>(ipfr)
-<span class="kw">library</span>(htmlTable)
-
-seed &lt;-<span class="st"> </span><span class="kw">expand.grid</span>(
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">seed &lt;-<span class="st"> </span><span class="kw">expand.grid</span>(
   <span class="dt">siz =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>),
   <span class="dt">wrk =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>),
   <span class="dt">veh =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>)
@@ -740,237 +1044,6 @@ Survey Expansion to Clusters</td></tr>
 </tr>
 </tbody>
 </table>
-</div>
-</div>
-<div id="ipu" class="section level1">
-<h1>IPU</h1>
-<p>Iterative proportional updating is a method developed by Arizona State University that allows the IPF procedure to match household- and person-level marginals. In the basic IPF procedure, all marginal distributions must describe the same thing (e.g. households). IPU allows you to say, for example, that a zone needs a total household count of 500, but also needs 800 people.</p>
-<div id="example-1-the-arizona-paper-example" class="section level2">
-<h2>Example 1: The Arizona Paper Example</h2>
-<p>In household survey expansion, it is common to want to control for certain features that describe households, (like size), while controlling for other attributes that describe people (like age). This is possible with the <code>ipu()</code> function.</p>
-<p>This example is taken directly from the Arizona paper on page 20: <a href="http://www.scag.ca.gov/Documents/PopulationSynthesizerPaper_TRB.pdf" class="uri">http://www.scag.ca.gov/Documents/PopulationSynthesizerPaper_TRB.pdf</a></p>
-<p>In this example, household type could represent size (e.g. 1-person and 2-person households). Person type could represent age groups (e.g. under 18, between 18 and 50, and over 50).</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">hh_seed &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
-  <span class="dt">geo_region =</span> <span class="dv">1</span>,
-  <span class="dt">hhid =</span> <span class="kw">c</span>(<span class="dv">1</span>:<span class="dv">8</span>),
-  <span class="dt">hhtype =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">2</span>)
-)
-
-per_seed &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
-  <span class="dt">hhid =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">5</span>, <span class="dv">5</span>, <span class="dv">5</span>, <span class="dv">6</span>, <span class="dv">6</span>, <span class="dv">7</span>, <span class="dv">7</span>, <span class="dv">7</span>, <span class="dv">7</span>, <span class="dv">7</span>, <span class="dv">8</span>, <span class="dv">8</span>),
-  <span class="dt">pertype =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">2</span>)
-)
-
-hh_targets &lt;-<span class="st"> </span><span class="kw">list</span>()
-hh_targets$hhtype &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
-  <span class="dt">geo_region =</span> <span class="dv">1</span>,
-  <span class="st">`</span><span class="dt">1</span><span class="st">`</span> =<span class="st"> </span><span class="dv">35</span>,
-  <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="dv">65</span>
-)
-
-per_targets &lt;-<span class="st"> </span><span class="kw">list</span>()
-per_targets$pertype &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
-  <span class="dt">geo_region =</span> <span class="dv">1</span>,
-  <span class="st">`</span><span class="dt">1</span><span class="st">`</span> =<span class="st"> </span><span class="dv">91</span>,
-  <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="dv">65</span>,
-  <span class="st">`</span><span class="dt">3</span><span class="st">`</span> =<span class="st"> </span><span class="dv">104</span>
-)</code></pre></div>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets, per_seed, per_targets,
-              <span class="dt">relative_gap =</span> .<span class="dv">0001</span>, <span class="dt">max_iterations =</span> <span class="dv">600</span>)</code></pre></div>
-<p>After running for 415 iterations, the results shown below match those found in the paper. Running to a tighter convergence would result in an exact match, but would take longer. The second table shows that the results match the household type targets.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">head</span>(result) %&gt;%
-<span class="st">  </span><span class="kw">htmlTable</span>(
-    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Sample of Resulting Seeds&quot;</span>
-  )</code></pre></div>
-<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
-<thead>
-<tr><td colspan='4' style='text-align: left;'>
-Sample of Resulting Seeds</td></tr>
-<tr>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>geo_region</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>hhid</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>hhtype</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>weight</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style='text-align: center;'>1</td>
-<td style='text-align: center;'>1</td>
-<td style='text-align: center;'>1</td>
-<td style='text-align: center;'>1.36093882523389</td>
-</tr>
-<tr>
-<td style='text-align: center;'>1</td>
-<td style='text-align: center;'>2</td>
-<td style='text-align: center;'>1</td>
-<td style='text-align: center;'>25.659362844639</td>
-</tr>
-<tr>
-<td style='text-align: center;'>1</td>
-<td style='text-align: center;'>3</td>
-<td style='text-align: center;'>1</td>
-<td style='text-align: center;'>7.97882983097802</td>
-</tr>
-<tr>
-<td style='text-align: center;'>1</td>
-<td style='text-align: center;'>4</td>
-<td style='text-align: center;'>2</td>
-<td style='text-align: center;'>27.7901521848487</td>
-</tr>
-<tr>
-<td style='text-align: center;'>1</td>
-<td style='text-align: center;'>5</td>
-<td style='text-align: center;'>2</td>
-<td style='text-align: center;'>18.4514877870369</td>
-</tr>
-<tr>
-<td style='border-bottom: 2px solid grey; text-align: center;'>1</td>
-<td style='border-bottom: 2px solid grey; text-align: center;'>6</td>
-<td style='border-bottom: 2px solid grey; text-align: center;'>2</td>
-<td style='border-bottom: 2px solid grey; text-align: center;'>8.64140300764386</td>
-</tr>
-</tbody>
-</table>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result %&gt;%<span class="st"> </span>
-<span class="st">  </span><span class="kw">group_by</span>(hhtype) %&gt;%<span class="st"> </span>
-<span class="st">  </span><span class="kw">summarize</span>(<span class="dt">weight =</span> <span class="kw">sum</span>(weight)) %&gt;%
-<span class="st">  </span><span class="kw">htmlTable</span>(
-    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Summary of Resulting Weights by Geography&quot;</span>
-  )</code></pre></div>
-<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
-<thead>
-<tr><td colspan='2' style='text-align: left;'>
-Summary of Resulting Weights by Geography</td></tr>
-<tr>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>hhtype</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>weight</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style='text-align: center;'>1</td>
-<td style='text-align: center;'>34.9991315008509</td>
-</tr>
-<tr>
-<td style='border-bottom: 2px solid grey; text-align: center;'>2</td>
-<td style='border-bottom: 2px solid grey; text-align: center;'>64.9983990738697</td>
-</tr>
-</tbody>
-</table>
-</div>
-<div id="example-2-using-multiple-geographies" class="section level2">
-<h2>Example 2: Using Multiple Geographies</h2>
-<p><code>ipu()</code> allows different geographies to be specified for different marginal tables. There are a few rules that make this possible, but in short, the geo field on each target table tells the algorithm which scale to constrain to.</p>
-<p>All of the following rules are checked by the algorithm a warning message will show if one is violated.</p>
-<ul>
-<li>The household seed table must contain all geo fields used by any target table and the <code>hhid</code> field.</li>
-<li>All fields that designate geographies must start with “geo_”
-<ul>
-<li>geo_cluster</li>
-<li>geo_region</li>
-<li>geo_state</li>
-</ul></li>
-<li>Do <strong>not</strong> put any geo fields on the person seed table.
-<ul>
-<li>This prevents any errors/inconsistencies between seed tables.</li>
-</ul></li>
-<li>Each target table must have a geo field that is present in the hh_seed</li>
-</ul>
-<p>To demonstrate, the Arizona example from example 1 is modified to add two different clusters for household controls but to still control the person targets at the regional level.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Same as example 1</span>
-hh_seed &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
-  <span class="dt">geo_region =</span> <span class="dv">1</span>,
-  <span class="dt">hhid =</span> <span class="kw">c</span>(<span class="dv">1</span>:<span class="dv">8</span>),
-  <span class="dt">hhtype =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">2</span>)
-)
-
-per_seed &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
-  <span class="dt">hhid =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">5</span>, <span class="dv">5</span>, <span class="dv">5</span>, <span class="dv">6</span>, <span class="dv">6</span>, <span class="dv">7</span>, <span class="dv">7</span>, <span class="dv">7</span>, <span class="dv">7</span>, <span class="dv">7</span>, <span class="dv">8</span>, <span class="dv">8</span>),
-  <span class="dt">pertype =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">2</span>)
-)
-
-hh_targets &lt;-<span class="st"> </span><span class="kw">list</span>()
-hh_targets$hhtype &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
-  <span class="dt">geo_region =</span> <span class="dv">1</span>,
-  <span class="st">`</span><span class="dt">1</span><span class="st">`</span> =<span class="st"> </span><span class="dv">35</span>,
-  <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="dv">65</span>
-)
-
-per_targets &lt;-<span class="st"> </span><span class="kw">list</span>()
-per_targets$pertype &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
-  <span class="dt">geo_region =</span> <span class="dv">1</span>,
-  <span class="st">`</span><span class="dt">1</span><span class="st">`</span> =<span class="st"> </span><span class="dv">91</span>,
-  <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="dv">65</span>,
-  <span class="st">`</span><span class="dt">3</span><span class="st">`</span> =<span class="st"> </span><span class="dv">104</span>
-)
-
-<span class="co"># Modifying example 1 for example 2</span>
-
-<span class="co"># Repeat the hh_seed to create cluster 1 and 2 households</span>
-hh_seed &lt;-<span class="st"> </span>hh_seed %&gt;%
-<span class="st">  </span><span class="kw">rename</span>(<span class="dt">geo_cluster =</span> geo_region)
-hh_seed &lt;-<span class="st"> </span><span class="kw">bind_rows</span>(
-  hh_seed,
-  hh_seed %&gt;%<span class="st"> </span>
-<span class="st">    </span><span class="kw">mutate</span>(<span class="dt">geo_cluster =</span> <span class="dv">2</span>, <span class="dt">hhid =</span> hhid +<span class="st"> </span><span class="dv">8</span>)
-)
-hh_seed$geo_region =<span class="st"> </span><span class="dv">1</span>
-
-<span class="co"># Repeat the household targets for two clusters</span>
-hh_targets$hhtype &lt;-<span class="st"> </span><span class="kw">bind_rows</span>(hh_targets$hhtype, hh_targets$hhtype)
-hh_targets$hhtype &lt;-<span class="st"> </span>hh_targets$hhtype %&gt;%
-<span class="st">  </span><span class="kw">rename</span>(<span class="dt">geo_cluster =</span> geo_region) %&gt;%
-<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">geo_cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>))
-hh_targets</code></pre></div>
-<pre><code>## $hhtype
-## # A tibble: 2 x 3
-##   geo_cluster   `1`   `2`
-##         &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
-## 1           1    35    65
-## 2           2    35    65</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Repeat the per_seed to create cluster 1 and 2 persons</span>
-per_seed &lt;-<span class="st"> </span><span class="kw">bind_rows</span>(
-  per_seed,
-  per_seed %&gt;%<span class="st"> </span>
-<span class="st">    </span><span class="kw">mutate</span>(<span class="dt">hhid =</span> hhid +<span class="st"> </span><span class="dv">8</span>)
-)
-
-<span class="co"># Double the regional person targets</span>
-per_targets$pertype &lt;-<span class="st"> </span>per_targets$pertype %&gt;%
-<span class="st">  </span><span class="kw">mutate_at</span>(
-    <span class="dt">.vars =</span> <span class="kw">vars</span>(<span class="st">&quot;1&quot;</span>, <span class="st">&quot;2&quot;</span>, <span class="st">&quot;3&quot;</span>),
-    <span class="dt">.funs =</span> <span class="kw">funs</span>(. *<span class="st"> </span><span class="dv">2</span>)
-  )
-per_targets</code></pre></div>
-<pre><code>## $pertype
-## # A tibble: 1 x 4
-##   geo_region   `1`   `2`   `3`
-##        &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
-## 1          1   182   130   208</code></pre>
-<p>Run the IPU algorithm.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets, per_seed, per_targets,
-              <span class="dt">relative_gap =</span> .<span class="dv">0001</span>, <span class="dt">max_iterations =</span> <span class="dv">600</span>)</code></pre></div>
-<p>The resulting weights match both the household and person targets.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result %&gt;%<span class="st"> </span><span class="kw">group_by</span>(hhtype) %&gt;%<span class="st"> </span><span class="kw">summarize</span>(<span class="dt">weight =</span> <span class="kw">sum</span>(weight))</code></pre></div>
-<pre><code>## # A tibble: 2 x 2
-##   hhtype    weight
-##    &lt;dbl&gt;     &lt;dbl&gt;
-## 1      1  69.99826
-## 2      2 129.99680</code></pre>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">per_seed %&gt;%
-<span class="st">  </span><span class="kw">left_join</span>(
-    result %&gt;%<span class="st"> </span><span class="kw">select</span>(hhid, weight),
-    <span class="dt">by =</span> <span class="st">&quot;hhid&quot;</span>
-  ) %&gt;%
-<span class="st">  </span><span class="kw">group_by</span>(pertype) %&gt;%
-<span class="st">  </span><span class="kw">summarize</span>(<span class="dt">weight =</span> <span class="kw">sum</span>(weight))</code></pre></div>
-<pre><code>## # A tibble: 3 x 2
-##   pertype   weight
-##     &lt;dbl&gt;    &lt;dbl&gt;
-## 1       1 181.9977
-## 2       2 129.9990
-## 3       3 208.0000</code></pre>
 </div>
 </div>
 <div id="how-ipfr-addresses-common-ipf-problems" class="section level1">
