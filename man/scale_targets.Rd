@@ -4,11 +4,14 @@
 \alias{scale_targets}
 \title{Scale targets to ensure consistency}
 \usage{
-scale_targets(targets)
+scale_targets(targets, verbose = FALSE)
 }
 \arguments{
 \item{targets}{\code{named list} of \code{data.frames} in the same format
 required by \link{ipu}.}
+
+\item{verbose}{\code{logical} Show a warning for each target scaled?
+Defaults to \code{FALSE}.}
 }
 \description{
 Often, different marginals may disagree on the total number of units. In the

@@ -120,9 +120,9 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
   }
   
   # Scale target tables. All table totals will match the first table.
-  primary_targets <- scale_targets(primary_targets)
+  primary_targets <- scale_targets(primary_targets, verbose)
   if (!is.null(secondary_seed)) {
-    secondary_targets <- scale_targets(secondary_targets)  
+    secondary_targets <- scale_targets(secondary_targets, verbose)  
   }
   
   # Pull off the geo information into a separate equivalency table
@@ -537,7 +537,10 @@ compare_results <- function(seed, targets){
 #' @param targets \code{named list} of \code{data.frames} in the same format
 #' required by \link{ipu}. 
 #' 
-scale_targets <- function(targets){
+#' @param verbose \code{logical} Show a warning for each target scaled?
+#'   Defaults to \code{FALSE}.
+#' 
+scale_targets <- function(targets, verbose = FALSE){
   
   for (i in c(1:length(names(targets)))) {
     name <- names(targets)[i]
@@ -549,19 +552,33 @@ scale_targets <- function(targets){
     
     # calculate total of table
     target <- target %>%
-      gather(key = category, value = count, -!!geo_colname)
+      tidyr::gather(key = category, value = count, -!!geo_colname)
     total <- sum(target$count)
+    
+    # Start a string that will be used for the warning message if targets
+    # are scaled and verbose = TRUE
+    warning_msg <- "Scaling target tables: "
     
     # if first iteration, set total to the global total. Otherwise, scale table
     if (i == 1) {
       global_total <- total
     } else {
       fac <- global_total / total
+      # Write out warning
+      if (fac != 1 & verbose) {
+        show_warning <- TRUE
+        warning_msg <- paste0(warning_msg, " ", name)
+      }
       target <- target %>%
-        mutate(count = count * !!fac) %>%
-        spread(key = category, value = count)
+        dplyr::mutate(count = count * !!fac) %>%
+        tidyr::spread(key = category, value = count)
       targets[[name]] <- target
     }
+  }
+  
+  if (show_warning) {
+    message(warning_msg)
+    utils::flush.console()
   }
   
   return(targets)
