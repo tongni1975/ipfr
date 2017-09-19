@@ -319,8 +319,8 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
     pos <- grep("geo_", colnames(primary_seed))
     geo_cols <- colnames(primary_seed)[pos]
     seed <- secondary_seed %>%
-      left_join(
-        primary_seed %>% select(one_of(geo_cols), pid, weight),
+      dplyr::left_join(
+        primary_seed %>% dplyr::select(dplyr::one_of(geo_cols), pid, weight),
         by = "pid"
       )
     
@@ -495,37 +495,37 @@ compare_results <- function(seed, targets){
     
     # Gather the current target table into long form
     target <- target %>%
-      mutate(geo = paste0(geo_colname, "_", !!as.name(geo_colname))) %>%
-      select(-one_of(geo_colname)) %>%
+      dplyr::mutate(geo = paste0(geo_colname, "_", !!as.name(geo_colname))) %>%
+      dplyr::select(-dplyr::one_of(geo_colname)) %>%
       tidyr::gather(key = category, value = target, -geo) %>%
-      mutate(category = paste0(name, "_", category))
+      dplyr::mutate(category = paste0(name, "_", category))
     
     # summarize the seed table
     result <- seed %>%
-      select(geo = !!as.name(geo_colname), category = !!as.name(name), weight) %>%
-      mutate(
+      dplyr::select(geo = !!as.name(geo_colname), category = !!as.name(name), weight) %>%
+      dplyr::mutate(
         geo = paste0(geo_colname, "_", geo),
         category = paste0(name, "_", category)
       ) %>%
-      group_by(geo, category) %>%
-      summarize(result = sum(weight))
+      dplyr::group_by(geo, category) %>%
+      dplyr::summarize(result = sum(weight))
     
     # Join them together
     joined_tbl <- target %>%
-      left_join(result, by = c("geo" = "geo", "category" = "category"))
+      dplyr::left_join(result, by = c("geo" = "geo", "category" = "category"))
     
     # Append it to the master target df
-    comparison_tbl <- bind_rows(comparison_tbl, joined_tbl)
+    comparison_tbl <- dplyr::bind_rows(comparison_tbl, joined_tbl)
   }
   
   # Calculate difference and percent difference
   comparison_tbl <- comparison_tbl %>%
-    mutate(
+    dplyr::mutate(
       diff = result - target,
       pct_diff = round(diff / target * 100, 2),
       diff = round(diff, 2)
     ) %>%
-    arrange(geo, category)
+    dplyr::arrange(geo, category)
   
   return(comparison_tbl)
 }
