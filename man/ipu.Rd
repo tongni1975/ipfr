@@ -6,7 +6,7 @@
 \usage{
 ipu(primary_seed, primary_targets, secondary_seed = NULL,
   secondary_targets = NULL, relative_gap = 0.01, max_iterations = 100,
-  absolute_diff = 10, min_weight = 1e-04, verbose = FALSE)
+  absolute_diff = 10, min_weight = 0.0001, verbose = FALSE)
 }
 \arguments{
 \item{primary_seed}{In population synthesis or household survey expansion, 

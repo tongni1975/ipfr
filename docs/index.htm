@@ -12,7 +12,7 @@
 
 <meta name="author" content="Kyle Ward" />
 
-<meta name="date" content="2017-09-17" />
+<meta name="date" content="2017-09-19" />
 
 <title>Using ipf</title>
 
@@ -70,7 +70,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <h1 class="title toc-ignore">Using ipf</h1>
 <h4 class="author"><em>Kyle Ward</em></h4>
-<h4 class="date"><em>2017-09-17</em></h4>
+<h4 class="date"><em>2017-09-19</em></h4>
 
 
 <div id="TOC">
@@ -237,7 +237,7 @@ Target Table</td></tr>
 </tbody>
 </table>
 <p>Run <code>ipu()</code>. Note that it throws an error. When providing cluster values in the seed table, <code>ipfr</code> checks to make sure that every marginal category appears in every cluster. In this case, the seed table does not have a 2-person household in cluster 2. This makes it impossible to match that marginal target.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets, <span class="dt">max_iterations =</span> <span class="dv">10</span>)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets)</code></pre></div>
 <pre><code>## Error in check_tables(primary_seed, primary_targets): Marginal siz, category 2 is missing from geo_cluster 2 in the primary_seed table.</code></pre>
 <p>Fix the seed table and re-run <code>ipu</code>. The results match the targets we provided.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">hh_seed &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
@@ -247,16 +247,17 @@ Target Table</td></tr>
   <span class="dt">geo_cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>)
 )
 
-result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets, <span class="dt">max_iterations =</span> <span class="dv">10</span>)
-
-result %&gt;%
+result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets)</code></pre></div>
+<p><code>ipu()</code> returns a named list.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">names</span>(result)</code></pre></div>
+<pre><code>## [1] &quot;weight_tbl&quot;   &quot;primary_comp&quot;</code></pre>
+<p>The first element is the resulting weight table:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result$weight_tbl %&gt;%
 <span class="st">  </span><span class="kw">htmlTable</span>(
-    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Result&quot;</span>
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>
   )</code></pre></div>
 <table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
 <thead>
-<tr><td colspan='4' style='text-align: left;'>
-Result</td></tr>
 <tr>
 <th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>pid</th>
 <th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>siz</th>
@@ -288,6 +289,57 @@ Result</td></tr>
 <td style='border-bottom: 2px solid grey; text-align: center;'>1</td>
 <td style='border-bottom: 2px solid grey; text-align: center;'>100</td>
 <td style='border-bottom: 2px solid grey; text-align: center;'>2</td>
+</tr>
+</tbody>
+</table>
+<p>The next element is a comparison back to the targets provided. With complex seed and target tables, this makes investigating results quick and easy.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result$primary_comp %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>geo</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>category</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>target</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>result</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>diff</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>pct_diff</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>geo_cluster_1</td>
+<td style='text-align: center;'>siz_1</td>
+<td style='text-align: center;'>75</td>
+<td style='text-align: center;'>75</td>
+<td style='text-align: center;'>0</td>
+<td style='text-align: center;'>0</td>
+</tr>
+<tr>
+<td style='text-align: center;'>geo_cluster_1</td>
+<td style='text-align: center;'>siz_2</td>
+<td style='text-align: center;'>25</td>
+<td style='text-align: center;'>25</td>
+<td style='text-align: center;'>0</td>
+<td style='text-align: center;'>0</td>
+</tr>
+<tr>
+<td style='text-align: center;'>geo_cluster_2</td>
+<td style='text-align: center;'>siz_1</td>
+<td style='text-align: center;'>100</td>
+<td style='text-align: center;'>100</td>
+<td style='text-align: center;'>0</td>
+<td style='text-align: center;'>0</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>geo_cluster_2</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>siz_2</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>150</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>150</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>0</td>
 </tr>
 </tbody>
 </table>
@@ -331,17 +383,24 @@ per_targets$pertype &lt;-<span class="st"> </span><span class="kw">data_frame</s
   <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="dv">65</span>,
   <span class="st">`</span><span class="dt">3</span><span class="st">`</span> =<span class="st"> </span><span class="dv">104</span>
 )</code></pre></div>
-<p>In the interst of keeping vignette build time short, the <code>ipu()</code> algorithm is only run for 10 iterations. After running for 400 or more iterations, the results match closely to those shown in the paper.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets, per_seed, per_targets, <span class="dt">max_iterations =</span> <span class="dv">10</span>)</code></pre></div>
-<p>The first table shows a sample of the result. The second table shows how well the results match targets when summarized. Feel free to run the code chunk above for 400 or more iterations and then look again.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">head</span>(result) %&gt;%
+<p>In the interst of keeping vignette build time short, the <code>ipu()</code> algorithm is only run for 30 iterations. After running for 400 or more iterations, the results match closely to those shown in the paper.</p>
+<ul>
+<li>The household seed table is the <code>primary_seed</code></li>
+<li>The household target list is the <code>primary_target</code></li>
+<li>The person seed table is the <code>secondary_seed</code></li>
+<li>The person target list is the <code>secondary_target</code></li>
+</ul>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets, per_seed, per_targets, <span class="dt">max_iterations =</span> <span class="dv">30</span>)</code></pre></div>
+<p>The first table shows the result. The second table shows the primary comparison table. Since we added secondary seeds and targets, the output now contains a secondary comparison table. Feel free to run the code chunk above for 400 or more iterations and then look again.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result$weight_tbl %&gt;%
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">weight =</span> <span class="kw">round</span>(weight, <span class="dv">2</span>)) %&gt;%
 <span class="st">  </span><span class="kw">htmlTable</span>(
-    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Sample of Resulting Seeds&quot;</span>
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Result&quot;</span>
   )</code></pre></div>
 <table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
 <thead>
 <tr><td colspan='4' style='text-align: left;'>
-Sample of Resulting Seeds</td></tr>
+Result</td></tr>
 <tr>
 <th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>geo_region</th>
 <th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>pid</th>
@@ -354,63 +413,131 @@ Sample of Resulting Seeds</td></tr>
 <td style='text-align: center;'>1</td>
 <td style='text-align: center;'>1</td>
 <td style='text-align: center;'>1</td>
-<td style='text-align: center;'>6.24866346008096</td>
+<td style='text-align: center;'>3.77</td>
 </tr>
 <tr>
 <td style='text-align: center;'>1</td>
 <td style='text-align: center;'>2</td>
 <td style='text-align: center;'>1</td>
-<td style='text-align: center;'>20.1044448014115</td>
+<td style='text-align: center;'>23</td>
 </tr>
 <tr>
 <td style='text-align: center;'>1</td>
 <td style='text-align: center;'>3</td>
 <td style='text-align: center;'>1</td>
-<td style='text-align: center;'>4.45825208451616</td>
+<td style='text-align: center;'>6.5</td>
 </tr>
 <tr>
 <td style='text-align: center;'>1</td>
 <td style='text-align: center;'>4</td>
 <td style='text-align: center;'>2</td>
-<td style='text-align: center;'>23.3656097063124</td>
+<td style='text-align: center;'>25.7</td>
 </tr>
 <tr>
 <td style='text-align: center;'>1</td>
 <td style='text-align: center;'>5</td>
 <td style='text-align: center;'>2</td>
-<td style='text-align: center;'>16.3911397624073</td>
+<td style='text-align: center;'>17.41</td>
+</tr>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>6</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>7.26</td>
+</tr>
+<tr>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>7</td>
+<td style='text-align: center;'>2</td>
+<td style='text-align: center;'>4.21</td>
 </tr>
 <tr>
 <td style='border-bottom: 2px solid grey; text-align: center;'>1</td>
-<td style='border-bottom: 2px solid grey; text-align: center;'>6</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>8</td>
 <td style='border-bottom: 2px solid grey; text-align: center;'>2</td>
-<td style='border-bottom: 2px solid grey; text-align: center;'>5.18143023635475</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>7.26</td>
 </tr>
 </tbody>
 </table>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result %&gt;%<span class="st"> </span>
-<span class="st">  </span><span class="kw">group_by</span>(hhtype) %&gt;%<span class="st"> </span>
-<span class="st">  </span><span class="kw">summarize</span>(<span class="dt">weight =</span> <span class="kw">sum</span>(weight)) %&gt;%
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result$primary_comp %&gt;%<span class="st"> </span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">result =</span> <span class="kw">round</span>(result, <span class="dv">2</span>)) %&gt;%
 <span class="st">  </span><span class="kw">htmlTable</span>(
-    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Summary of Resulting Weights by Geography&quot;</span>
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Primary Comparison&quot;</span>
   )</code></pre></div>
 <table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
 <thead>
-<tr><td colspan='2' style='text-align: left;'>
-Summary of Resulting Weights by Geography</td></tr>
+<tr><td colspan='6' style='text-align: left;'>
+Primary Comparison</td></tr>
 <tr>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>hhtype</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>weight</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>geo</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>category</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>target</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>result</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>diff</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>pct_diff</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td style='text-align: center;'>1</td>
-<td style='text-align: center;'>30.8113603460086</td>
+<td style='text-align: center;'>geo_region_1</td>
+<td style='text-align: center;'>hhtype_1</td>
+<td style='text-align: center;'>35</td>
+<td style='text-align: center;'>33.27</td>
+<td style='text-align: center;'>-1.73</td>
+<td style='text-align: center;'>-4.94</td>
 </tr>
 <tr>
-<td style='border-bottom: 2px solid grey; text-align: center;'>2</td>
-<td style='border-bottom: 2px solid grey; text-align: center;'>57.3818762231669</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>geo_region_1</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>hhtype_2</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>65</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>61.85</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>-3.15</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>-4.84</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result$secondary_comp %&gt;%<span class="st"> </span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">result =</span> <span class="kw">round</span>(result, <span class="dv">2</span>)) %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Secondary Comparison&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='6' style='text-align: left;'>
+Secondary Comparison</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>geo</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>category</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>target</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>result</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>diff</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>pct_diff</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>geo_region_1</td>
+<td style='text-align: center;'>pertype_1</td>
+<td style='text-align: center;'>91</td>
+<td style='text-align: center;'>88.42</td>
+<td style='text-align: center;'>-2.58</td>
+<td style='text-align: center;'>-2.83</td>
+</tr>
+<tr>
+<td style='text-align: center;'>geo_region_1</td>
+<td style='text-align: center;'>pertype_2</td>
+<td style='text-align: center;'>65</td>
+<td style='text-align: center;'>63.84</td>
+<td style='text-align: center;'>-1.16</td>
+<td style='text-align: center;'>-1.79</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>geo_region_1</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>pertype_3</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>104</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>104</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>0</td>
 </tr>
 </tbody>
 </table>
@@ -566,18 +693,30 @@ hh_targets$hhtype &lt;-<span class="st"> </span>hh_targets$hhtype %&gt;%
 <span class="st">  </span><span class="kw">rename</span>(<span class="dt">geo_cluster =</span> geo_region) %&gt;%
 <span class="st">  </span><span class="kw">mutate</span>(<span class="dt">geo_cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>))
 
-hh_targets %&gt;%
+hh_targets$hhtype %&gt;%
 <span class="st">  </span><span class="kw">htmlTable</span>(
     <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Modified household targets&quot;</span>
   )</code></pre></div>
 <table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
 <thead>
-<tr><td colspan='1' style='text-align: left;'>
+<tr><td colspan='3' style='text-align: left;'>
 Modified household targets</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>geo_cluster</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>1</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>2</th>
+</tr>
 </thead>
 <tbody>
 <tr>
-<td style='border-bottom: 2px solid grey; text-align: center;'>list(geo_cluster = c(1, 2), `1` = c(35, 35), `2` = c(65, 65))</td>
+<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>35</td>
+<td style='text-align: center;'>65</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>2</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>35</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>65</td>
 </tr>
 </tbody>
 </table>
@@ -589,13 +728,14 @@ per_seed &lt;-<span class="st"> </span><span class="kw">bind_rows</span>(
 )
 
 per_seed %&gt;%
+<span class="st">  </span><span class="kw">head</span>() %&gt;%
 <span class="st">  </span><span class="kw">htmlTable</span>(
-    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Modified person seed&quot;</span>
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Modified person seed (first few rows)&quot;</span>
   )</code></pre></div>
 <table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
 <thead>
 <tr><td colspan='2' style='text-align: left;'>
-Modified person seed</td></tr>
+Modified person seed (first few rows)</td></tr>
 <tr>
 <th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>pid</th>
 <th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>pertype</th>
@@ -623,168 +763,8 @@ Modified person seed</td></tr>
 <td style='text-align: center;'>3</td>
 </tr>
 <tr>
-<td style='text-align: center;'>3</td>
-<td style='text-align: center;'>1</td>
-</tr>
-<tr>
-<td style='text-align: center;'>3</td>
-<td style='text-align: center;'>1</td>
-</tr>
-<tr>
-<td style='text-align: center;'>3</td>
-<td style='text-align: center;'>2</td>
-</tr>
-<tr>
-<td style='text-align: center;'>4</td>
-<td style='text-align: center;'>1</td>
-</tr>
-<tr>
-<td style='text-align: center;'>4</td>
-<td style='text-align: center;'>3</td>
-</tr>
-<tr>
-<td style='text-align: center;'>4</td>
-<td style='text-align: center;'>3</td>
-</tr>
-<tr>
-<td style='text-align: center;'>5</td>
-<td style='text-align: center;'>2</td>
-</tr>
-<tr>
-<td style='text-align: center;'>5</td>
-<td style='text-align: center;'>2</td>
-</tr>
-<tr>
-<td style='text-align: center;'>5</td>
-<td style='text-align: center;'>3</td>
-</tr>
-<tr>
-<td style='text-align: center;'>6</td>
-<td style='text-align: center;'>1</td>
-</tr>
-<tr>
-<td style='text-align: center;'>6</td>
-<td style='text-align: center;'>2</td>
-</tr>
-<tr>
-<td style='text-align: center;'>7</td>
-<td style='text-align: center;'>1</td>
-</tr>
-<tr>
-<td style='text-align: center;'>7</td>
-<td style='text-align: center;'>1</td>
-</tr>
-<tr>
-<td style='text-align: center;'>7</td>
-<td style='text-align: center;'>2</td>
-</tr>
-<tr>
-<td style='text-align: center;'>7</td>
-<td style='text-align: center;'>3</td>
-</tr>
-<tr>
-<td style='text-align: center;'>7</td>
-<td style='text-align: center;'>3</td>
-</tr>
-<tr>
-<td style='text-align: center;'>8</td>
-<td style='text-align: center;'>1</td>
-</tr>
-<tr>
-<td style='text-align: center;'>8</td>
-<td style='text-align: center;'>2</td>
-</tr>
-<tr>
-<td style='text-align: center;'>9</td>
-<td style='text-align: center;'>1</td>
-</tr>
-<tr>
-<td style='text-align: center;'>9</td>
-<td style='text-align: center;'>2</td>
-</tr>
-<tr>
-<td style='text-align: center;'>9</td>
-<td style='text-align: center;'>3</td>
-</tr>
-<tr>
-<td style='text-align: center;'>10</td>
-<td style='text-align: center;'>1</td>
-</tr>
-<tr>
-<td style='text-align: center;'>10</td>
-<td style='text-align: center;'>3</td>
-</tr>
-<tr>
-<td style='text-align: center;'>11</td>
-<td style='text-align: center;'>1</td>
-</tr>
-<tr>
-<td style='text-align: center;'>11</td>
-<td style='text-align: center;'>1</td>
-</tr>
-<tr>
-<td style='text-align: center;'>11</td>
-<td style='text-align: center;'>2</td>
-</tr>
-<tr>
-<td style='text-align: center;'>12</td>
-<td style='text-align: center;'>1</td>
-</tr>
-<tr>
-<td style='text-align: center;'>12</td>
-<td style='text-align: center;'>3</td>
-</tr>
-<tr>
-<td style='text-align: center;'>12</td>
-<td style='text-align: center;'>3</td>
-</tr>
-<tr>
-<td style='text-align: center;'>13</td>
-<td style='text-align: center;'>2</td>
-</tr>
-<tr>
-<td style='text-align: center;'>13</td>
-<td style='text-align: center;'>2</td>
-</tr>
-<tr>
-<td style='text-align: center;'>13</td>
-<td style='text-align: center;'>3</td>
-</tr>
-<tr>
-<td style='text-align: center;'>14</td>
-<td style='text-align: center;'>1</td>
-</tr>
-<tr>
-<td style='text-align: center;'>14</td>
-<td style='text-align: center;'>2</td>
-</tr>
-<tr>
-<td style='text-align: center;'>15</td>
-<td style='text-align: center;'>1</td>
-</tr>
-<tr>
-<td style='text-align: center;'>15</td>
-<td style='text-align: center;'>1</td>
-</tr>
-<tr>
-<td style='text-align: center;'>15</td>
-<td style='text-align: center;'>2</td>
-</tr>
-<tr>
-<td style='text-align: center;'>15</td>
-<td style='text-align: center;'>3</td>
-</tr>
-<tr>
-<td style='text-align: center;'>15</td>
-<td style='text-align: center;'>3</td>
-</tr>
-<tr>
-<td style='text-align: center;'>16</td>
-<td style='text-align: center;'>1</td>
-</tr>
-<tr>
-<td style='border-bottom: 2px solid grey; text-align: center;'>16</td>
-<td style='border-bottom: 2px solid grey; text-align: center;'>2</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>3</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>1</td>
 </tr>
 </tbody>
 </table>
@@ -795,101 +775,128 @@ per_targets$pertype &lt;-<span class="st"> </span>per_targets$pertype %&gt;%
     <span class="dt">.funs =</span> <span class="kw">funs</span>(. *<span class="st"> </span><span class="dv">2</span>)
   )
 
-per_targets %&gt;%
+per_targets$pertype %&gt;%
 <span class="st">  </span><span class="kw">htmlTable</span>(
     <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Modified person targets&quot;</span>
   )</code></pre></div>
 <table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
 <thead>
-<tr><td colspan='1' style='text-align: left;'>
+<tr><td colspan='4' style='text-align: left;'>
 Modified person targets</td></tr>
-</thead>
-<tbody>
 <tr>
-<td style='border-bottom: 2px solid grey; text-align: center;'>list(geo_region = 1, `1` = 182, `2` = 130, `3` = 208)</td>
-</tr>
-</tbody>
-</table>
-<p>Run the IPU algorithm.</p>
-<ul>
-<li>The household seed is the <code>primary_seed</code></li>
-<li>Household target list is the <code>primary_target</code></li>
-<li>Person seed table is the <code>secondary_seed</code></li>
-<li>Person target list is the <code>secondary_target</code></li>
-</ul>
-<p>Again, for vignette build time, only 10 iterations are performed. Run the code yourself with <code>max_iterations</code> set to 600 to see the converged result.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets, per_seed, per_targets, <span class="dt">max_iterations =</span> <span class="dv">10</span>)</code></pre></div>
-<p>The tables below show the results compared back to targets. More iterations would make a better match.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result %&gt;%<span class="st"> </span>
-<span class="st">  </span><span class="kw">group_by</span>(geo_cluster, hhtype) %&gt;%<span class="st"> </span>
-<span class="st">  </span><span class="kw">summarize</span>(<span class="dt">weight =</span> <span class="kw">sum</span>(weight)) %&gt;%
-<span class="st">  </span><span class="kw">htmlTable</span>(
-    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Household result&quot;</span>
-  )</code></pre></div>
-<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
-<thead>
-<tr><td colspan='3' style='text-align: left;'>
-Household result</td></tr>
-<tr>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>geo_cluster</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>hhtype</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>weight</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>geo_region</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>1</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>2</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>3</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td style='text-align: center;'>1</td>
-<td style='text-align: center;'>1</td>
-<td style='text-align: center;'>30.8113603460086</td>
-</tr>
-<tr>
-<td style='text-align: center;'>1</td>
-<td style='text-align: center;'>2</td>
-<td style='text-align: center;'>57.3818762231669</td>
-</tr>
-<tr>
-<td style='text-align: center;'>2</td>
-<td style='text-align: center;'>1</td>
-<td style='text-align: center;'>30.8113603460086</td>
-</tr>
-<tr>
-<td style='border-bottom: 2px solid grey; text-align: center;'>2</td>
-<td style='border-bottom: 2px solid grey; text-align: center;'>2</td>
-<td style='border-bottom: 2px solid grey; text-align: center;'>57.3818762231669</td>
-</tr>
-</tbody>
-</table>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">per_seed %&gt;%
-<span class="st">  </span><span class="kw">left_join</span>(
-    result %&gt;%<span class="st"> </span><span class="kw">select</span>(pid, weight),
-    <span class="dt">by =</span> <span class="st">&quot;pid&quot;</span>
-  ) %&gt;%
-<span class="st">  </span><span class="kw">group_by</span>(pertype) %&gt;%
-<span class="st">  </span><span class="kw">summarize</span>(<span class="dt">weight =</span> <span class="kw">sum</span>(weight)) %&gt;%
-<span class="st">  </span><span class="kw">htmlTable</span>(
-    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Person result&quot;</span>
-  )</code></pre></div>
-<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
-<thead>
-<tr><td colspan='2' style='text-align: left;'>
-Person result</td></tr>
-<tr>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>pertype</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>weight</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style='text-align: center;'>1</td>
-<td style='text-align: center;'>167.045230346044</td>
-</tr>
-<tr>
-<td style='text-align: center;'>2</td>
-<td style='text-align: center;'>122.228643647718</td>
-</tr>
-<tr>
-<td style='border-bottom: 2px solid grey; text-align: center;'>3</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>1</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>182</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>130</td>
 <td style='border-bottom: 2px solid grey; text-align: center;'>208</td>
+</tr>
+</tbody>
+</table>
+<p>Run the IPU algorithm. Again, for vignette build time, only 30 iterations are performed. Run the code yourself with <code>max_iterations</code> set to 600 to see the converged result.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets, per_seed, per_targets, <span class="dt">max_iterations =</span> <span class="dv">30</span>)</code></pre></div>
+<p>The tables below show the results compared back to targets. More iterations would make a better match.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result$primary_comp %&gt;%
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">result =</span> <span class="kw">round</span>(result, <span class="dv">2</span>)) %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Primary Comparison&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='6' style='text-align: left;'>
+Primary Comparison</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>geo</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>category</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>target</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>result</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>diff</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>pct_diff</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>geo_cluster_1</td>
+<td style='text-align: center;'>hhtype_1</td>
+<td style='text-align: center;'>35</td>
+<td style='text-align: center;'>33.27</td>
+<td style='text-align: center;'>-1.73</td>
+<td style='text-align: center;'>-4.94</td>
+</tr>
+<tr>
+<td style='text-align: center;'>geo_cluster_1</td>
+<td style='text-align: center;'>hhtype_2</td>
+<td style='text-align: center;'>65</td>
+<td style='text-align: center;'>61.85</td>
+<td style='text-align: center;'>-3.15</td>
+<td style='text-align: center;'>-4.84</td>
+</tr>
+<tr>
+<td style='text-align: center;'>geo_cluster_2</td>
+<td style='text-align: center;'>hhtype_1</td>
+<td style='text-align: center;'>35</td>
+<td style='text-align: center;'>33.27</td>
+<td style='text-align: center;'>-1.73</td>
+<td style='text-align: center;'>-4.94</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>geo_cluster_2</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>hhtype_2</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>65</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>61.85</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>-3.15</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>-4.84</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result$secondary_comp %&gt;%
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">result =</span> <span class="kw">round</span>(result, <span class="dv">2</span>)) %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Secondary Comparison&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='6' style='text-align: left;'>
+Secondary Comparison</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>geo</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>category</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>target</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>result</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>diff</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>pct_diff</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>geo_region_1</td>
+<td style='text-align: center;'>pertype_1</td>
+<td style='text-align: center;'>182</td>
+<td style='text-align: center;'>176.84</td>
+<td style='text-align: center;'>-5.16</td>
+<td style='text-align: center;'>-2.83</td>
+</tr>
+<tr>
+<td style='text-align: center;'>geo_region_1</td>
+<td style='text-align: center;'>pertype_2</td>
+<td style='text-align: center;'>130</td>
+<td style='text-align: center;'>127.67</td>
+<td style='text-align: center;'>-2.33</td>
+<td style='text-align: center;'>-1.79</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>geo_region_1</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>pertype_3</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>208</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>208</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>0</td>
 </tr>
 </tbody>
 </table>

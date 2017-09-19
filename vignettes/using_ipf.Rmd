@@ -118,7 +118,7 @@ in every cluster. In this case, the seed table does not have a 2-person househol
 in cluster 2. This makes it impossible to match that marginal target.
 
 ```{r}
-result <- ipu(hh_seed, hh_targets, max_iterations = 10)
+result <- ipu(hh_seed, hh_targets)
 ```
 
 Fix the seed table and re-run `ipu`. The results match the targets we provided.
@@ -131,13 +131,34 @@ hh_seed <- data_frame(
   geo_cluster = c(1, 1, 2, 2)
 )
 
-result <- ipu(hh_seed, hh_targets, max_iterations = 10)
+result <- ipu(hh_seed, hh_targets)
+```
 
-result %>%
+`ipu()` returns a named list.
+
+```{r}
+names(result)
+```
+
+The first element is the resulting weight table:
+
+```{r}
+result$weight_tbl %>%
   htmlTable(
-    rnames = FALSE, caption = "Result"
+    rnames = FALSE
   )
 ```
+
+The next element is a comparison back to the targets provided. With complex
+seed and target tables, this makes investigating results quick and easy.
+
+```{r}
+result$primary_comp %>%
+  htmlTable(
+    rnames = FALSE
+  )
+```
+
 
 ## Example 2: The Arizona Paper Example
 
@@ -189,28 +210,40 @@ per_targets$pertype <- data_frame(
 ```
 
 In the interst of keeping vignette build time short, the `ipu()` algorithm is 
-only run for 10 iterations. After running for 400 or more iterations, the 
+only run for 30 iterations. After running for 400 or more iterations, the 
 results match closely to those shown in the paper.
 
+  * The household seed table is the `primary_seed`
+  * The household target list is the `primary_target`
+  * The person seed table is the `secondary_seed`
+  * The person target list is the `secondary_target`
+
 ```{r example 1 ipu}
-result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 10)
+result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 30)
 ```
 
-The first table shows a sample of the result. The second table shows how well the
-results match targets when summarized. Feel free to run the code chunk above for
+The first table shows the result. The second table shows the primary comparison
+table. Since we added secondary seeds and targets, the output now contains
+a secondary comparison table. Feel free to run the code chunk above for
 400 or more iterations and then look again.
 
 ```{r example 1 results}
-head(result) %>%
+result$weight_tbl %>%
+  mutate(weight = round(weight, 2)) %>%
   htmlTable(
-    rnames = FALSE, caption = "Sample of Resulting Seeds"
+    rnames = FALSE, caption = "Result"
   )
   
-result %>% 
-  group_by(hhtype) %>% 
-  summarize(weight = sum(weight)) %>%
+result$primary_comp %>% 
+  mutate(result = round(result, 2)) %>%
   htmlTable(
-    rnames = FALSE, caption = "Summary of Resulting Weights by Geography"
+    rnames = FALSE, caption = "Primary Comparison"
+  )
+
+result$secondary_comp %>% 
+  mutate(result = round(result, 2)) %>%
+  htmlTable(
+    rnames = FALSE, caption = "Secondary Comparison"
   )
 ```
 
@@ -263,7 +296,7 @@ hh_targets$hhtype <- hh_targets$hhtype %>%
   rename(geo_cluster = geo_region) %>%
   mutate(geo_cluster = c(1, 2))
 
-hh_targets %>%
+hh_targets$hhtype %>%
   htmlTable(
     rnames = FALSE, caption = "Modified household targets"
   )
@@ -276,8 +309,9 @@ per_seed <- bind_rows(
 )
 
 per_seed %>%
+  head() %>%
   htmlTable(
-    rnames = FALSE, caption = "Modified person seed"
+    rnames = FALSE, caption = "Modified person seed (first few rows)"
   )
 
 # Double the regional person targets
@@ -287,47 +321,34 @@ per_targets$pertype <- per_targets$pertype %>%
     .funs = funs(. * 2)
   )
 
-per_targets %>%
+per_targets$pertype %>%
   htmlTable(
     rnames = FALSE, caption = "Modified person targets"
   )
 ```
 
-Run the IPU algorithm. 
-
-  * The household seed is the `primary_seed`
-  * Household target list is the `primary_target`
-  * Person seed table is the `secondary_seed`
-  * Person target list is the `secondary_target`
-
-Again, for vignette build time, only 10 iterations are
+Run the IPU algorithm. Again, for vignette build time, only 30 iterations are
 performed. Run the code yourself with `max_iterations` set to 600 to see the
 converged result.
 
 ```{r example 2 ipu}
-result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 10)
+result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 30)
 ```
 
 The tables below show the results compared back to targets. More iterations
 would make a better match.
 
 ```{r example 2 results}
-result %>% 
-  group_by(geo_cluster, hhtype) %>% 
-  summarize(weight = sum(weight)) %>%
+result$primary_comp %>%
+  mutate(result = round(result, 2)) %>%
   htmlTable(
-    rnames = FALSE, caption = "Household result"
+    rnames = FALSE, caption = "Primary Comparison"
   )
 
-per_seed %>%
-  left_join(
-    result %>% select(pid, weight),
-    by = "pid"
-  ) %>%
-  group_by(pertype) %>%
-  summarize(weight = sum(weight)) %>%
+result$secondary_comp %>%
+  mutate(result = round(result, 2)) %>%
   htmlTable(
-    rnames = FALSE, caption = "Person result"
+    rnames = FALSE, caption = "Secondary Comparison"
   )
 ```
 
