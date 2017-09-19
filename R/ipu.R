@@ -494,7 +494,8 @@ compare_results <- function(seed, targets){
       diff = result - target,
       pct_diff = round(diff / target * 100, 2),
       diff = round(diff, 2)
-    )
+    ) %>%
+    arrange(geo, category)
   
   return(comparison_tbl)
 }
