@@ -62,7 +62,7 @@ iteration? Default \code{FALSE}.}
 the \code{primary_seed} with a revised weight column.
 }
 \description{
-A special case of iterative proportional fitting. It can satisfy
+A general case of iterative proportional fitting. It can satisfy
   two, disparate sets of marginals that do not agree on a single total. A
   common example is balancing population data using household- and person-level
   marginal controls. This could be for survey expansion or synthetic

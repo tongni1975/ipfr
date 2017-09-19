@@ -1,6 +1,25 @@
+#' ipfr: A package to perform iterative proportional fitting
+#' 
+#' There are currently two functions 
+#' 
+#' \code{\link{ipu}}
+#' 
+#' \code{\link{ipf}}
+#' 
+#' The \code{ipf} function is deprecated. \code{ipu} has a more consistent
+#' input format, can handle primary and secondary marginals, and can use varying
+#' geographical constraints for each set of targets.
+#' 
+#' Use \code{ipu}
+#' 
+#' @docType package
+#' @name ipfr
+NULL
+#> NULL
+
 #' Iterative Proportional Updating
 #' 
-#' @description A special case of iterative proportional fitting. It can satisfy
+#' @description A general case of iterative proportional fitting. It can satisfy
 #'   two, disparate sets of marginals that do not agree on a single total. A
 #'   common example is balancing population data using household- and person-level
 #'   marginal controls. This could be for survey expansion or synthetic
