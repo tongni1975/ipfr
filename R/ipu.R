@@ -274,9 +274,35 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
     utils::flush.console()
   }
   
+  # Set final weights into primary seed table
   primary_seed$weight <- seed$weight
-  return(primary_seed)
   
+  # Create the result list (what will be returned)
+  result <- list()
+  result$weight_tbl <- primary_seed
+  
+  # Compare resulting weights to initial targets
+  primary_comp <- compare_results(primary_seed, primary_targets)
+  result$primary_comp <- primary_comp
+  if (!is.null(secondary_seed)) {
+    # Add geo fields to secondary seed
+    pos <- grep("geo_", colnames(primary_seed))
+    geo_cols <- colnames(primary_seed)[pos]
+    seed <- secondary_seed %>%
+      left_join(
+        primary_seed %>% select(one_of(geo_cols), pid, weight),
+        by = "pid"
+      )
+    
+    # Run the comparison and store it in 'result'
+    secondary_comp <- compare_results(
+      seed, 
+      secondary_targets
+    )
+    result$secondary_comp <- secondary_comp
+  }
+  
+  return(result)
 }
 
 #' Check seed and target tables for completeness
@@ -413,5 +439,66 @@ check_tables <- function(primary_seed, primary_targets, secondary_seed = NULL, s
     }
   }
 }
+
+
+#' Compare results to targets
+#'
+#' @param seed \code{data.frame} Seed table with a weight column in the same
+#' format required by \code{ipu()}.
+#' 
+#' @param targets \code{named list} of \code{data.frames} in the same format
+#' required by \code{ipu()}.
+#'
+#'
+compare_results <- function(seed, targets){
+  
+  # Expand the target tables out into a single, long-form data frame
+  comparison_tbl <- NULL
+  for (name in names(targets)){
+    
+    # Pull out the current target table
+    target <- targets[[name]]
+    
+    # Get the name of the geo field
+    pos <- grep("geo_", colnames(target))
+    geo_colname <- colnames(target)[pos]
+    
+    # Gather the current target table into long form
+    target <- target %>%
+      mutate(geo = paste0(geo_colname, "_", !!as.name(geo_colname))) %>%
+      select(-one_of(geo_colname)) %>%
+      tidyr::gather(key = category, value = target, -geo) %>%
+      mutate(category = paste0(name, "_", category))
+    
+    # summarize the seed table
+    result <- seed %>%
+      select(geo = !!as.name(geo_colname), category = !!as.name(name), weight) %>%
+      mutate(
+        geo = paste0(geo_colname, "_", geo),
+        category = paste0(name, "_", category)
+      ) %>%
+      group_by(geo, category) %>%
+      summarize(result = sum(weight))
+    
+    # Join them together
+    joined_tbl <- target %>%
+      left_join(result, by = c("geo" = "geo", "category" = "category"))
+    
+    # Append it to the master target df
+    comparison_tbl <- bind_rows(comparison_tbl, joined_tbl)
+  }
+  
+  # Calculate difference and percent difference
+  comparison_tbl <- comparison_tbl %>%
+    mutate(
+      diff = result - target,
+      pct_diff = round(diff / target * 100, 2),
+      diff = round(diff, 2)
+    )
+  
+  return(comparison_tbl)
+}
+
+
 
 
