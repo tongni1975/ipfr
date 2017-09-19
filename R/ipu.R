@@ -236,6 +236,7 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
     
     # Determine percent differences (by geo field)
     saved_diff_tbl <- NULL
+    pct_diff <- 0
     for (seed_attribute in seed_attribute_cols) {
       # create lookups for targets list
       target_tbl_name <- strsplit(seed_attribute, ".", fixed = TRUE)[[1]][1]
@@ -566,6 +567,7 @@ scale_targets <- function(targets, verbose = FALSE){
     # if first iteration, set total to the global total. Otherwise, scale table
     if (i == 1) {
       global_total <- total
+      show_warning <- FALSE
     } else {
       fac <- global_total / total
       # Write out warning
