@@ -119,6 +119,12 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
     check_tables(primary_seed, primary_targets)
   }
   
+  # Scale target tables. All table totals will match the first table.
+  primary_targets <- scale_targets(primary_targets)
+  if (!is.null(secondary_seed)) {
+    secondary_targets <- scale_targets(secondary_targets)  
+  }
+  
   # Pull off the geo information into a separate equivalency table
   # to be used as needed.
   geo_equiv <- primary_seed %>%
@@ -520,5 +526,44 @@ compare_results <- function(seed, targets){
 }
 
 
-
+#' Scale targets to ensure consistency
+#' 
+#' Often, different marginals may disagree on the total number of units. In the
+#' context of household survey expansion, for example, one marginal might say
+#' there are 100k households while another says there are 101k. This function
+#' solves the problem by scaling all target tables to match the first target
+#' table provided.
+#' 
+#' @param targets \code{named list} of \code{data.frames} in the same format
+#' required by \link{ipu}. 
+#' 
+scale_targets <- function(targets){
+  
+  for (i in c(1:length(names(targets)))) {
+    name <- names(targets)[i]
+    target <- targets[[name]]
+    
+    # Get the name of the geo field
+    pos <- grep("geo_", colnames(target))
+    geo_colname <- colnames(target)[pos]
+    
+    # calculate total of table
+    target <- target %>%
+      gather(key = category, value = count, -!!geo_colname)
+    total <- sum(target$count)
+    
+    # if first iteration, set total to the global total. Otherwise, scale table
+    if (i == 1) {
+      global_total <- total
+    } else {
+      fac <- global_total / total
+      target <- target %>%
+        mutate(count = count * !!fac) %>%
+        spread(key = category, value = count)
+      targets[[name]] <- target
+    }
+  }
+  
+  return(targets)
+}
 
