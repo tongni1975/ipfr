@@ -76,8 +76,8 @@ NULL
 #'    Set to .0001 by default.  Should be arbitrarily small compared to your 
 #'    seed table weights.
 #'   
-#' @param verbose Print details on the maximum expansion factor with each 
-#'    iteration? Default \code{FALSE}. 
+#' @param verbose Print iteration details and worst marginal stats upon 
+#'   completion? Default \code{FALSE}.
 #' 
 #' @return the \code{primary_seed} with a revised weight column.
 #' 
@@ -117,6 +117,12 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
     check_tables(primary_seed, primary_targets, secondary_seed, secondary_targets)
   } else {
     check_tables(primary_seed, primary_targets)
+  }
+  
+  # Scale target tables. All table totals will match the first table.
+  primary_targets <- scale_targets(primary_targets, verbose)
+  if (!is.null(secondary_seed)) {
+    secondary_targets <- scale_targets(secondary_targets, verbose)  
   }
   
   # Pull off the geo information into a separate equivalency table
@@ -229,6 +235,7 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
     }
     
     # Determine percent differences (by geo field)
+    saved_diff_tbl <- NULL
     pct_diff <- 0
     for (seed_attribute in seed_attribute_cols) {
       # create lookups for targets list
@@ -284,12 +291,16 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
   
   if (verbose) {
     message(ifelse(converged, "IPU converged", "IPU did not converge"))
-    message("Worst marginal stats:")
-    position <- which(saved_diff_tbl$pct_diff == pct_diff)[1]
-    message("Category: ", saved_category)
-    message(saved_geo, ": ", saved_diff_tbl$geo[position])
-    message("Max % Diff: ", round(pct_diff * 100, 2), "%")
-    message("Absolute Diff: ", round(saved_diff_tbl$abs_diff[position], 2))
+    if (is.null(saved_diff_tbl)) {
+      message("All targets matched within the absolute_diff of ", absolute_diff)
+    } else {
+      message("Worst marginal stats:")
+      position <- which(saved_diff_tbl$pct_diff == pct_diff)[1]
+      message("Category: ", saved_category)
+      message(saved_geo, ": ", saved_diff_tbl$geo[position])
+      message("Max % Diff: ", round(pct_diff * 100, 2), "%")
+      message("Absolute Diff: ", round(saved_diff_tbl$abs_diff[position], 2))
+    }
     utils::flush.console()
   }
   
@@ -308,8 +319,8 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
     pos <- grep("geo_", colnames(primary_seed))
     geo_cols <- colnames(primary_seed)[pos]
     seed <- secondary_seed %>%
-      left_join(
-        primary_seed %>% select(one_of(geo_cols), pid, weight),
+      dplyr::left_join(
+        primary_seed %>% dplyr::select(dplyr::one_of(geo_cols), pid, weight),
         by = "pid"
       )
     
@@ -484,41 +495,98 @@ compare_results <- function(seed, targets){
     
     # Gather the current target table into long form
     target <- target %>%
-      mutate(geo = paste0(geo_colname, "_", !!as.name(geo_colname))) %>%
-      select(-one_of(geo_colname)) %>%
+      dplyr::mutate(geo = paste0(geo_colname, "_", !!as.name(geo_colname))) %>%
+      dplyr::select(-dplyr::one_of(geo_colname)) %>%
       tidyr::gather(key = category, value = target, -geo) %>%
-      mutate(category = paste0(name, "_", category))
+      dplyr::mutate(category = paste0(name, "_", category))
     
     # summarize the seed table
     result <- seed %>%
-      select(geo = !!as.name(geo_colname), category = !!as.name(name), weight) %>%
-      mutate(
+      dplyr::select(geo = !!as.name(geo_colname), category = !!as.name(name), weight) %>%
+      dplyr::mutate(
         geo = paste0(geo_colname, "_", geo),
         category = paste0(name, "_", category)
       ) %>%
-      group_by(geo, category) %>%
-      summarize(result = sum(weight))
+      dplyr::group_by(geo, category) %>%
+      dplyr::summarize(result = sum(weight))
     
     # Join them together
     joined_tbl <- target %>%
-      left_join(result, by = c("geo" = "geo", "category" = "category"))
+      dplyr::left_join(result, by = c("geo" = "geo", "category" = "category"))
     
     # Append it to the master target df
-    comparison_tbl <- bind_rows(comparison_tbl, joined_tbl)
+    comparison_tbl <- dplyr::bind_rows(comparison_tbl, joined_tbl)
   }
   
   # Calculate difference and percent difference
   comparison_tbl <- comparison_tbl %>%
-    mutate(
+    dplyr::mutate(
       diff = result - target,
       pct_diff = round(diff / target * 100, 2),
       diff = round(diff, 2)
     ) %>%
-    arrange(geo, category)
+    dplyr::arrange(geo, category)
   
   return(comparison_tbl)
 }
 
 
-
+#' Scale targets to ensure consistency
+#' 
+#' Often, different marginals may disagree on the total number of units. In the
+#' context of household survey expansion, for example, one marginal might say
+#' there are 100k households while another says there are 101k. This function
+#' solves the problem by scaling all target tables to match the first target
+#' table provided.
+#' 
+#' @param targets \code{named list} of \code{data.frames} in the same format
+#' required by \link{ipu}. 
+#' 
+#' @param verbose \code{logical} Show a warning for each target scaled?
+#'   Defaults to \code{FALSE}.
+#' 
+scale_targets <- function(targets, verbose = FALSE){
+  
+  for (i in c(1:length(names(targets)))) {
+    name <- names(targets)[i]
+    target <- targets[[name]]
+    
+    # Get the name of the geo field
+    pos <- grep("geo_", colnames(target))
+    geo_colname <- colnames(target)[pos]
+    
+    # calculate total of table
+    target <- target %>%
+      tidyr::gather(key = category, value = count, -!!geo_colname)
+    total <- sum(target$count)
+    
+    # Start a string that will be used for the warning message if targets
+    # are scaled and verbose = TRUE
+    warning_msg <- "Scaling target tables: "
+    
+    # if first iteration, set total to the global total. Otherwise, scale table
+    if (i == 1) {
+      global_total <- total
+      show_warning <- FALSE
+    } else {
+      fac <- global_total / total
+      # Write out warning
+      if (fac != 1 & verbose) {
+        show_warning <- TRUE
+        warning_msg <- paste0(warning_msg, " ", name)
+      }
+      target <- target %>%
+        dplyr::mutate(count = count * !!fac) %>%
+        tidyr::spread(key = category, value = count)
+      targets[[name]] <- target
+    }
+  }
+  
+  if (show_warning) {
+    message(warning_msg)
+    utils::flush.console()
+  }
+  
+  return(targets)
+}
 

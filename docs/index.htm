@@ -80,25 +80,19 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#example-1-simple-example">Example 1: Simple Example</a><ul>
 <li><a href="#seed-table-creation">Seed table creation</a></li>
 <li><a href="#target-creation">Target creation</a></li>
+<li><a href="#run-ipu">Run IPU</a></li>
 </ul></li>
 <li><a href="#example-2-the-arizona-paper-example">Example 2: The Arizona Paper Example</a></li>
 <li><a href="#example-3-using-multiple-geographies">Example 3: Using Multiple Geographies</a></li>
 </ul></li>
-<li><a href="#ipf">IPF</a><ul>
-<li><a href="#example-1-basics">Example 1: Basics</a><ul>
-<li><a href="#seed-table-creation-1">Seed table creation</a></li>
-<li><a href="#target-creation-1">Target creation</a></li>
-<li><a href="#the-goal">The Goal</a></li>
-<li><a href="#using-ipf">Using IPF</a></li>
-<li><a href="#summarizing-results">Summarizing Results</a></li>
-</ul></li>
-<li><a href="#example-2-survey-expansion-using-geographical-clusters">Example 2: Survey Expansion using Geographical Clusters</a></li>
-</ul></li>
-<li><a href="#how-ipfr-addresses-common-ipf-problems">How IPFR addresses common IPF problems</a><ul>
+<li><a href="#how-ipu-addresses-common-ipf-problems">How IPU addresses common IPF problems</a><ul>
 <li><a href="#zero-weights">Zero weights</a></li>
 <li><a href="#missing-seed-information">Missing seed information</a></li>
 <li><a href="#marginal-agreement">Marginal agreement</a></li>
-<li><a href="#partial-marginals">Partial marginals</a></li>
+</ul></li>
+<li><a href="#ipf">IPF</a><ul>
+<li><a href="#example-1-basics">Example 1: Basics</a></li>
+<li><a href="#example-2-survey-expansion-using-geographical-clusters">Example 2: Survey Expansion using Geographical Clusters</a></li>
 </ul></li>
 </ul>
 </div>
@@ -236,6 +230,9 @@ Target Table</td></tr>
 </tr>
 </tbody>
 </table>
+</div>
+<div id="run-ipu" class="section level3">
+<h3>Run IPU</h3>
 <p>Run <code>ipu()</code>. Note that it throws an error. When providing cluster values in the seed table, <code>ipfr</code> checks to make sure that every marginal category appears in every cluster. In this case, the seed table does not have a 2-person household in cluster 2. This makes it impossible to match that marginal target.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets)</code></pre></div>
 <pre><code>## Error in check_tables(primary_seed, primary_targets): Marginal siz, category 2 is missing from geo_cluster 2 in the primary_seed table.</code></pre>
@@ -902,22 +899,77 @@ Secondary Comparison</td></tr>
 </table>
 </div>
 </div>
+<div id="how-ipu-addresses-common-ipf-problems" class="section level1">
+<h1>How IPU addresses common IPF problems</h1>
+<p>This section will show how <code>ipu()</code> addresses some common problems found in basic ipf procedures. It uses the example data from the first example.</p>
+<div id="zero-weights" class="section level2">
+<h2>Zero weights</h2>
+<p>IPF works by successively multiplying the table weights by factors. Cells with a zero weight cannot be modified by this process. As the number of zero weights increase, the flexibility of the process is reduced, and convergence becomes more difficult. <code>ipfr</code> solves this problem by setting a minimum weight for all cells to <code>.0001</code>. This minimum weight can be adjusted using the <code>min_weight</code> parameter and should be arbitrarily small compared to your seed table weights.</p>
+</div>
+<div id="missing-seed-information" class="section level2">
+<h2>Missing seed information</h2>
+<p>Not every combination of marginal categories is required to be included in the seed table; however, at least one observation of each category must exist. For example, the combination:</p>
+<ul>
+<li>siz = 1</li>
+<li>wrk = 1</li>
+<li>veh = 0</li>
+</ul>
+<p>may not have been observed in the survey, and thus may be missing from the seed table. As long as other combinations of size-1 households exist (e.g. with 0 workers and 1 vehicle), <code>ipfr</code> will work fine. On the other hand, if there are no observations of any size-1 households, <code>ipfr</code> will stop with an error message.</p>
+<p>See the first IPU example to see how it works.</p>
+</div>
+<div id="marginal-agreement" class="section level2">
+<h2>Marginal agreement</h2>
+<p>In the above examples, are marginals disagreed on totals (either persons or households). If they disagreed on the total, the standard IPF process could not converge.</p>
+<p>Occasionally, marginal distributions might disagree slightly on the totals, particularly if they are derived from different sources. When that happens, <code>ipu()</code> will still converge by scaling all tables to match the total of the first table. This eliminates the painful task of ensuring all marginals match exactly.</p>
+<p>In the example below, the size marginal sums to a total of 100 households. The vehicle marginal sums to 300. With the <code>verbose</code> option set to <code>TRUE</code>, a message will be displayed telling which, if any, target tables are scaled.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">hh_seed &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">geo_region =</span> <span class="dv">1</span>,
+  <span class="dt">pid =</span> <span class="kw">c</span>(<span class="dv">1</span>:<span class="dv">8</span>),
+  <span class="dt">hhsiz =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">2</span>),
+  <span class="dt">hhveh =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">0</span>)
+)
+
+hh_targets &lt;-<span class="st"> </span><span class="kw">list</span>()
+hh_targets$hhsiz &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">geo_region =</span> <span class="dv">1</span>,
+  <span class="st">`</span><span class="dt">1</span><span class="st">`</span> =<span class="st"> </span><span class="dv">35</span>,
+  <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="dv">65</span>
+)
+hh_targets$hhveh &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">geo_region =</span> <span class="dv">1</span>,
+  <span class="st">`</span><span class="dt">0</span><span class="st">`</span> =<span class="st"> </span><span class="dv">100</span>,
+  <span class="st">`</span><span class="dt">1</span><span class="st">`</span> =<span class="st"> </span><span class="dv">100</span>,
+  <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="dv">100</span>
+)
+
+result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets, <span class="dt">max_iterations =</span> <span class="dv">30</span>, <span class="dt">verbose =</span> <span class="ot">TRUE</span>)</code></pre></div>
+<pre><code>## Scaling target tables:  hhveh</code></pre>
+<pre><code>## 
+ Finished iteration  2 . %RMSE =  9.044233
+ Finished iteration  3 . %RMSE =  0.4706742
+ Finished iteration  4 . %RMSE =  0.02385747
+ Finished iteration  5 . %RMSE =  0.001207629</code></pre>
+<pre><code>## IPU converged</code></pre>
+<pre><code>## All targets matched within the absolute_diff of 10</code></pre>
+<p>Importantly, the performance measures below compare the result to the scaled target not the original. Note that the vehicle targets have been scaled down.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result$primary_comp</code></pre></div>
+<pre><code>## # A tibble: 5 x 6
+##            geo category   target   result  diff pct_diff
+##          &lt;chr&gt;    &lt;chr&gt;    &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;
+## 1 geo_region_1  hhsiz_1 35.00000 35.00003     0        0
+## 2 geo_region_1  hhsiz_2 65.00000 64.99997     0        0
+## 3 geo_region_1  hhveh_0 33.33333 33.33333     0        0
+## 4 geo_region_1  hhveh_1 33.33333 33.33333     0        0
+## 5 geo_region_1  hhveh_2 33.33333 33.33333     0        0</code></pre>
+</div>
+</div>
 <div id="ipf" class="section level1">
 <h1>IPF</h1>
 <p><strong>Note: <code>ipf()</code> is being deprecated in favor of <code>ipu()</code>.</strong></p>
-<p>The <code>ipf()</code> function is intended for basic IPF operations. It has many applications in different fields, but in transportation, you can use it to:</p>
-<ul>
-<li>Grow a base year through-trip table to future year station volumes.</li>
-<li>Expand a household survey to multiple household marginal distributions (any number of them).</li>
-<li>Expand a synthetic population seed (like PUMS data) to create base or future-year synthetic populations.</li>
-</ul>
-<p>In more general terms, IPF takes a seed distribution with rich relational information and weights it to match various 1-dimensional marginal distributions. The first example explains further.</p>
 <div id="example-1-basics" class="section level2">
 <h2>Example 1: Basics</h2>
-<p>This section creates a random seed table and target values to illustrate how the package is used. The targets are specified for three separate clusters, which could represent model TAZs, survey districts, or some other grouping of geographic areas.</p>
-<div id="seed-table-creation-1" class="section level3">
-<h3>Seed table creation</h3>
-<p>The seed table is the starting point for the IPF procedure. In this example, we will use a made up summary table of survey data. This fake table is a count of households by the number persons, workers and vehicles. A sample of the table is shown for illustration. The count is stored in the <code>weight</code> field.</p>
+<p>This section creates a random seed table and target values to illustrate how the function is used. The targets are specified for three separate clusters, which could represent model TAZs, survey districts, or some other grouping of geographic areas.</p>
+<p>Seed table creation.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">seed &lt;-<span class="st"> </span><span class="kw">expand.grid</span>(
   <span class="dt">siz =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>),
   <span class="dt">wrk =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>),
@@ -980,18 +1032,7 @@ seed %&gt;%
 </tr>
 </tbody>
 </table>
-</div>
-<div id="target-creation-1" class="section level3">
-<h3>Target creation</h3>
-<p>The number of households by size (e.g., 1-person, 2-person, etc.) is referred to as a marginal distribution. Often, from the Census, we know the total number of households by each individual marginal. For example, we know the number of households by size:</p>
-<ul>
-<li>1 person: 150 households</li>
-<li>2 persons: 150 households</li>
-<li>3 persons: 100 households</li>
-<li>4+ persons: 100 households</li>
-</ul>
-<p>This information becomes the target that the IPF process tries to match.</p>
-<p>This information is created below for the distribution of households by size, number of workers, and number of vehicles. The size table is shown as an example. Across the top are the marginal categories (1-4). The cluster column represents three separate geographies (counties, tracts, TAZs, etc.).</p>
+<p>Target creation.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">targets &lt;-<span class="st"> </span><span class="kw">list</span>()
 targets$siz &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
   <span class="dt">cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>),
@@ -1055,64 +1096,7 @@ Size Targets</td></tr>
 </tr>
 </tbody>
 </table>
-</div>
-<div id="the-goal" class="section level3">
-<h3>The Goal</h3>
-<p>We know the count of each marginal individually, but assume we don’t have official information from the Census about the joint distribution. What we want to do is use the joint distribution from our survey, but ensure it agrees with the marginal information from the Census.</p>
-<p>An initial test comparing sizes for cluster 1 shows they do not agree.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">siz &lt;-<span class="st"> </span>targets$siz %&gt;%
-<span class="st">  </span><span class="kw">filter</span>(cluster ==<span class="st"> </span><span class="dv">1</span>) %&gt;%
-<span class="st">  </span><span class="kw">gather</span>(<span class="dt">key =</span> siz, <span class="dt">value =</span> target, -cluster) %&gt;%
-<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">siz =</span> <span class="kw">as.numeric</span>(siz)) %&gt;%
-<span class="st">  </span><span class="kw">select</span>(-cluster)
-  
-
-seed %&gt;%
-<span class="st">  </span><span class="kw">select</span>(siz, weight) %&gt;%
-<span class="st">  </span><span class="kw">group_by</span>(siz) %&gt;%
-<span class="st">  </span><span class="kw">summarize</span>(<span class="dt">seed =</span> <span class="kw">sum</span>(weight)) %&gt;%
-<span class="st">  </span><span class="kw">left_join</span>(siz, <span class="dt">by =</span> <span class="st">&quot;siz&quot;</span>) %&gt;%
-<span class="st">  </span><span class="kw">htmlTable</span>(
-    <span class="dt">align =</span> <span class="st">&quot;crr&quot;</span>, <span class="dt">rnames =</span> <span class="ot">FALSE</span>,
-    <span class="dt">caption =</span> <span class="st">&quot;Comparing size marginals for cluster 1&quot;</span>
-  )</code></pre></div>
-<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
-<thead>
-<tr><td colspan='3' style='text-align: left;'>
-Comparing size marginals for cluster 1</td></tr>
-<tr>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>siz</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>seed</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>target</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style='text-align: center;'>1</td>
-<td style='text-align: right;'>105</td>
-<td style='text-align: right;'>100</td>
-</tr>
-<tr>
-<td style='text-align: center;'>2</td>
-<td style='text-align: right;'>77</td>
-<td style='text-align: right;'>100</td>
-</tr>
-<tr>
-<td style='text-align: center;'>3</td>
-<td style='text-align: right;'>88</td>
-<td style='text-align: right;'>150</td>
-</tr>
-<tr>
-<td style='border-bottom: 2px solid grey; text-align: center;'>4</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>86</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>150</td>
-</tr>
-</tbody>
-</table>
-</div>
-<div id="using-ipf" class="section level3">
-<h3>Using IPF</h3>
-<p>We can use the ipfr package to change this. For this example, the <code>verbose</code> option is turned on to show what the tool reports upon completion. It reports the worst-performing marginal in the worst-performing cluster. If these values are small, then you can be confident in the result.</p>
+<p>Run <code>ipf()</code>.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">table &lt;-<span class="st"> </span><span class="kw">ipf</span>(seed, targets, <span class="dt">verbose =</span> <span class="ot">TRUE</span>)</code></pre></div>
 <pre><code>## 
  Finished iteration  1
@@ -1123,7 +1107,7 @@ Comparing size marginals for cluster 1</td></tr>
 <pre><code>## cluster:1</code></pre>
 <pre><code>## Marginal:siz</code></pre>
 <pre><code>## Category:4</code></pre>
-<p>A sample of the resulting table is shown below.</p>
+<p>Results.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">table %&gt;%
 <span class="st">  </span><span class="kw">mutate_all</span>(<span class="kw">funs</span>(<span class="kw">round</span>(., <span class="dv">2</span>))) %&gt;%
 <span class="st">  </span><span class="kw">head</span>() %&gt;%
@@ -1185,10 +1169,6 @@ Comparing size marginals for cluster 1</td></tr>
 </tr>
 </tbody>
 </table>
-</div>
-<div id="summarizing-results" class="section level3">
-<h3>Summarizing Results</h3>
-<p>We can summarize the final table to see if it worked.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">table %&gt;%
 <span class="st">  </span><span class="kw">select</span>(-<span class="kw">c</span>(wrk, veh)) %&gt;%
 <span class="st">  </span><span class="kw">group_by</span>(cluster, siz) %&gt;%
@@ -1418,15 +1398,12 @@ Vehciles: Target</td></tr>
 first_seed &lt;-<span class="st"> </span>seed
 first_targets &lt;-<span class="st"> </span>targets</code></pre></div>
 </div>
-</div>
 <div id="example-2-survey-expansion-using-geographical-clusters" class="section level2">
 <h2>Example 2: Survey Expansion using Geographical Clusters</h2>
-<p>In the first example, target values were specified for various clusters, but no target information was appended to the seed table. In this case, <code>ipfr</code> assumes that the full seed table is used as a starting point for every cluster.</p>
-<p>In the case of survey expansion, it is common to define clusters in both the seed and target table. With this approach, only the seed records in a cluster will be expanded to match that cluster’s targets.</p>
-<p>Accomplishing this is as simple as appending the <code>cluster</code> values to the seed table. We will create a new seed table, and append cluster values into a new <code>cluster</code> field. Note that <code>cluster</code> is a special field name and must be used in both seed and target tables for this to work.</p>
+<p>Seed table creation.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">seed &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
   <span class="dt">hhid =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>),
-  <span class="dt">siz =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">1</span>),
+  <span class="dt">siz =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">1</span>),
   <span class="dt">weight =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>),
   <span class="dt">cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>)
 )
@@ -1461,7 +1438,7 @@ Seed Table with Cluster Appended</td></tr>
 </tr>
 <tr>
 <td style='text-align: center;'>3</td>
-<td style='text-align: center;'>1</td>
+<td style='text-align: center;'>2</td>
 <td style='text-align: center;'>1</td>
 <td style='text-align: center;'>2</td>
 </tr>
@@ -1473,26 +1450,16 @@ Seed Table with Cluster Appended</td></tr>
 </tr>
 </tbody>
 </table>
-<p>New targets are specified for each cluster:</p>
+<p>Targets for each cluster.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">targets &lt;-<span class="st"> </span><span class="kw">list</span>()
 targets$siz &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
   <span class="dt">cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>),
   <span class="st">`</span><span class="dt">1</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">75</span>, <span class="dv">100</span>),
   <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">25</span>, <span class="dv">150</span>)
 )</code></pre></div>
-<p>Run <code>ipf</code>. Note that it picks up a new error. When providing cluster values in the seed table, <code>ipfr</code> checks to make sure that every marginal category appears in every cluster. In this case, the full seed table does contain both size 1 and 2 records, but cluster 2 only has size 1.</p>
+<p>Run <code>ipf</code></p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result &lt;-<span class="st"> </span><span class="kw">ipf</span>(<span class="dt">seed =</span> seed, <span class="dt">targets =</span> targets)</code></pre></div>
-<pre><code>## Error in ipf(seed = seed, targets = targets): Marginal siz; category 2 is missing from cluster 2 in the seed table.</code></pre>
-<p>Fix the seed table and re-run <code>ipf</code>.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">seed &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
-  <span class="dt">hhid =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>),
-  <span class="dt">siz =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">1</span>),
-  <span class="dt">weight =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>),
-  <span class="dt">cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>)
-)
-
-result &lt;-<span class="st"> </span><span class="kw">ipf</span>(<span class="dt">seed =</span> seed, <span class="dt">targets =</span> targets)</code></pre></div>
-<p>In the resulting table, note that the first two rows in the seed table (in cluster 1) match the 100 household total of cluster 1, while the second two rows match the 250 household total of cluster 2.</p>
+<p>Results.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result %&gt;%
 <span class="st">  </span><span class="kw">htmlTable</span>(
     <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Survey Expansion to Clusters&quot;</span>
@@ -1532,356 +1499,6 @@ Survey Expansion to Clusters</td></tr>
 <td style='border-bottom: 2px solid grey; text-align: center;'>4</td>
 <td style='border-bottom: 2px solid grey; text-align: center;'>1</td>
 <td style='border-bottom: 2px solid grey; text-align: center;'>100</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-<div id="how-ipfr-addresses-common-ipf-problems" class="section level1">
-<h1>How IPFR addresses common IPF problems</h1>
-<p>This section will show how <code>ipfr</code> addresses some common problems found in basic ipf procedures. It uses the example data from the first example.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">seed &lt;-<span class="st"> </span>first_seed
-targets &lt;-<span class="st"> </span>first_targets</code></pre></div>
-<div id="zero-weights" class="section level2">
-<h2>Zero weights</h2>
-<p>Both <code>ipf()</code> and <code>ipu()</code> implement this improvement.</p>
-<p>IPF works by successively multiplying the table weights by factors. Cells with a zero weight cannot be modified by this process. As the number of zero weights increase, the flexibility of the process is reduced, and convergence becomes more difficult. <code>ipfr</code> solves this problem by setting a minimum weight for all cells to <code>.0001</code>. This minimum weight can be adjusted using the <code>min_weight</code> parameter and should be arbitrarily small compared to your seed table weights.</p>
-</div>
-<div id="missing-seed-information" class="section level2">
-<h2>Missing seed information</h2>
-<p>Both <code>ipf()</code> and <code>ipu()</code> implement this improvement.</p>
-<p>Not every combination of marginal categories is required to be included in the seed table; however, at least one observation of each category must exist. For example, the combination:</p>
-<ul>
-<li>siz = 1</li>
-<li>wrk = 1</li>
-<li>veh = 0</li>
-</ul>
-<p>may not have been observed in the survey, and thus may be missing from the seed table. As long as other combinations of size-1 households exist (e.g. with 0 workers and 1 vehicle), <code>ipfr</code> will work fine. On the other hand, if there are no observations of any size-1 households, <code>ipfr</code> will stop with an error message.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">missing_seed &lt;-<span class="st"> </span>seed %&gt;%
-<span class="st">  </span><span class="kw">filter</span>(siz !=<span class="st"> </span><span class="dv">1</span>)
-
-error &lt;-<span class="st"> </span><span class="kw">try</span>(table &lt;-<span class="st"> </span><span class="kw">ipf</span>(missing_seed, targets))
-error[<span class="dv">1</span>]</code></pre></div>
-<pre><code>## [1] &quot;Error in ipf(missing_seed, targets) : \n  Marginal siz; category 1 is missing from seed table\n&quot;</code></pre>
-</div>
-<div id="marginal-agreement" class="section level2">
-<h2>Marginal agreement</h2>
-<p>Only <code>ipf()</code> implements this improvement. <code>ipu()</code> assumes that at least some marginals <em>should</em> disagree on the total.</p>
-<p>In our first IPF example, the marginal distributions of households all add up to the same number for each zone (500, 500, and 0). If they disagreed on the total number of households, the standard IPF process could not converge.</p>
-<p>Occasionally, marginal distributions might disagree slightly on the totals, particularly if they are derived from different sources. When that happens, <code>ipf()</code> will still converge by matching the total of the first marginal table supplied while using the percentage distribution from the remaining tables. The eliminates the painful task of ensuring all marginals match exactly.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Increase 1-person households from 100 to 500</span>
-targets$siz &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
-  <span class="dt">cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>),
-  <span class="st">`</span><span class="dt">1</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">500</span>, <span class="dv">500</span>, <span class="dv">0</span>),
-  <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">100</span>, <span class="dv">100</span>, <span class="dv">0</span>),
-  <span class="st">`</span><span class="dt">3</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">150</span>, <span class="dv">100</span>, <span class="dv">0</span>),
-  <span class="st">`</span><span class="dt">4</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">150</span>, <span class="dv">150</span>, <span class="dv">0</span>)
-)
-
-table &lt;-<span class="st"> </span><span class="kw">ipf</span>(seed, targets)</code></pre></div>
-<p><table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
-<thead>
-<tr><td colspan='5' style='text-align: left;'>
-Size: Result</td></tr>
-<tr>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>1</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>2</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>3</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>4</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style='text-align: center;'>1</td>
-<td style='text-align: right;'>500</td>
-<td style='text-align: right;'>100</td>
-<td style='text-align: right;'>150</td>
-<td style='text-align: right;'>150</td>
-</tr>
-<tr>
-<td style='text-align: center;'>2</td>
-<td style='text-align: right;'>500</td>
-<td style='text-align: right;'>100</td>
-<td style='text-align: right;'>100</td>
-<td style='text-align: right;'>150</td>
-</tr>
-<tr>
-<td style='border-bottom: 2px solid grey; text-align: center;'>3</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-</tr>
-</tbody>
-</table><table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
-<thead>
-<tr><td colspan='5' style='text-align: left;'>
-Size: Target</td></tr>
-<tr>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>1</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>2</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>3</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>4</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style='text-align: center;'>1</td>
-<td style='text-align: right;'>500</td>
-<td style='text-align: right;'>100</td>
-<td style='text-align: right;'>150</td>
-<td style='text-align: right;'>150</td>
-</tr>
-<tr>
-<td style='text-align: center;'>2</td>
-<td style='text-align: right;'>500</td>
-<td style='text-align: right;'>100</td>
-<td style='text-align: right;'>100</td>
-<td style='text-align: right;'>150</td>
-</tr>
-<tr>
-<td style='border-bottom: 2px solid grey; text-align: center;'>3</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-</tr>
-</tbody>
-</table><table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
-<thead>
-<tr><td colspan='5' style='text-align: left;'>
-Workers: Result</td></tr>
-<tr>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>0</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>1</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>2</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>3</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style='text-align: center;'>1</td>
-<td style='text-align: right;'>180</td>
-<td style='text-align: right;'>270</td>
-<td style='text-align: right;'>270</td>
-<td style='text-align: right;'>180</td>
-</tr>
-<tr>
-<td style='text-align: center;'>2</td>
-<td style='text-align: right;'>170</td>
-<td style='text-align: right;'>170</td>
-<td style='text-align: right;'>255</td>
-<td style='text-align: right;'>255</td>
-</tr>
-<tr>
-<td style='border-bottom: 2px solid grey; text-align: center;'>3</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-</tr>
-</tbody>
-</table><table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
-<thead>
-<tr><td colspan='5' style='text-align: left;'>
-Workers: Target</td></tr>
-<tr>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>0</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>1</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>2</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>3</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style='text-align: center;'>1</td>
-<td style='text-align: right;'>100</td>
-<td style='text-align: right;'>150</td>
-<td style='text-align: right;'>150</td>
-<td style='text-align: right;'>100</td>
-</tr>
-<tr>
-<td style='text-align: center;'>2</td>
-<td style='text-align: right;'>100</td>
-<td style='text-align: right;'>100</td>
-<td style='text-align: right;'>150</td>
-<td style='text-align: right;'>150</td>
-</tr>
-<tr>
-<td style='border-bottom: 2px solid grey; text-align: center;'>3</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-</tr>
-</tbody>
-</table><table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
-<thead>
-<tr><td colspan='5' style='text-align: left;'>
-Vehicles: Result</td></tr>
-<tr>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>0</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>1</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>2</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>3</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style='text-align: center;'>1</td>
-<td style='text-align: right;'>135</td>
-<td style='text-align: right;'>315</td>
-<td style='text-align: right;'>270</td>
-<td style='text-align: right;'>180</td>
-</tr>
-<tr>
-<td style='text-align: center;'>2</td>
-<td style='text-align: right;'>298</td>
-<td style='text-align: right;'>128</td>
-<td style='text-align: right;'>255</td>
-<td style='text-align: right;'>170</td>
-</tr>
-<tr>
-<td style='border-bottom: 2px solid grey; text-align: center;'>3</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-</tr>
-</tbody>
-</table><table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
-<thead>
-<tr><td colspan='5' style='text-align: left;'>
-Vehciles: Target</td></tr>
-<tr>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>0</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>1</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>2</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>3</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style='text-align: center;'>1</td>
-<td style='text-align: right;'>75</td>
-<td style='text-align: right;'>175</td>
-<td style='text-align: right;'>150</td>
-<td style='text-align: right;'>100</td>
-</tr>
-<tr>
-<td style='text-align: center;'>2</td>
-<td style='text-align: right;'>175</td>
-<td style='text-align: right;'>75</td>
-<td style='text-align: right;'>150</td>
-<td style='text-align: right;'>100</td>
-</tr>
-<tr>
-<td style='border-bottom: 2px solid grey; text-align: center;'>3</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-</tr>
-</tbody>
-</table></p>
-</div>
-<div id="partial-marginals" class="section level2">
-<h2>Partial marginals</h2>
-<p>Both <code>ipf()</code> and <code>ipu()</code> implement this improvement.</p>
-<p>In some applications of IPF, there may not be a need to control every category of every marginal. In this example, perhaps you want to control 1-, 2-, and 3-person households, but are not concerned with 4+ person households.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">partial_targets &lt;-<span class="st"> </span>targets
-partial_targets$siz &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
-  <span class="dt">cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>),
-  <span class="st">`</span><span class="dt">1</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">100</span>, <span class="dv">150</span>, <span class="dv">0</span>),
-  <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">100</span>, <span class="dv">100</span>, <span class="dv">0</span>),
-  <span class="st">`</span><span class="dt">3</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">150</span>, <span class="dv">100</span>, <span class="dv">0</span>)
-)
-
-table &lt;-<span class="st"> </span><span class="kw">ipf</span>(seed, partial_targets)</code></pre></div>
-<p>As shown below, the marginal distributions of size categories 1, 2, and 3 are fairly close to their target values, while 4+ is not.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">table %&gt;%
-<span class="st">  </span><span class="kw">select</span>(-<span class="kw">c</span>(wrk, veh)) %&gt;%
-<span class="st">  </span><span class="kw">group_by</span>(cluster, siz) %&gt;%
-<span class="st">  </span><span class="kw">summarize</span>(<span class="dt">total =</span> <span class="kw">round</span>(<span class="kw">sum</span>(weight), <span class="dv">0</span>)) %&gt;%
-<span class="st">  </span><span class="kw">spread</span>(<span class="dt">key =</span> siz, <span class="dt">value =</span> total) %&gt;%
-<span class="st">  </span><span class="kw">htmlTable</span>(
-    <span class="dt">align =</span> <span class="st">&quot;crr&quot;</span>, <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Size: Result&quot;</span>
-  )</code></pre></div>
-<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
-<thead>
-<tr><td colspan='5' style='text-align: left;'>
-Size: Result</td></tr>
-<tr>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>1</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>2</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>3</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>4</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style='text-align: center;'>1</td>
-<td style='text-align: right;'>96</td>
-<td style='text-align: right;'>96</td>
-<td style='text-align: right;'>144</td>
-<td style='text-align: right;'>15</td>
-</tr>
-<tr>
-<td style='text-align: center;'>2</td>
-<td style='text-align: right;'>143</td>
-<td style='text-align: right;'>96</td>
-<td style='text-align: right;'>96</td>
-<td style='text-align: right;'>15</td>
-</tr>
-<tr>
-<td style='border-bottom: 2px solid grey; text-align: center;'>3</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-</tr>
-</tbody>
-</table>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">partial_targets$siz %&gt;%
-<span class="st">  </span><span class="kw">htmlTable</span>(
-    <span class="dt">align =</span> <span class="st">&quot;crr&quot;</span>, <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Size: Target&quot;</span>
-  )</code></pre></div>
-<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
-<thead>
-<tr><td colspan='4' style='text-align: left;'>
-Size: Target</td></tr>
-<tr>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>cluster</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>1</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>2</th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>3</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style='text-align: center;'>1</td>
-<td style='text-align: right;'>100</td>
-<td style='text-align: right;'>100</td>
-<td style='text-align: right;'>150</td>
-</tr>
-<tr>
-<td style='text-align: center;'>2</td>
-<td style='text-align: right;'>150</td>
-<td style='text-align: right;'>100</td>
-<td style='text-align: right;'>100</td>
-</tr>
-<tr>
-<td style='border-bottom: 2px solid grey; text-align: center;'>3</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>0</td>
 </tr>
 </tbody>
 </table>

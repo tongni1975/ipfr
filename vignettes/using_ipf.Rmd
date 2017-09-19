@@ -112,6 +112,8 @@ hh_targets$siz %>%
   )
 ```
 
+### Run IPU
+
 Run `ipu()`. Note that it throws an error. When providing cluster values in
 the seed table, `ipfr` checks to make sure that every marginal category appears
 in every cluster. In this case, the seed table does not have a 2-person household
@@ -352,34 +354,95 @@ result$secondary_comp %>%
   )
 ```
 
+# How IPU addresses common IPF problems
+
+This section will show how `ipu()` addresses some common problems found in basic
+ipf procedures. It uses the example data from the first example.
+
+## Zero weights
+
+IPF works by successively multiplying the table weights by factors.  Cells with 
+a zero weight cannot be modified by this process.  As the number of zero weights 
+increase, the flexibility of the process is reduced, and convergence becomes 
+more difficult. `ipfr` solves this problem by setting a minimum weight for all 
+cells to `.0001`.  This minimum weight can be adjusted using the `min_weight` 
+parameter and should be arbitrarily small compared to your seed table weights.
+
+## Missing seed information
+
+Not every combination of marginal categories is required to be included in the 
+seed table; however, at least one observation of each category must exist.  For example, the combination:
+
+  * siz = 1
+  * wrk = 1
+  * veh = 0
+
+may not have been observed in the survey, and thus may be missing from the seed 
+table.  As long as other combinations of size-1 households exist (e.g. with 0 workers and 1 vehicle), `ipfr` will work fine.  On the other hand, if there are no observations of any size-1 households, `ipfr` will stop with an error message.
+
+See the first IPU example to see how it works.
+
+## Marginal agreement
+
+In the above examples, are marginals disagreed on totals (either persons or 
+households). If they disagreed on the total, the standard IPF process could not
+converge.
+
+Occasionally, marginal distributions might disagree slightly on the totals, 
+particularly if they are derived from different sources.  When that happens, 
+`ipu()` will still converge by scaling all tables to match the total of the
+first table. This eliminates the painful task of ensuring all marginals match
+exactly.
+
+In the example below, the size marginal sums to a total of 100 households.
+The vehicle marginal sums to 300. With the `verbose` option set to `TRUE`,
+a message will be displayed telling which, if any, target tables are scaled.
+
+```{r, warning=TRUE}
+hh_seed <- data_frame(
+  geo_region = 1,
+  pid = c(1:8),
+  hhsiz = c(1, 1, 1, 2, 2, 2, 2, 2),
+  hhveh = c(0, 2, 1, 1, 1, 2, 1, 0)
+)
+
+hh_targets <- list()
+hh_targets$hhsiz <- data_frame(
+  geo_region = 1,
+  `1` = 35,
+  `2` = 65
+)
+hh_targets$hhveh <- data_frame(
+  geo_region = 1,
+  `0` = 100,
+  `1` = 100,
+  `2` = 100
+)
+
+result <- ipu(hh_seed, hh_targets, max_iterations = 30, verbose = TRUE)
+```
+
+Importantly, the performance measures below compare the result to the scaled
+target not the original. Note that the vehicle targets have been scaled down.
+
+```{r}
+result$primary_comp
+```
+
+
 # IPF
 
 **Note: `ipf()` is being deprecated in favor of `ipu()`.**
 
-The `ipf()` function is intended for basic IPF operations. It has
-many applications in different fields, but in transportation, you
-can use it to:
-
-  * Grow a base year through-trip table to future year station volumes.
-  * Expand a household survey to multiple household marginal distributions (any number of them).
-  * Expand a synthetic population seed (like PUMS data) to create base or future-year synthetic populations.
-  
-In more general terms, IPF takes a seed distribution with rich relational 
-information and weights it to match various 1-dimensional marginal
-distributions. The first example explains further.
-
 ## Example 1: Basics
 
 This section creates a random seed table and target values to illustrate how the
-package is used. The targets are specified for three separate clusters, which
+function is used. The targets are specified for three separate clusters, which 
 could represent model TAZs, survey districts, or some other grouping of 
 geographic areas.
 
-### Seed table creation
-The seed table is the starting point for the IPF procedure.  In this example, 
-we will use a made up summary table of survey data.  This fake table is a count 
-of households by the number persons, workers and vehicles.  A sample of the 
-table is shown for illustration.  The count is stored in the `weight` field.
+Seed table creation.
+
 ```{r seed creation}
 seed <- expand.grid(
   siz = c(1, 2, 3, 4),
@@ -397,24 +460,8 @@ seed %>%
 )
 ```
 
+Target creation.
 
-### Target creation
-The number of households by size (e.g., 1-person, 2-person, etc.) is referred to
-as a marginal distribution.  Often, from the Census, we know the total number of 
-households by each individual marginal.  For example, we know the number of 
-households by size:
-
-  * 1 person: 150 households
-  * 2 persons: 150 households
-  * 3 persons: 100 households
-  * 4+ persons: 100 households
-
-This information becomes the target that the IPF process tries to match.
-
-This information is created below for the distribution of households by size, 
-number of workers, and number of vehicles.  The size table is shown as an example.
-Across the top are the marginal categories (1-4). The cluster column represents
-three separate geographies (counties, tracts, TAZs, etc.).
 ```{r "marginal creation"}
 
 targets <- list()
@@ -446,43 +493,14 @@ targets$siz %>%
   )  
 ```
 
-### The Goal
-We know the count of each marginal individually, but assume we don't have 
-official information from the Census about the joint distribution.  What we want
-to do is use the joint distribution from our survey, but ensure it agrees with 
-the marginal information from the Census.
+Run `ipf()`.
 
-An initial test comparing sizes for cluster 1 shows they do not agree.
-```{r "initial test"}
-siz <- targets$siz %>%
-  filter(cluster == 1) %>%
-  gather(key = siz, value = target, -cluster) %>%
-  mutate(siz = as.numeric(siz)) %>%
-  select(-cluster)
-  
-
-seed %>%
-  select(siz, weight) %>%
-  group_by(siz) %>%
-  summarize(seed = sum(weight)) %>%
-  left_join(siz, by = "siz") %>%
-  htmlTable(
-    align = "crr", rnames = FALSE,
-    caption = "Comparing size marginals for cluster 1"
-  )
-```
-
-### Using IPF
-
-We can use the ipfr package to change this.  For this example, the `verbose`
-option is turned on to show what the tool reports upon completion. It reports 
-the worst-performing marginal in the worst-performing cluster. If these
-values are small, then you can be confident in the result.
 ```{r}
 table <- ipf(seed, targets, verbose = TRUE)
 ```
 
-A sample of the resulting table is shown below.
+Results.
+
 ```{r}
 table %>%
   mutate_all(funs(round(., 2))) %>%
@@ -492,9 +510,6 @@ table %>%
   )
 ```
 
-### Summarizing Results
-
-We can summarize the final table to see if it worked.
 ```{r}
 table %>%
   select(-c(wrk, veh)) %>%
@@ -552,23 +567,12 @@ first_targets <- targets
 
 ## Example 2: Survey Expansion using Geographical Clusters
 
-In the first example, target values were specified for various clusters, but no
-target information was appended to the seed table. In this case, `ipfr` assumes
-that the full seed table is used as a starting point for every cluster.
-
-In the case of survey expansion, it is common to define clusters in both the 
-seed and target table. With this approach, only the seed records in a cluster
-will be expanded to match that cluster's targets.
-
-Accomplishing this is as simple as appending the `cluster` values to the seed 
-table. We will create a new seed table, and append cluster values into a new
-`cluster` field. Note that `cluster` is a special field name and must be used in
-both seed and target tables for this to work.
+Seed table creation.
 
 ```{r}
 seed <- data_frame(
   hhid = c(1, 2, 3, 4),
-  siz = c(1, 2, 1, 1),
+  siz = c(1, 2, 2, 1),
   weight = c(1, 1, 1, 1),
   cluster = c(1, 1, 2, 2)
 )
@@ -579,7 +583,7 @@ seed %>%
   )
 ```
 
-New targets are specified for each cluster:
+Targets for each cluster.
 
 ```{r}
 targets <- list()
@@ -590,32 +594,14 @@ targets$siz <- data_frame(
 )
 ```
 
-Run `ipf`. Note that it picks up a new error. When providing cluster values in
-the seed table, `ipfr` checks to make sure that every marginal category appears
-in every cluster. In this case, the full seed table does contain both size 1 and
-2 records, but cluster 2 only has size 1.
+Run `ipf`
 
 ```{r}
 result <- ipf(seed = seed, targets = targets)
 ```
 
-Fix the seed table and re-run `ipf`.
 
-```{r}
-seed <- data_frame(
-  hhid = c(1, 2, 3, 4),
-  siz = c(1, 2, 2, 1),
-  weight = c(1, 1, 1, 1),
-  cluster = c(1, 1, 2, 2)
-)
-
-result <- ipf(seed = seed, targets = targets)
-```
-
-
-In the resulting table, note that the first two rows in the seed table (in 
-cluster 1) match the 100 household total of cluster 1, while the second two
-rows match the 250 household total of cluster 2.
+Results.
 
 ```{r}
 result %>%
@@ -624,158 +610,3 @@ result %>%
   )
 ```
 
-
-# How IPFR addresses common IPF problems
-
-This section will show how `ipfr` addresses some common problems found in basic
-ipf procedures. It uses the example data from the first example.
-
-```{r}
-seed <- first_seed
-targets <- first_targets
-```
-
-
-## Zero weights
-
-Both `ipf()` and `ipu()` implement this improvement.
-
-IPF works by successively multiplying the table weights by factors.  Cells with 
-a zero weight cannot be modified by this process.  As the number of zero weights 
-increase, the flexibility of the process is reduced, and convergence becomes 
-more difficult. `ipfr` solves this problem by setting a minimum weight for all 
-cells to `.0001`.  This minimum weight can be adjusted using the `min_weight` 
-parameter and should be arbitrarily small compared to your seed table weights.
-
-## Missing seed information
-
-Both `ipf()` and `ipu()` implement this improvement.
-
-Not every combination of marginal categories is required to be included in the 
-seed table; however, at least one observation of each category must exist.  For example, the combination:
-
-  * siz = 1
-  * wrk = 1
-  * veh = 0
-
-may not have been observed in the survey, and thus may be missing from the seed 
-table.  As long as other combinations of size-1 households exist (e.g. with 0 workers and 1 vehicle), `ipfr` will work fine.  On the other hand, if there are no observations of any size-1 households, `ipfr` will stop with an error message.
-
-```{r, warning=TRUE}
-missing_seed <- seed %>%
-  filter(siz != 1)
-
-error <- try(table <- ipf(missing_seed, targets))
-error[1]
-```
-
-## Marginal agreement
-
-Only `ipf()` implements this improvement. `ipu()` assumes that at least some
-marginals *should* disagree on the total.
-
-In our first IPF example, the marginal distributions of households all add up to
-the same number for each zone (500, 500, and 0). If they disagreed on the total
-number of households, the standard IPF process could not converge.
-
-Occasionally, marginal distributions might disagree slightly on the totals, particularly 
-if they are derived from different sources.  When that happens, `ipf()` 
-will still converge by matching the total of the first marginal table supplied 
-while using the percentage distribution from the remaining tables. The eliminates
-the painful task of ensuring all marginals match exactly.
-
-```{r, warning=TRUE}
-# Increase 1-person households from 100 to 500
-targets$siz <- data_frame(
-  cluster = c(1, 2, 3),
-  `1` = c(500, 500, 0),
-  `2` = c(100, 100, 0),
-  `3` = c(150, 100, 0),
-  `4` = c(150, 150, 0)
-)
-
-table <- ipf(seed, targets)
-```
-
-```{r, echo=FALSE}
-# Size
-table %>%
-  select(-c(wrk, veh)) %>%
-  group_by(cluster, siz) %>%
-  summarize(total = round(sum(weight), 0)) %>%
-  spread(key = siz, value = total) %>%
-  htmlTable(
-    align = "crr", rnames = FALSE, caption = "Size: Result"
-  )
-
-targets$siz %>%
-  htmlTable(
-    align = "crr", rnames = FALSE, caption = "Size: Target"
-  )
-
-# Workers
-table %>%
-  select(-c(siz, veh)) %>%
-  group_by(cluster, wrk) %>%
-  summarize(total = round(sum(weight), 0)) %>%
-  spread(key = wrk, value = total) %>%
-  htmlTable(
-    align = "crr", rnames = FALSE, caption = "Workers: Result"
-  )
-
-targets$wrk %>%
-  htmlTable(
-    align = "crr", rnames = FALSE, caption = "Workers: Target"
-  )
-
-# Vehciles
-table %>%
-  select(-c(siz, wrk)) %>%
-  group_by(cluster, veh) %>%
-  summarize(total = round(sum(weight), 0)) %>%
-  spread(key = veh, value = total) %>%
-  htmlTable(
-    align = "crr", rnames = FALSE, caption = "Vehicles: Result"
-  )
-
-targets$veh %>%
-  htmlTable(
-    align = "crr", rnames = FALSE, caption = "Vehciles: Target"
-  )
-```
-
-## Partial marginals
-
-Both `ipf()` and `ipu()` implement this improvement.
-
-In some applications of IPF, there may not be a need to control every category of every marginal.  In this example, perhaps you want to control 1-, 2-, and 3-person households, but are not concerned with 4+ person households.
-
-```{r}
-partial_targets <- targets
-partial_targets$siz <- data_frame(
-  cluster = c(1, 2, 3),
-  `1` = c(100, 150, 0),
-  `2` = c(100, 100, 0),
-  `3` = c(150, 100, 0)
-)
-
-table <- ipf(seed, partial_targets)
-```
-
-As shown below, the marginal distributions of size categories 1, 2, and 3 are fairly close to their target values, while 4+ is not.
-
-```{r}
-table %>%
-  select(-c(wrk, veh)) %>%
-  group_by(cluster, siz) %>%
-  summarize(total = round(sum(weight), 0)) %>%
-  spread(key = siz, value = total) %>%
-  htmlTable(
-    align = "crr", rnames = FALSE, caption = "Size: Result"
-  )
-
-partial_targets$siz %>%
-  htmlTable(
-    align = "crr", rnames = FALSE, caption = "Size: Target"
-  )
-```
