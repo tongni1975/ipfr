@@ -55,8 +55,8 @@ Defaults to 10.}
 Set to .0001 by default.  Should be arbitrarily small compared to your 
 seed table weights.}
 
-\item{verbose}{Print details on the maximum expansion factor with each 
-iteration? Default \code{FALSE}.}
+\item{verbose}{Print iteration details and worst marginal stats upon 
+completion? Default \code{FALSE}.}
 }
 \value{
 the \code{primary_seed} with a revised weight column.

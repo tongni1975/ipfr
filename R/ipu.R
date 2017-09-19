@@ -76,8 +76,8 @@ NULL
 #'    Set to .0001 by default.  Should be arbitrarily small compared to your 
 #'    seed table weights.
 #'   
-#' @param verbose Print details on the maximum expansion factor with each 
-#'    iteration? Default \code{FALSE}. 
+#' @param verbose Print iteration details and worst marginal stats upon 
+#'   completion? Default \code{FALSE}.
 #' 
 #' @return the \code{primary_seed} with a revised weight column.
 #' 
@@ -235,7 +235,7 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
     }
     
     # Determine percent differences (by geo field)
-    pct_diff <- 0
+    saved_diff_tbl <- NULL
     for (seed_attribute in seed_attribute_cols) {
       # create lookups for targets list
       target_tbl_name <- strsplit(seed_attribute, ".", fixed = TRUE)[[1]][1]
@@ -290,12 +290,16 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
   
   if (verbose) {
     message(ifelse(converged, "IPU converged", "IPU did not converge"))
-    message("Worst marginal stats:")
-    position <- which(saved_diff_tbl$pct_diff == pct_diff)[1]
-    message("Category: ", saved_category)
-    message(saved_geo, ": ", saved_diff_tbl$geo[position])
-    message("Max % Diff: ", round(pct_diff * 100, 2), "%")
-    message("Absolute Diff: ", round(saved_diff_tbl$abs_diff[position], 2))
+    if (is.null(saved_diff_tbl)) {
+      message("All targets matched within the absolute_diff of ", absolute_diff)
+    } else {
+      message("Worst marginal stats:")
+      position <- which(saved_diff_tbl$pct_diff == pct_diff)[1]
+      message("Category: ", saved_category)
+      message(saved_geo, ": ", saved_diff_tbl$geo[position])
+      message("Max % Diff: ", round(pct_diff * 100, 2), "%")
+      message("Absolute Diff: ", round(saved_diff_tbl$abs_diff[position], 2))
+    }
     utils::flush.console()
   }
   
