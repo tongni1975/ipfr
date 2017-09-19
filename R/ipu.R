@@ -78,6 +78,16 @@ NULL
 #'   
 #' @param verbose Print iteration details and worst marginal stats upon 
 #'   completion? Default \code{FALSE}.
+#'   
+#' @param max_weight_scale \code{real} number. The average weight per seed record is
+#' calculated by dividing the total of the targets by the number of records.
+#' The max_scale caps the maximum weight at a multiple of that average. Defaults
+#' to 5.
+#' 
+#' @param min_weight_scale \code{real} number. The average weight per seed record is
+#' calculated by dividing the total of the targets by the number of records.
+#' The min_scale caps the minimum weight at a multiple of that average. Defaults
+#' to 0.2.
 #' 
 #' @return a \code{named list} with the \code{primary_seed} with weight and two 
 #'   comparison tables to aid in reporting.
@@ -106,7 +116,8 @@ NULL
 #' @importFrom magrittr "%>%"
 ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_targets = NULL,
                 relative_gap = 0.01, max_iterations = 100, absolute_diff = 10,
-                min_weight = .0001, verbose = FALSE){
+                min_weight = .0001, verbose = FALSE,
+                max_weight_scale = 5, min_weight_scale = .2){
   
   # If person data is provided, both seed and targets must be
   if (xor(!is.null(secondary_seed), !is.null(secondary_targets))) {
@@ -121,12 +132,9 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
   }
   
   # Scale target tables. All table totals will match the first table.
-  result <- scale_targets(primary_targets, verbose)
-  primary_targets <- result$targets
-  primary_total <- result$total
+  primary_targets <- scale_targets(primary_targets, verbose)
   if (!is.null(secondary_seed)) {
-    result <- scale_targets(secondary_targets, verbose) 
-    secondary_targets <- result$targets
+    secondary_targets <- scale_targets(secondary_targets, verbose) 
   }
   
   # Pull off the geo information into a separate equivalency table
@@ -231,7 +239,7 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
         dplyr::mutate(
           factor = target / sum(attr * weight),
           weight = ifelse(attr > 0, weight * factor, weight),
-          # Implement the floor on minimum weight
+          # Implement the floor on zero weights
           weight = pmax(weight, min_weight)
         ) %>%
         dplyr::ungroup() %>%
@@ -549,8 +557,7 @@ compare_results <- function(seed, targets){
 #' @param verbose \code{logical} Show a warning for each target scaled?
 #'   Defaults to \code{FALSE}.
 #' 
-#' @return A \code{named list} with the scaled targets and the global total
-#'   matched
+#' @return A \code{named list} with the scaled targets
 #' 
 scale_targets <- function(targets, verbose = FALSE){
   
@@ -594,9 +601,6 @@ scale_targets <- function(targets, verbose = FALSE){
     utils::flush.console()
   }
   
-  result <- list()
-  result$targets <- targets
-  result$total <- global_total
-  return(result)
+  return(targets)
 }
 

@@ -13,6 +13,9 @@ required by \link{ipu}.}
 \item{verbose}{\code{logical} Show a warning for each target scaled?
 Defaults to \code{FALSE}.}
 }
+\value{
+A \code{named list} with the scaled targets
+}
 \description{
 Often, different marginals may disagree on the total number of units. In the
 context of household survey expansion, for example, one marginal might say
