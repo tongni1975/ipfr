@@ -79,7 +79,8 @@ NULL
 #' @param verbose Print iteration details and worst marginal stats upon 
 #'   completion? Default \code{FALSE}.
 #' 
-#' @return the \code{primary_seed} with a revised weight column.
+#' @return a \code{named list} with the \code{primary_seed} with weight and two 
+#'   comparison tables to aid in reporting.
 #' 
 #' @export
 #' 
@@ -120,9 +121,12 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
   }
   
   # Scale target tables. All table totals will match the first table.
-  primary_targets <- scale_targets(primary_targets, verbose)
+  result <- scale_targets(primary_targets, verbose)
+  primary_targets <- result$targets
+  primary_total <- result$total
   if (!is.null(secondary_seed)) {
-    secondary_targets <- scale_targets(secondary_targets, verbose)  
+    result <- scale_targets(secondary_targets, verbose) 
+    secondary_targets <- result$targets
   }
   
   # Pull off the geo information into a separate equivalency table
@@ -545,6 +549,9 @@ compare_results <- function(seed, targets){
 #' @param verbose \code{logical} Show a warning for each target scaled?
 #'   Defaults to \code{FALSE}.
 #' 
+#' @return A \code{named list} with the scaled targets and the global total
+#'   matched
+#' 
 scale_targets <- function(targets, verbose = FALSE){
   
   for (i in c(1:length(names(targets)))) {
@@ -587,6 +594,9 @@ scale_targets <- function(targets, verbose = FALSE){
     utils::flush.console()
   }
   
-  return(targets)
+  result <- list()
+  result$targets <- targets
+  result$total <- global_total
+  return(result)
 }
 
