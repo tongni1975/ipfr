@@ -12,7 +12,7 @@
 
 <meta name="author" content="Kyle Ward" />
 
-<meta name="date" content="2017-09-19" />
+<meta name="date" content="2017-09-20" />
 
 <title>Using ipf</title>
 
@@ -70,7 +70,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <h1 class="title toc-ignore">Using ipf</h1>
 <h4 class="author"><em>Kyle Ward</em></h4>
-<h4 class="date"><em>2017-09-19</em></h4>
+<h4 class="date"><em>2017-09-20</em></h4>
 
 
 <div id="TOC">
@@ -954,6 +954,10 @@ result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_tar
 <pre><code>## All targets matched within the absolute_diff of 10</code></pre>
 <p>Importantly, the performance measures below compare the result to the scaled target not the original. Note that the vehicle targets have been scaled down.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result$primary_comp %&gt;%
+<span class="st">  </span><span class="kw">mutate_at</span>(
+    <span class="dt">.vars =</span> <span class="kw">vars</span>(target, result),
+    <span class="dt">.funs =</span> <span class="kw">funs</span>(<span class="kw">round</span>(., <span class="dv">2</span>))
+  ) %&gt;%
 <span class="st">  </span><span class="kw">htmlTable</span>(
     <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Scaled Results&quot;</span>
   )</code></pre></div>
@@ -975,7 +979,7 @@ Scaled Results</td></tr>
 <td style='text-align: center;'>geo_region_1</td>
 <td style='text-align: center;'>hhsiz_1</td>
 <td style='text-align: center;'>35</td>
-<td style='text-align: center;'>35.0000282380462</td>
+<td style='text-align: center;'>35</td>
 <td style='text-align: center;'>0</td>
 <td style='text-align: center;'>0</td>
 </tr>
@@ -983,31 +987,31 @@ Scaled Results</td></tr>
 <td style='text-align: center;'>geo_region_1</td>
 <td style='text-align: center;'>hhsiz_2</td>
 <td style='text-align: center;'>65</td>
-<td style='text-align: center;'>64.9999717619538</td>
+<td style='text-align: center;'>65</td>
 <td style='text-align: center;'>0</td>
 <td style='text-align: center;'>0</td>
 </tr>
 <tr>
 <td style='text-align: center;'>geo_region_1</td>
 <td style='text-align: center;'>hhveh_0</td>
-<td style='text-align: center;'>33.3333333333333</td>
-<td style='text-align: center;'>33.3333333333333</td>
+<td style='text-align: center;'>33.33</td>
+<td style='text-align: center;'>33.33</td>
 <td style='text-align: center;'>0</td>
 <td style='text-align: center;'>0</td>
 </tr>
 <tr>
 <td style='text-align: center;'>geo_region_1</td>
 <td style='text-align: center;'>hhveh_1</td>
-<td style='text-align: center;'>33.3333333333333</td>
-<td style='text-align: center;'>33.3333333333333</td>
+<td style='text-align: center;'>33.33</td>
+<td style='text-align: center;'>33.33</td>
 <td style='text-align: center;'>0</td>
 <td style='text-align: center;'>0</td>
 </tr>
 <tr>
 <td style='border-bottom: 2px solid grey; text-align: center;'>geo_region_1</td>
 <td style='border-bottom: 2px solid grey; text-align: center;'>hhveh_2</td>
-<td style='border-bottom: 2px solid grey; text-align: center;'>33.3333333333333</td>
-<td style='border-bottom: 2px solid grey; text-align: center;'>33.3333333333333</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>33.33</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>33.33</td>
 <td style='border-bottom: 2px solid grey; text-align: center;'>0</td>
 <td style='border-bottom: 2px solid grey; text-align: center;'>0</td>
 </tr>
@@ -1038,16 +1042,8 @@ hh_targets$siz &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
   <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">25</span>, <span class="dv">150</span>)
 )
 
-result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets, <span class="dt">max_iterations =</span> <span class="dv">10</span>, <span class="dt">verbose =</span> <span class="ot">TRUE</span>,
+result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets, <span class="dt">max_iterations =</span> <span class="dv">10</span>,
               <span class="dt">max_weight_scale =</span> <span class="fl">1.2</span>, <span class="dt">min_weight_scale =</span> .<span class="dv">8</span>)</code></pre></div>
-<pre><code>## 
- Finished iteration  2 . %RMSE =  0</code></pre>
-<pre><code>## IPU converged</code></pre>
-<pre><code>## Worst marginal stats:</code></pre>
-<pre><code>## Category: siz.2</code></pre>
-<pre><code>## geo_cluster: 1</code></pre>
-<pre><code>## Max % Diff: 60%</code></pre>
-<pre><code>## Absolute Diff: 15</code></pre>
 <p>Consider the effect on geo_cluster 1. With a total target of 100 households and two records in the seed table, the average weight is 50. This means that the weights must be between 40 and 60. The algorithm does not have enough flexibility to meet the controls.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result$primary_comp %&gt;%
 <span class="st">  </span><span class="kw">htmlTable</span>(
@@ -1101,6 +1097,70 @@ Constrained Results</td></tr>
 </tr>
 </tbody>
 </table>
+<p>A second problem can arrise from capping weights based on the average weight. In the example below, I change the targets so that, for geo_cluster 1, they are very unbalanced. Cluster 1 now has 100,000 1-person households but only 5 2-person households.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">hh_targets &lt;-<span class="st"> </span><span class="kw">list</span>()
+hh_targets$siz &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">geo_cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>),
+  <span class="st">`</span><span class="dt">1</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">100000</span>, <span class="dv">100</span>),
+  <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">5</span>, <span class="dv">150</span>)
+)
+
+result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets, <span class="dt">max_iterations =</span> <span class="dv">10</span>,
+              <span class="dt">max_weight_scale =</span> <span class="dv">5</span>, <span class="dt">min_weight_scale =</span> .<span class="dv">2</span>)
+
+result$primary_comp %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Unbalanced Targets&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='6' style='text-align: left;'>
+Unbalanced Targets</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>geo</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>category</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>target</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>result</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>diff</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>pct_diff</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>geo_cluster_1</td>
+<td style='text-align: center;'>siz_1</td>
+<td style='text-align: center;'>100000</td>
+<td style='text-align: center;'>100000</td>
+<td style='text-align: center;'>0</td>
+<td style='text-align: center;'>0</td>
+</tr>
+<tr>
+<td style='text-align: center;'>geo_cluster_1</td>
+<td style='text-align: center;'>siz_2</td>
+<td style='text-align: center;'>5</td>
+<td style='text-align: center;'>10000.5</td>
+<td style='text-align: center;'>9995.5</td>
+<td style='text-align: center;'>199910</td>
+</tr>
+<tr>
+<td style='text-align: center;'>geo_cluster_2</td>
+<td style='text-align: center;'>siz_1</td>
+<td style='text-align: center;'>100</td>
+<td style='text-align: center;'>100</td>
+<td style='text-align: center;'>0</td>
+<td style='text-align: center;'>0</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>geo_cluster_2</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>siz_2</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>150</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>150</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>0</td>
+</tr>
+</tbody>
+</table>
+<p>Even with reasonable values for the weight caps, the minimum allowable weight is much higher than 5. This is an extreme example, and is unlikely to be an issue in applications related to housing and population - the targets are generally on the same scale. However, when expanding a through trip table, it is common to have some external stations with large targets and others with small. In these cases, it is advisable to leave the scale arguments at their default values.</p>
 </div>
 </div>
 <div id="ipf" class="section level1">

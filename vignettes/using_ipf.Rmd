@@ -427,6 +427,10 @@ target not the original. Note that the vehicle targets have been scaled down.
 
 ```{r}
 result$primary_comp %>%
+  mutate_at(
+    .vars = vars(target, result),
+    .funs = funs(round(., 2))
+  ) %>%
   htmlTable(
     rnames = FALSE, caption = "Scaled Results"
   )
@@ -470,7 +474,7 @@ hh_targets$siz <- data_frame(
   `2` = c(25, 150)
 )
 
-result <- ipu(hh_seed, hh_targets, max_iterations = 10, verbose = TRUE,
+result <- ipu(hh_seed, hh_targets, max_iterations = 10,
               max_weight_scale = 1.2, min_weight_scale = .8)
 ```
 
@@ -485,6 +489,36 @@ result$primary_comp %>%
     rnames = FALSE, caption = "Constrained Results"
   )
 ```
+
+A second problem can arrise from capping weights based on the average weight. In
+the example below, I change the targets so that, for geo_cluster 1, they are 
+very unbalanced. Cluster 1 now has 100,000 1-person households but only 5 
+2-person households. 
+
+```{r}
+hh_targets <- list()
+hh_targets$siz <- data_frame(
+  geo_cluster = c(1, 2),
+  `1` = c(100000, 100),
+  `2` = c(5, 150)
+)
+
+result <- ipu(hh_seed, hh_targets, max_iterations = 10,
+              max_weight_scale = 5, min_weight_scale = .2)
+
+result$primary_comp %>%
+  htmlTable(
+    rnames = FALSE, caption = "Unbalanced Targets"
+  )
+```
+
+Even with reasonable values for the weight caps, the 
+minimum allowable weight is much higher than 5. This is an extreme example, and
+is unlikely to be an issue in applications related to housing and population -
+the targets are generally on the same scale. However, when expanding a through
+trip table, it is common to have some external stations with large targets and
+others with small. In these cases, it is advisable to leave the scale arguments
+at their default values.
 
 # IPF
 
