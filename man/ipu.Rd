@@ -7,7 +7,7 @@
 ipu(primary_seed, primary_targets, secondary_seed = NULL,
   secondary_targets = NULL, relative_gap = 0.01, max_iterations = 100,
   absolute_diff = 10, min_weight = 0.0001, verbose = FALSE,
-  max_weight_scale = 5, min_weight_scale = 0.2)
+  max_weight_scale = 1000, min_weight_scale = 0.001)
 }
 \arguments{
 \item{primary_seed}{In population synthesis or household survey expansion, 
@@ -62,12 +62,12 @@ completion? Default \code{FALSE}.}
 \item{max_weight_scale}{\code{real} number. The average weight per seed record is
 calculated by dividing the total of the targets by the number of records.
 The max_scale caps the maximum weight at a multiple of that average. Defaults
-to 5.}
+to \code{1000} (basically turned off).}
 
 \item{min_weight_scale}{\code{real} number. The average weight per seed record is
 calculated by dividing the total of the targets by the number of records.
 The min_scale caps the minimum weight at a multiple of that average. Defaults
-to 0.2.}
+to \code{0.001} (basically turned off).}
 }
 \value{
 a \code{named list} with the \code{primary_seed} with weight and two 

@@ -82,12 +82,12 @@ NULL
 #' @param max_weight_scale \code{real} number. The average weight per seed record is
 #' calculated by dividing the total of the targets by the number of records.
 #' The max_scale caps the maximum weight at a multiple of that average. Defaults
-#' to 5.
+#' to \code{1000} (basically turned off).
 #' 
 #' @param min_weight_scale \code{real} number. The average weight per seed record is
 #' calculated by dividing the total of the targets by the number of records.
 #' The min_scale caps the minimum weight at a multiple of that average. Defaults
-#' to 0.2.
+#' to \code{0.001} (basically turned off).
 #' 
 #' @return a \code{named list} with the \code{primary_seed} with weight and two 
 #'   comparison tables to aid in reporting.
@@ -117,7 +117,7 @@ NULL
 ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_targets = NULL,
                 relative_gap = 0.01, max_iterations = 100, absolute_diff = 10,
                 min_weight = .0001, verbose = FALSE,
-                max_weight_scale = 5, min_weight_scale = .2){
+                max_weight_scale = 1000, min_weight_scale = .001){
   
   # If person data is provided, both seed and targets must be
   if (xor(!is.null(secondary_seed), !is.null(secondary_targets))) {
@@ -214,6 +214,29 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
       dplyr::left_join(temp, by = geo_colname)
   }
   
+  # Calculate average, min, and max weights and join to seed. If there are
+  # multiple geographies in the first primary target table, then min and max
+  # weights will vary by geography.
+  pos <- grep("geo_", colnames(targets[[1]]))
+  geo_colname <- colnames(targets[[1]])[pos]
+  recs_by_geo <- seed %>%
+    group_by(!!as.name(geo_colname)) %>%
+    summarize(count = n())
+    
+  weight_scale <- targets[[1]] %>%
+    tidyr::gather(key = category, value = total, -!!as.name(geo_colname)) %>%
+    dplyr::group_by(!!as.name(geo_colname)) %>%
+    dplyr::summarize(total = sum(total)) %>% 
+    dplyr::left_join(recs_by_geo, by = geo_colname) %>%
+    dplyr::mutate(
+      avg_weight = total / count,
+      min_weight = (!!min_weight_scale) * avg_weight,
+      max_weight = (!!max_weight_scale) * avg_weight
+    ) %>%
+    dplyr::select(-avg_weight)
+  seed <- seed %>%
+    dplyr::left_join(weight_scale, by = geo_colname)
+  
   iter <- 1
   converged <- FALSE
   while (!converged & iter <= max_iterations) {
@@ -243,6 +266,11 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
           weight = pmax(weight, min_weight)
         ) %>%
         dplyr::ungroup() %>%
+        # Cap weights to min/max
+        dplyr::mutate(
+          weight = ifelse(attr > 0, pmax(min_weight, weight), weight),
+          weight = ifelse(attr > 0, pmin(max_weight, weight), weight)
+        ) %>%
         dplyr::select(-geo, -attr, -target, -factor)
     }
     
