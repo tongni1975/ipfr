@@ -6,7 +6,7 @@
 \usage{
 ipu(primary_seed, primary_targets, secondary_seed = NULL,
   secondary_targets = NULL, relative_gap = 0.01, max_iterations = 100,
-  absolute_diff = 10, min_weight = 0.0001, verbose = FALSE,
+  absolute_diff = 10, weight_floor = 0.0001, verbose = FALSE,
   max_weight_scale = 1000, min_weight_scale = 0.001)
 }
 \arguments{
@@ -52,9 +52,9 @@ is only 1.
 
 Defaults to 10.}
 
-\item{min_weight}{Minimum weight to allow in any cell to prevent zero weights.
-Set to .0001 by default.  Should be arbitrarily small compared to your 
-seed table weights.}
+\item{weight_floor}{Minimum weight to allow in any cell to prevent zero
+weights. Set to .0001 by default.  Should be arbitrarily small compared to
+your seed table weights.}
 
 \item{verbose}{Print iteration details and worst marginal stats upon 
 completion? Default \code{FALSE}.}

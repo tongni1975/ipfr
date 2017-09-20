@@ -72,9 +72,9 @@ NULL
 #'   
 #'   Defaults to 10.
 #'   
-#' @param min_weight Minimum weight to allow in any cell to prevent zero weights.
-#'    Set to .0001 by default.  Should be arbitrarily small compared to your 
-#'    seed table weights.
+#' @param weight_floor Minimum weight to allow in any cell to prevent zero
+#'   weights. Set to .0001 by default.  Should be arbitrarily small compared to
+#'   your seed table weights.
 #'   
 #' @param verbose Print iteration details and worst marginal stats upon 
 #'   completion? Default \code{FALSE}.
@@ -116,7 +116,7 @@ NULL
 #' @importFrom magrittr "%>%"
 ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_targets = NULL,
                 relative_gap = 0.01, max_iterations = 100, absolute_diff = 10,
-                min_weight = .0001, verbose = FALSE,
+                weight_floor = .0001, verbose = FALSE,
                 max_weight_scale = 1000, min_weight_scale = .001){
   
   # If person data is provided, both seed and targets must be
@@ -263,14 +263,13 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
           factor = target / sum(attr * weight),
           weight = ifelse(attr > 0, weight * factor, weight),
           # Implement the floor on zero weights
-          weight = pmax(weight, min_weight)
+          weight = pmax(weight, weight_floor),
+          # Cap weights to to multiples of the average weight.
+          # Not applicable if target is 0.
+          weight = ifelse(attr > 0 & target > 0, pmax(min_weight, weight), weight),
+          weight = ifelse(attr > 0 & target > 0, pmin(max_weight, weight), weight)
         ) %>%
         dplyr::ungroup() %>%
-        # Cap weights to min/max
-        dplyr::mutate(
-          weight = ifelse(attr > 0, pmax(min_weight, weight), weight),
-          weight = ifelse(attr > 0, pmin(max_weight, weight), weight)
-        ) %>%
         dplyr::select(-geo, -attr, -target, -factor)
     }
     
