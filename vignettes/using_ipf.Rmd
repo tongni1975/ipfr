@@ -426,9 +426,65 @@ Importantly, the performance measures below compare the result to the scaled
 target not the original. Note that the vehicle targets have been scaled down.
 
 ```{r}
-result$primary_comp
+result$primary_comp %>%
+  htmlTable(
+    rnames = FALSE, caption = "Scaled Results"
+  )
 ```
 
+## Weight Distribution
+
+Often, it is preferable to constrain weights so that certain, under-sampled
+observations to do not end up with extreme weights. `ipu()` supports this by
+using the `min_weight_scale` and `max_weight_scale` variables.
+
+First, the average weight is calculated **per geography** based on the total of 
+the target tables divided by the number of records in the seed table. Then, the 
+max and min factors set a cap and floor based on a multiple of that average.
+
+Common values to use are:
+
+* max_weight_scale = 5 (5x the average weight) * min_weight_scale = .2 (1/5 the
+average weight)
+
+However, care should be taken when moving these variables from their default
+values. These variables impose another constraint on the algorithm and increase
+the chance of failure. In the example below, very strict values are used with
+the same seed and target data from Example 1.
+
+Values of 1.2 and .8 mean that all weights must be within 20% of the average
+weight.
+
+```{r}
+hh_seed <- data_frame(
+  pid = c(1, 2, 3, 4),
+  siz = c(1, 2, 2, 1),
+  weight = c(1, 1, 1, 1),
+  geo_cluster = c(1, 1, 2, 2)
+)
+
+hh_targets <- list()
+hh_targets$siz <- data_frame(
+  geo_cluster = c(1, 2),
+  `1` = c(75, 100),
+  `2` = c(25, 150)
+)
+
+result <- ipu(hh_seed, hh_targets, max_iterations = 10, verbose = TRUE,
+              max_weight_scale = 1.2, min_weight_scale = .8)
+```
+
+Consider the effect on geo_cluster 1. With a total target of 100 households and
+two records in the seed table, the average weight is 50. This means that the
+weights must be between 40 and 60. The algorithm does not have enough flexibility
+to meet the controls.
+
+```{r}
+result$primary_comp %>%
+  htmlTable(
+    rnames = FALSE, caption = "Constrained Results"
+  )
+```
 
 # IPF
 

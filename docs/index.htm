@@ -89,6 +89,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#zero-weights">Zero weights</a></li>
 <li><a href="#missing-seed-information">Missing seed information</a></li>
 <li><a href="#marginal-agreement">Marginal agreement</a></li>
+<li><a href="#weight-distribution">Weight Distribution</a></li>
 </ul></li>
 <li><a href="#ipf">IPF</a><ul>
 <li><a href="#example-1-basics">Example 1: Basics</a></li>
@@ -952,15 +953,154 @@ result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_tar
 <pre><code>## IPU converged</code></pre>
 <pre><code>## All targets matched within the absolute_diff of 10</code></pre>
 <p>Importantly, the performance measures below compare the result to the scaled target not the original. Note that the vehicle targets have been scaled down.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result$primary_comp</code></pre></div>
-<pre><code>## # A tibble: 5 x 6
-##            geo category   target   result  diff pct_diff
-##          &lt;chr&gt;    &lt;chr&gt;    &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;
-## 1 geo_region_1  hhsiz_1 35.00000 35.00003     0        0
-## 2 geo_region_1  hhsiz_2 65.00000 64.99997     0        0
-## 3 geo_region_1  hhveh_0 33.33333 33.33333     0        0
-## 4 geo_region_1  hhveh_1 33.33333 33.33333     0        0
-## 5 geo_region_1  hhveh_2 33.33333 33.33333     0        0</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result$primary_comp %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Scaled Results&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='6' style='text-align: left;'>
+Scaled Results</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>geo</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>category</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>target</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>result</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>diff</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>pct_diff</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>geo_region_1</td>
+<td style='text-align: center;'>hhsiz_1</td>
+<td style='text-align: center;'>35</td>
+<td style='text-align: center;'>35.0000282380462</td>
+<td style='text-align: center;'>0</td>
+<td style='text-align: center;'>0</td>
+</tr>
+<tr>
+<td style='text-align: center;'>geo_region_1</td>
+<td style='text-align: center;'>hhsiz_2</td>
+<td style='text-align: center;'>65</td>
+<td style='text-align: center;'>64.9999717619538</td>
+<td style='text-align: center;'>0</td>
+<td style='text-align: center;'>0</td>
+</tr>
+<tr>
+<td style='text-align: center;'>geo_region_1</td>
+<td style='text-align: center;'>hhveh_0</td>
+<td style='text-align: center;'>33.3333333333333</td>
+<td style='text-align: center;'>33.3333333333333</td>
+<td style='text-align: center;'>0</td>
+<td style='text-align: center;'>0</td>
+</tr>
+<tr>
+<td style='text-align: center;'>geo_region_1</td>
+<td style='text-align: center;'>hhveh_1</td>
+<td style='text-align: center;'>33.3333333333333</td>
+<td style='text-align: center;'>33.3333333333333</td>
+<td style='text-align: center;'>0</td>
+<td style='text-align: center;'>0</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>geo_region_1</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>hhveh_2</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>33.3333333333333</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>33.3333333333333</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>0</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="weight-distribution" class="section level2">
+<h2>Weight Distribution</h2>
+<p>Often, it is preferable to constrain weights so that certain, under-sampled observations to do not end up with extreme weights. <code>ipu()</code> supports this by using the <code>min_weight_scale</code> and <code>max_weight_scale</code> variables.</p>
+<p>First, the average weight is calculated <strong>per geography</strong> based on the total of the target tables divided by the number of records in the seed table. Then, the max and min factors set a cap and floor based on a multiple of that average.</p>
+<p>Common values to use are:</p>
+<ul>
+<li>max_weight_scale = 5 (5x the average weight) * min_weight_scale = .2 (1/5 the average weight)</li>
+</ul>
+<p>However, care should be taken when moving these variables from their default values. These variables impose another constraint on the algorithm and increase the chance of failure. In the example below, very strict values are used with the same seed and target data from Example 1.</p>
+<p>Values of 1.2 and .8 mean that all weights must be within 20% of the average weight.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">hh_seed &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">pid =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>),
+  <span class="dt">siz =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">1</span>),
+  <span class="dt">weight =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>),
+  <span class="dt">geo_cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>)
+)
+
+hh_targets &lt;-<span class="st"> </span><span class="kw">list</span>()
+hh_targets$siz &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
+  <span class="dt">geo_cluster =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>),
+  <span class="st">`</span><span class="dt">1</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">75</span>, <span class="dv">100</span>),
+  <span class="st">`</span><span class="dt">2</span><span class="st">`</span> =<span class="st"> </span><span class="kw">c</span>(<span class="dv">25</span>, <span class="dv">150</span>)
+)
+
+result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets, <span class="dt">max_iterations =</span> <span class="dv">10</span>, <span class="dt">verbose =</span> <span class="ot">TRUE</span>,
+              <span class="dt">max_weight_scale =</span> <span class="fl">1.2</span>, <span class="dt">min_weight_scale =</span> .<span class="dv">8</span>)</code></pre></div>
+<pre><code>## 
+ Finished iteration  2 . %RMSE =  0</code></pre>
+<pre><code>## IPU converged</code></pre>
+<pre><code>## Worst marginal stats:</code></pre>
+<pre><code>## Category: siz.2</code></pre>
+<pre><code>## geo_cluster: 1</code></pre>
+<pre><code>## Max % Diff: 60%</code></pre>
+<pre><code>## Absolute Diff: 15</code></pre>
+<p>Consider the effect on geo_cluster 1. With a total target of 100 households and two records in the seed table, the average weight is 50. This means that the weights must be between 40 and 60. The algorithm does not have enough flexibility to meet the controls.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result$primary_comp %&gt;%
+<span class="st">  </span><span class="kw">htmlTable</span>(
+    <span class="dt">rnames =</span> <span class="ot">FALSE</span>, <span class="dt">caption =</span> <span class="st">&quot;Constrained Results&quot;</span>
+  )</code></pre></div>
+<table class='gmisc_table' style='border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;' >
+<thead>
+<tr><td colspan='6' style='text-align: left;'>
+Constrained Results</td></tr>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>geo</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>category</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>target</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>result</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>diff</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>pct_diff</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: center;'>geo_cluster_1</td>
+<td style='text-align: center;'>siz_1</td>
+<td style='text-align: center;'>75</td>
+<td style='text-align: center;'>60</td>
+<td style='text-align: center;'>-15</td>
+<td style='text-align: center;'>-20</td>
+</tr>
+<tr>
+<td style='text-align: center;'>geo_cluster_1</td>
+<td style='text-align: center;'>siz_2</td>
+<td style='text-align: center;'>25</td>
+<td style='text-align: center;'>40</td>
+<td style='text-align: center;'>15</td>
+<td style='text-align: center;'>60</td>
+</tr>
+<tr>
+<td style='text-align: center;'>geo_cluster_2</td>
+<td style='text-align: center;'>siz_1</td>
+<td style='text-align: center;'>100</td>
+<td style='text-align: center;'>100</td>
+<td style='text-align: center;'>0</td>
+<td style='text-align: center;'>0</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: center;'>geo_cluster_2</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>siz_2</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>150</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>150</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>0</td>
+<td style='border-bottom: 2px solid grey; text-align: center;'>0</td>
+</tr>
+</tbody>
+</table>
 </div>
 </div>
 <div id="ipf" class="section level1">
