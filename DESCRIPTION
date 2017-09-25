@@ -9,6 +9,7 @@ Depends:
     R (>= 3.2.0)
 Imports:
     dplyr (>= 0.7.3),
+    ggplot2 (>= 2.2.1),
     magrittr (>= 1.5),
     tidyr (>= 0.5.1),
     mlr (>= 2.11)

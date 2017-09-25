@@ -6,8 +6,8 @@
 \usage{
 ipu(primary_seed, primary_targets, secondary_seed = NULL,
   secondary_targets = NULL, relative_gap = 0.01, max_iterations = 100,
-  absolute_diff = 10, weight_floor = 1e-05, verbose = FALSE,
-  max_factor = 10000, min_factor = 0.001)
+  absolute_diff = 10, weight_floor = 0.00001, verbose = FALSE,
+  max_factor = 10000, min_factor = 0.0001)
 }
 \arguments{
 \item{primary_seed}{In population synthesis or household survey expansion, 
@@ -70,8 +70,9 @@ The min_scale caps the minimum weight at a multiple of that average. Defaults
 to \code{0.0001} (basically turned off).}
 }
 \value{
-a \code{named list} with the \code{primary_seed} with weight and two 
-  comparison tables to aid in reporting.
+a \code{named list} with the \code{primary_seed} with weight, a 
+  histogram of the weight distribution, and two comparison tables to aid in
+  reporting.
 }
 \description{
 A general case of iterative proportional fitting. It can satisfy

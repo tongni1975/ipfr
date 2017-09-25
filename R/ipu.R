@@ -89,8 +89,9 @@ NULL
 #' The min_scale caps the minimum weight at a multiple of that average. Defaults
 #' to \code{0.0001} (basically turned off).
 #' 
-#' @return a \code{named list} with the \code{primary_seed} with weight and two 
-#'   comparison tables to aid in reporting.
+#' @return a \code{named list} with the \code{primary_seed} with weight, a 
+#'   histogram of the weight distribution, and two comparison tables to aid in
+#'   reporting.
 #' 
 #' @export
 #' 
@@ -117,7 +118,7 @@ NULL
 ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_targets = NULL,
                 relative_gap = 0.01, max_iterations = 100, absolute_diff = 10,
                 weight_floor = .00001, verbose = FALSE,
-                max_factor = 10000, min_factor = .001){
+                max_factor = 10000, min_factor = .0001){
   
   # If person data is provided, both seed and targets must be
   if (xor(!is.null(secondary_seed), !is.null(secondary_targets))) {
@@ -222,7 +223,6 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
   recs_by_geo <- seed %>%
     group_by(!!as.name(geo_colname)) %>%
     summarize(count = n())
-    
   weight_scale <- targets[[1]] %>%
     tidyr::gather(key = category, value = total, -!!as.name(geo_colname)) %>%
     dplyr::group_by(!!as.name(geo_colname)) %>%
@@ -232,8 +232,7 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
       avg_weight = total / count,
       min_weight = (!!min_factor) * avg_weight,
       max_weight = (!!max_factor) * avg_weight
-    ) %>%
-    dplyr::select(-avg_weight)
+    ) 
   seed <- seed %>%
     dplyr::left_join(weight_scale, by = geo_colname)
   
@@ -343,12 +342,20 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
     utils::flush.console()
   }
   
-  # Set final weights into primary seed table
+  # Set final weights into primary seed table. Also include average weight
+  # and distribution info.
   primary_seed$weight <- seed$weight
+  primary_seed$avg_weight <- seed$avg_weight
+  primary_seed$weight_factor <- primary_seed$weight / primary_seed$avg_weight
   
-  # Create the result list (what will be returned)
+  # Create the result list (what will be returned). Add the seed table and a
+  # histogram of weight distribution.
   result <- list()
   result$weight_tbl <- primary_seed
+  result$weight_dist <- ggplot2::ggplot(
+    data = primary_seed, ggplot2::aes(primary_seed$weight_factor)
+  ) +
+    ggplot2::geom_histogram(bins = 10, fill = "darkblue", color = "gray")
   
   # Compare resulting weights to initial targets
   primary_comp <- compare_results(primary_seed, primary_targets)
@@ -518,7 +525,8 @@ check_tables <- function(primary_seed, primary_targets, secondary_seed = NULL, s
 #' @param targets \code{named list} of \code{data.frames} in the same format
 #' required by \code{ipu()}.
 #'
-#'
+#' @return \code{data frame} comparing balanced results to targets
+
 compare_results <- function(seed, targets){
   
   # Expand the target tables out into a single, long-form data frame
@@ -630,4 +638,3 @@ scale_targets <- function(targets, verbose = FALSE){
   
   return(targets)
 }
-

@@ -13,6 +13,9 @@ format required by \code{ipu()}.}
 \item{targets}{\code{named list} of \code{data.frames} in the same format
 required by \code{ipu()}.}
 }
+\value{
+\code{data frame} comparing balanced results to targets
+}
 \description{
 Compare results to targets
 }

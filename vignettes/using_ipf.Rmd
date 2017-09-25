@@ -142,13 +142,28 @@ result <- ipu(hh_seed, hh_targets)
 names(result)
 ```
 
-The first element is the resulting weight table:
+The first element is the resulting weight table. The primary seed has three
+columns appended:
+
+  * weight
+    * The expanded weight of the record.
+  * avg_weight
+    * The average weight for the geography (total target / number of seed records)
+  * weight_factor
+    * The weight divided by the average weight.
 
 ```{r}
 result$weight_tbl %>%
   htmlTable(
     rnames = FALSE
   )
+```
+
+The second element is a histogram of the `weight_factor`. This provides a quick
+overview of the distribution of weights.
+
+```{r}
+result$weight_dist
 ```
 
 The next element is a comparison back to the targets provided. With complex
@@ -161,6 +176,8 @@ result$primary_comp %>%
   )
 ```
 
+If secondary targets are provided to `ipu()`, a fourth item in the list will
+contain a `secondary_comp` table.
 
 ## Example 2: The Arizona Paper Example
 
