@@ -12,7 +12,7 @@
 
 <meta name="author" content="Kyle Ward" />
 
-<meta name="date" content="2017-09-20" />
+<meta name="date" content="2017-09-25" />
 
 <title>Using ipf</title>
 
@@ -70,7 +70,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <h1 class="title toc-ignore">Using ipf</h1>
 <h4 class="author"><em>Kyle Ward</em></h4>
-<h4 class="date"><em>2017-09-20</em></h4>
+<h4 class="date"><em>2017-09-25</em></h4>
 
 
 <div id="TOC">
@@ -89,7 +89,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><a href="#zero-weights">Zero weights</a></li>
 <li><a href="#missing-seed-information">Missing seed information</a></li>
 <li><a href="#marginal-agreement">Marginal agreement</a></li>
-<li><a href="#weight-distribution">Weight Distribution</a></li>
+<li><a href="#extreme-weights">Extreme Weights</a></li>
 </ul></li>
 <li><a href="#ipf">IPF</a><ul>
 <li><a href="#example-1-basics">Example 1: Basics</a></li>
@@ -1018,15 +1018,16 @@ Scaled Results</td></tr>
 </tbody>
 </table>
 </div>
-<div id="weight-distribution" class="section level2">
-<h2>Weight Distribution</h2>
-<p>Often, it is preferable to constrain weights so that certain, under-sampled observations to do not end up with extreme weights. <code>ipu()</code> supports this by using the <code>min_weight_scale</code> and <code>max_weight_scale</code> variables.</p>
+<div id="extreme-weights" class="section level2">
+<h2>Extreme Weights</h2>
+<p>Often, it is preferable to constrain weights so that certain, under-sampled observations to do not end up with extreme weights. <code>ipu()</code> supports this by using the <code>min_factor</code> and <code>max_factor</code> variables.</p>
 <p>First, the average weight is calculated <strong>per geography</strong> based on the total of the target tables divided by the number of records in the seed table. Then, the max and min factors set a cap and floor based on a multiple of that average.</p>
 <p>Common values to use are:</p>
 <ul>
-<li>max_weight_scale = 5 (5x the average weight) * min_weight_scale = .2 (1/5 the average weight)</li>
+<li>max_factor = 5 (5x the average weight)</li>
+<li>min_factor = .2 (1/5 the average weight)</li>
 </ul>
-<p>However, care should be taken when moving these variables from their default values. These variables impose another constraint on the algorithm and increase the chance of failure. In the example below, very strict values are used with the same seed and target data from Example 1.</p>
+<p>However, care should be taken when moving these variables from their default values. These variables impose another constraint on the algorithm and increase the chance of failure. In the example below, very strict values are used with the same seed and target data from IPU Example 1.</p>
 <p>Values of 1.2 and .8 mean that all weights must be within 20% of the average weight.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">hh_seed &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
   <span class="dt">pid =</span> <span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">4</span>),
@@ -1043,7 +1044,7 @@ hh_targets$siz &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
 )
 
 result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets, <span class="dt">max_iterations =</span> <span class="dv">10</span>,
-              <span class="dt">max_weight_scale =</span> <span class="fl">1.2</span>, <span class="dt">min_weight_scale =</span> .<span class="dv">8</span>)</code></pre></div>
+              <span class="dt">max_factor =</span> <span class="fl">1.2</span>, <span class="dt">min_factor =</span> .<span class="dv">8</span>)</code></pre></div>
 <p>Consider the effect on geo_cluster 1. With a total target of 100 households and two records in the seed table, the average weight is 50. This means that the weights must be between 40 and 60. The algorithm does not have enough flexibility to meet the controls.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">result$primary_comp %&gt;%
 <span class="st">  </span><span class="kw">htmlTable</span>(
@@ -1106,7 +1107,7 @@ hh_targets$siz &lt;-<span class="st"> </span><span class="kw">data_frame</span>(
 )
 
 result &lt;-<span class="st"> </span><span class="kw">ipu</span>(hh_seed, hh_targets, <span class="dt">max_iterations =</span> <span class="dv">10</span>,
-              <span class="dt">max_weight_scale =</span> <span class="dv">5</span>, <span class="dt">min_weight_scale =</span> .<span class="dv">2</span>)
+              <span class="dt">max_factor =</span> <span class="dv">5</span>, <span class="dt">min_factor =</span> .<span class="dv">2</span>)
 
 result$primary_comp %&gt;%
 <span class="st">  </span><span class="kw">htmlTable</span>(
@@ -1160,7 +1161,7 @@ Unbalanced Targets</td></tr>
 </tr>
 </tbody>
 </table>
-<p>Even with reasonable values for the weight caps, the minimum allowable weight is much higher than 5. This is an extreme example, and is unlikely to be an issue in applications related to housing and population - the targets are generally on the same scale. However, when expanding a through trip table, it is common to have some external stations with large targets and others with small. In these cases, it is advisable to leave the scale arguments at their default values.</p>
+<p>Even with reasonable values for the weight caps, the minimum allowable weight is much higher than 5. This is an extreme example, and is unlikely to be an issue in applications related to housing and population - the targets are generally on the same scale. However, when expanding a through-trip table, it is common to have some external stations with large targets and others with small. In these cases, it is advisable to leave the scale arguments at their default values.</p>
 </div>
 </div>
 <div id="ipf" class="section level1">

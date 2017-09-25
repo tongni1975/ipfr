@@ -79,12 +79,12 @@ NULL
 #' @param verbose Print iteration details and worst marginal stats upon 
 #'   completion? Default \code{FALSE}.
 #'   
-#' @param max_weight_scale \code{real} number. The average weight per seed record is
+#' @param max_factor \code{real} number. The average weight per seed record is
 #' calculated by dividing the total of the targets by the number of records.
 #' The max_scale caps the maximum weight at a multiple of that average. Defaults
 #' to \code{10000} (basically turned off).
 #' 
-#' @param min_weight_scale \code{real} number. The average weight per seed record is
+#' @param min_factor \code{real} number. The average weight per seed record is
 #' calculated by dividing the total of the targets by the number of records.
 #' The min_scale caps the minimum weight at a multiple of that average. Defaults
 #' to \code{0.0001} (basically turned off).
@@ -117,7 +117,7 @@ NULL
 ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_targets = NULL,
                 relative_gap = 0.01, max_iterations = 100, absolute_diff = 10,
                 weight_floor = .00001, verbose = FALSE,
-                max_weight_scale = 10000, min_weight_scale = .001){
+                max_factor = 10000, min_factor = .001){
   
   # If person data is provided, both seed and targets must be
   if (xor(!is.null(secondary_seed), !is.null(secondary_targets))) {
@@ -230,8 +230,8 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
     dplyr::left_join(recs_by_geo, by = geo_colname) %>%
     dplyr::mutate(
       avg_weight = total / count,
-      min_weight = (!!min_weight_scale) * avg_weight,
-      max_weight = (!!max_weight_scale) * avg_weight
+      min_weight = (!!min_factor) * avg_weight,
+      max_weight = (!!max_factor) * avg_weight
     ) %>%
     dplyr::select(-avg_weight)
   seed <- seed %>%

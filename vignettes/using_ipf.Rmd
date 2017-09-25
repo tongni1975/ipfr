@@ -436,11 +436,11 @@ result$primary_comp %>%
   )
 ```
 
-## Weight Distribution
+## Extreme Weights
 
 Often, it is preferable to constrain weights so that certain, under-sampled
 observations to do not end up with extreme weights. `ipu()` supports this by
-using the `min_weight_scale` and `max_weight_scale` variables.
+using the `min_factor` and `max_factor` variables.
 
 First, the average weight is calculated **per geography** based on the total of 
 the target tables divided by the number of records in the seed table. Then, the 
@@ -448,13 +448,13 @@ max and min factors set a cap and floor based on a multiple of that average.
 
 Common values to use are:
 
-* max_weight_scale = 5 (5x the average weight) * min_weight_scale = .2 (1/5 the
-average weight)
+  * max_factor = 5 (5x the average weight)
+  * min_factor = .2 (1/5 the average weight)
 
 However, care should be taken when moving these variables from their default
 values. These variables impose another constraint on the algorithm and increase
 the chance of failure. In the example below, very strict values are used with
-the same seed and target data from Example 1.
+the same seed and target data from IPU Example 1.
 
 Values of 1.2 and .8 mean that all weights must be within 20% of the average
 weight.
@@ -475,7 +475,7 @@ hh_targets$siz <- data_frame(
 )
 
 result <- ipu(hh_seed, hh_targets, max_iterations = 10,
-              max_weight_scale = 1.2, min_weight_scale = .8)
+              max_factor = 1.2, min_factor = .8)
 ```
 
 Consider the effect on geo_cluster 1. With a total target of 100 households and
@@ -504,7 +504,7 @@ hh_targets$siz <- data_frame(
 )
 
 result <- ipu(hh_seed, hh_targets, max_iterations = 10,
-              max_weight_scale = 5, min_weight_scale = .2)
+              max_factor = 5, min_factor = .2)
 
 result$primary_comp %>%
   htmlTable(
@@ -512,13 +512,12 @@ result$primary_comp %>%
   )
 ```
 
-Even with reasonable values for the weight caps, the 
-minimum allowable weight is much higher than 5. This is an extreme example, and
-is unlikely to be an issue in applications related to housing and population -
-the targets are generally on the same scale. However, when expanding a through
-trip table, it is common to have some external stations with large targets and
-others with small. In these cases, it is advisable to leave the scale arguments
-at their default values.
+Even with reasonable values for the weight caps, the minimum allowable weight is
+much higher than 5. This is an extreme example, and is unlikely to be an issue
+in applications related to housing and population - the targets are generally on
+the same scale. However, when expanding a through-trip table, it is common to
+have some external stations with large targets and others with small. In these
+cases, it is advisable to leave the scale arguments at their default values.
 
 # IPF
 
