@@ -355,7 +355,10 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
   result$weight_dist <- ggplot2::ggplot(
     data = primary_seed, ggplot2::aes(primary_seed$weight_factor)
   ) +
-    ggplot2::geom_histogram(bins = 10, fill = "darkblue", color = "gray")
+    ggplot2::geom_histogram(bins = 10, fill = "darkblue", color = "gray") +
+    ggplot2::labs(
+      x = "Weight Factor = Weight / Average Weight", y = "Count of Seed Records"
+    )
   
   # Compare resulting weights to initial targets
   primary_comp <- compare_results(primary_seed, primary_targets)
