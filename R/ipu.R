@@ -151,12 +151,22 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
   primary_seed_mod <- primary_seed_mod %>%
     # Keep only the fields of interest (marginal columns and pid)
     dplyr::select(dplyr::one_of(c(col_names, "pid"))) %>%
-    # Convert to factors and then to dummy columns
+    # Convert to factors and then to dummy columns if the column has more
+    # than one category.
     dplyr::mutate_at(
       .vars = col_names,
-      .funs = dplyr::funs(as.factor(.))
+      .funs = dplyr::funs(ifelse(length(unique(.)) > 1, as.factor(.), .))
     ) %>%
     mlr::createDummyFeatures()
+  # if one of the columns in col_names has only one value, it wasn't converted
+  # to a factor in the previous step. Do it now. Also format the name properly.
+  for (name in col_names){
+    if (!is.factor(primary_seed_mod[, name])) {
+      value = primary_seed_mod[[name]][1]
+      new_name <- paste0(name, ".", value)
+      names(primary_seed_mod)[names(primary_seed_mod) == name] <- new_name
+    }
+  }
   
   if (!is.null(secondary_seed)) {
     # Modify the person seed table the same way, but sum by primary ID
@@ -241,7 +251,8 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
   while (!converged & iter <= max_iterations) {
     # Loop over each target and upate weights
     for (seed_attribute in seed_attribute_cols) {
-      # create lookups for targets list
+      
+      # Create lookups for targets list
       target_tbl_name <- strsplit(seed_attribute, ".", fixed = TRUE)[[1]][1]
       target_name <- paste0(seed_attribute, ".", "target")
       
