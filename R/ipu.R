@@ -145,8 +145,8 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
   primary_seed_mod <- primary_seed %>%
     dplyr::select(-dplyr::starts_with("geo_"))
   
-  # Modify the primary seed to the required format. Use one-hot-encoding to
-  # expand standard columns into dummy columns.
+  # Remove any fields that aren't in the target list and change the ones
+  # that are to factors.
   col_names <- names(primary_targets)
   primary_seed_mod <- primary_seed_mod %>%
     # Keep only the fields of interest (marginal columns and pid)
@@ -155,18 +155,24 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
     # than one category.
     dplyr::mutate_at(
       .vars = col_names,
-      .funs = dplyr::funs(ifelse(length(unique(.)) > 1, as.factor(.), .))
-    ) %>%
-    mlr::createDummyFeatures()
-  # if one of the columns in col_names has only one value, it wasn't converted
-  # to a factor in the previous step. Do it now. Also format the name properly.
+      # .funs = dplyr::funs(ifelse(length(unique(.)) > 1, as.factor(.), .))
+      .funs = dplyr::funs(as.factor(.))
+    )
+  # If one of the columns has only one value, it cannot be a factor. The name
+  # must also be changed to match what the rest will be after one-hot encoding.
   for (name in col_names){
-    if (!is.factor(primary_seed_mod[, name])) {
+    if (length(unique(primary_seed_mod[[name]])) == 1) {
+      # unfactor
+      primary_seed_mod[[name]] <- type.convert(as.character(primary_seed_mod[[name]]))
+      # change name
       value = primary_seed_mod[[name]][1]
       new_name <- paste0(name, ".", value)
       names(primary_seed_mod)[names(primary_seed_mod) == name] <- new_name
     }
   }
+  # Use one-hot encoding to convert the remaining factor fields to dummies
+  primary_seed_mod <- primary_seed_mod %>%
+    mlr::createDummyFeatures()
   
   if (!is.null(secondary_seed)) {
     # Modify the person seed table the same way, but sum by primary ID
@@ -231,8 +237,8 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
   pos <- grep("geo_", colnames(targets[[1]]))
   geo_colname <- colnames(targets[[1]])[pos]
   recs_by_geo <- seed %>%
-    group_by(!!as.name(geo_colname)) %>%
-    summarize(count = n())
+    dplyr::group_by(!!as.name(geo_colname)) %>%
+    dplyr::summarize(count = n())
   weight_scale <- targets[[1]] %>%
     tidyr::gather(key = category, value = total, -!!as.name(geo_colname)) %>%
     dplyr::group_by(!!as.name(geo_colname)) %>%
@@ -260,7 +266,7 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
       target_tbl <- targets[[target_tbl_name]]
       pos <- grep("geo_", colnames(target_tbl))
       geo_colname <- colnames(target_tbl)[pos]
-      
+
       # Adjust weights
       seed <- seed %>%
         dplyr::mutate(
