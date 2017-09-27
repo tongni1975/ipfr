@@ -351,7 +351,8 @@ performed. Run the code yourself with `max_iterations` set to 600 to see the
 converged result.
 
 ```{r example 2 ipu}
-result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 30)
+result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 30,
+              balance_sec_targets = TRUE)
 ```
 
 The tables below show the results compared back to targets. More iterations

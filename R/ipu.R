@@ -53,6 +53,11 @@ NULL
 #' 
 #' @param secondary_targets Same format as \code{primary_targets}, but they constrain 
 #'   the \code{secondary_seed} table.
+#'   
+#' @param balance_sec_targets If true, the secondary targets will be modifed
+#'   such that they have the same average weight per record as the primary
+#'   target. This can be used to prevent large imbalances between the targets.
+#'   Defaults to \code{FALSE}.
 #' 
 #' @param relative_gap After each iteration, the weights are compared to the
 #' previous weights and the %RMSE is calculated. If the %RMSE is less than
@@ -115,11 +120,14 @@ NULL
 #' }
 #' 
 #' @importFrom magrittr "%>%"
-ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_targets = NULL,
+
+ipu <- function(primary_seed, primary_targets, 
+                secondary_seed = NULL, secondary_targets = NULL,
+                balance_sec_targets = FALSE,
                 relative_gap = 0.01, max_iterations = 100, absolute_diff = 10,
                 weight_floor = .00001, verbose = FALSE,
                 max_factor = 10000, min_factor = .0001){
-  
+
   # If person data is provided, both seed and targets must be
   if (xor(!is.null(secondary_seed), !is.null(secondary_targets))) {
     stop("You provided either secondary_seed or secondary_targets, but not both.")
@@ -132,17 +140,23 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
     check_tables(primary_seed, primary_targets)
   }
   
-  # Scale target tables. All table totals will match the first table.
+  # Scale target tables. 
+  # All tables in the list will match the totals of the first table.
   primary_targets <- scale_targets(primary_targets, verbose)
   if (!is.null(secondary_seed)) {
     secondary_targets <- scale_targets(secondary_targets, verbose) 
   }
   
-  # Balance secondary targets to primary
-  secondary_targets_mod <- balance_secondary_targets(
-    primary_targets, primary_seed,
-    secondary_targets, secondary_seed
-  )
+  # Balance secondary targets to primary so that both have the same average
+  # weight per record.
+  if (balance_sec_targets & !is.null(secondary_seed)){
+    secondary_targets_mod <- balance_secondary_targets(
+      primary_targets, primary_seed,
+      secondary_targets, secondary_seed
+    )
+  } else {
+    secondary_targets_mod <- secondary_targets
+  }
   
   # Pull off the geo information into a separate equivalency table
   # to be used as needed.
@@ -182,7 +196,7 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
   
   if (!is.null(secondary_seed)) {
     # Modify the person seed table the same way, but sum by primary ID
-    col_names <- names(secondary_targets)
+    col_names <- names(secondary_targets_mod)
     secondary_seed_mod <- secondary_seed %>%
       # Keep only the fields of interest
       dplyr::select(dplyr::one_of(c(col_names, "pid"))) %>%
@@ -218,7 +232,7 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
   # modify the targets to match the new seed column names and
   # join them to the seed table
   if (!is.null(secondary_seed)) {
-    targets <- c(primary_targets, secondary_targets)
+    targets <- c(primary_targets, secondary_targets_mod)
   } else {
     targets <- primary_targets
   }
@@ -396,7 +410,8 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
         by = "pid"
       )
     
-    # Run the comparison and store it in 'result'
+    # Run the comparison against the original, unscaled targets 
+    # and store in 'result'
     secondary_comp <- compare_results(
       seed, 
       secondary_targets
@@ -678,35 +693,38 @@ scale_targets <- function(targets, verbose = FALSE){
 #' 
 #' @param primary_targets Input from \link{ipu} after scaling.
 #' 
-#' @param secondary_targets Input from \link(ipu) after scaling.
+#' @param secondary_targets Input from \link{ipu} after scaling.
 #' 
 #' @return \code{named list} of the secondary targets
 
-balance_secondary_targets <- function(primary_targets, primary_seed, 
-                                      secondary_targets, secondary_seed) {
-  
+balance_secondary_targets <- function(primary_targets, primary_seed,
+                                      secondary_targets, secondary_seed){
+
   # Extract the first table from the primary target list and geo name
   pri_target <- primary_targets[[1]]
   pos <- grep("geo_", colnames(pri_target))
   pri_geo_colname <- colnames(pri_target)[pos]
-  
+
   for (name in names(secondary_targets)){
     sec_target <- secondary_targets[[name]]
-    
+
     # Get geography field
     pos <- grep("geo_", colnames(sec_target))
     sec_geo_colname <- colnames(sec_target)[pos]
-    
+
     # If the geographies used aren't the same, convert the primary table
     if (pri_geo_colname != sec_geo_colname) {
       pri_target <- pri_target %>%
         left_join(
-          primary_seed %>% select(!!pri_geo_colname, sec_geo_colname),
+          primary_seed %>% 
+            select(!!pri_geo_colname, sec_geo_colname) %>%
+            group_by(!!as.name(pri_geo_colname)) %>%
+            slice(1),
           by = pri_geo_colname
         ) %>%
         select(-one_of(pri_geo_colname))
     }
-  
+
     # Summarize the primary and secondary targets by geography
     pri_target <- pri_target  %>%
         gather(key = cat, value = count, -sec_geo_colname) %>%
@@ -716,7 +734,7 @@ balance_secondary_targets <- function(primary_targets, primary_seed,
       gather(key = cat, value = count, -sec_geo_colname) %>%
       group_by(!!as.name(sec_geo_colname)) %>%
       summarize(total = sum(count))
-  
+
     # Get primary and secondary record counts
     pri_rec_count <- primary_seed %>%
       group_by(!!as.name(sec_geo_colname)) %>%
@@ -728,12 +746,12 @@ balance_secondary_targets <- function(primary_targets, primary_seed,
       ) %>%
       group_by(!!as.name(sec_geo_colname)) %>%
       summarize(recs = n())
-    
+
     # Calculate average weights and the secondary factor
     pri_rec_count$avg_weight <- pri_target$total / pri_rec_count$recs
     sec_rec_count$avg_weight <- sec_target$total / sec_rec_count$recs
     sec_rec_count$factor <- pri_rec_count$avg_weight / sec_rec_count$avg_weight
-    
+
     # Update the secondary targets by the factor
     secondary_targets[[name]] <- secondary_targets[[name]] %>%
       left_join(
@@ -746,6 +764,6 @@ balance_secondary_targets <- function(primary_targets, primary_seed,
       ) %>%
       select(-factor)
   }
-  
+
   return(secondary_targets)
 }
