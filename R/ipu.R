@@ -13,6 +13,7 @@
 #' Use \code{ipu}
 #' 
 #' @docType package
+#' 
 #' @name ipfr
 NULL
 #> NULL
@@ -53,6 +54,11 @@ NULL
 #' 
 #' @param secondary_targets Same format as \code{primary_targets}, but they constrain 
 #'   the \code{secondary_seed} table.
+#'   
+#' @param secondary_importance A \code{real} between 0 and 1 signifying the 
+#'   importance of the secondary targets. At an importance of 1, the function
+#'   will try to match the secondary tarets exactly. At 0, only the percentage
+#'   distributions are used (see the vignette section "Target Agreement".)
 #' 
 #' @param relative_gap After each iteration, the weights are compared to the
 #' previous weights and the %RMSE is calculated. If the %RMSE is less than
@@ -115,14 +121,22 @@ NULL
 #' }
 #' 
 #' @importFrom magrittr "%>%"
-ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_targets = NULL,
+
+ipu <- function(primary_seed, primary_targets, 
+                secondary_seed = NULL, secondary_targets = NULL,
+                secondary_importance = 1,
                 relative_gap = 0.01, max_iterations = 100, absolute_diff = 10,
                 weight_floor = .00001, verbose = FALSE,
                 max_factor = 10000, min_factor = .0001){
-  
+
   # If person data is provided, both seed and targets must be
   if (xor(!is.null(secondary_seed), !is.null(secondary_targets))) {
     stop("You provided either secondary_seed or secondary_targets, but not both.")
+  }
+  
+  # Check for valid values of secondary_importance.
+  if (secondary_importance > 1 | secondary_importance < 0) {
+    stop("`secondary_importance` argument must be between 0 and 1")
   }
   
   # Check hh and person tables
@@ -132,10 +146,22 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
     check_tables(primary_seed, primary_targets)
   }
   
-  # Scale target tables. All table totals will match the first table.
+  # Scale target tables. 
+  # All tables in the list will match the totals of the first table.
   primary_targets <- scale_targets(primary_targets, verbose)
   if (!is.null(secondary_seed)) {
     secondary_targets <- scale_targets(secondary_targets, verbose) 
+  }
+  
+  # Balance secondary targets to primary.
+  if (secondary_importance != 1 & !is.null(secondary_seed)){
+    if (verbose) {message("Balancing secondary targets to primary")}
+    secondary_targets_mod <- balance_secondary_targets(
+      primary_targets, primary_seed, secondary_targets, secondary_seed,
+      secondary_importance
+    )
+  } else {
+    secondary_targets_mod <- secondary_targets
   }
   
   # Pull off the geo information into a separate equivalency table
@@ -176,7 +202,7 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
   
   if (!is.null(secondary_seed)) {
     # Modify the person seed table the same way, but sum by primary ID
-    col_names <- names(secondary_targets)
+    col_names <- names(secondary_targets_mod)
     secondary_seed_mod <- secondary_seed %>%
       # Keep only the fields of interest
       dplyr::select(dplyr::one_of(c(col_names, "pid"))) %>%
@@ -212,7 +238,7 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
   # modify the targets to match the new seed column names and
   # join them to the seed table
   if (!is.null(secondary_seed)) {
-    targets <- c(primary_targets, secondary_targets)
+    targets <- c(primary_targets, secondary_targets_mod)
   } else {
     targets <- primary_targets
   }
@@ -276,8 +302,9 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
         ) %>%
         dplyr::group_by(geo) %>%
         dplyr::mutate(
-          factor = target / sum(attr * weight),
-          weight = ifelse(attr > 0, weight * factor, weight),
+          total_weight = sum(attr * weight),
+          factor = ifelse(attr > 0, target / total_weight, 1),
+          weight = weight * factor,
           # Implement the floor on zero weights
           weight = pmax(weight, weight_floor),
           # Cap weights to to multiples of the average weight.
@@ -310,8 +337,10 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
         ) %>%
         dplyr::group_by(geo) %>%
         dplyr::mutate(
-          abs_diff = abs((target - sum(attr * weight))),
-          pct_diff = abs_diff / (target + .0000001) # avoid dividing by zero
+          total_weight = sum(attr * weight),
+          diff = total_weight - target,
+          abs_diff = abs(diff),
+          pct_diff = diff / (target + .0000001) # avoid dividing by zero
         ) %>%
         # Removes rows where the absolute gap is smaller than 'absolute_diff'
         dplyr::filter(abs_diff > absolute_diff) %>%
@@ -321,8 +350,8 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
       # If any records are left in the diff_tbl, record worst percent difference 
       # and save that percent difference table for reporting.
       if (nrow(diff_tbl) > 0) {
-        if (max(diff_tbl$pct_diff) > pct_diff) {
-          pct_diff <- max(diff_tbl$pct_diff)
+        if (max(abs(diff_tbl$pct_diff)) > pct_diff) {
+          pct_diff <- max(abs(diff_tbl$pct_diff))
           saved_diff_tbl <- diff_tbl
           saved_category <- seed_attribute
           saved_geo <- geo_colname
@@ -343,18 +372,20 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
     prev_weights <- seed$weight
     iter <- iter + 1
   }
-  
+
   if (verbose) {
     message(ifelse(converged, "IPU converged", "IPU did not converge"))
     if (is.null(saved_diff_tbl)) {
       message("All targets matched within the absolute_diff of ", absolute_diff)
     } else {
       message("Worst marginal stats:")
-      position <- which(saved_diff_tbl$pct_diff == pct_diff)[1]
+      position <- which(abs(saved_diff_tbl$pct_diff) == pct_diff)[1]
       message("Category: ", saved_category)
       message(saved_geo, ": ", saved_diff_tbl$geo[position])
-      message("Max % Diff: ", round(pct_diff * 100, 2), "%")
-      message("Absolute Diff: ", round(saved_diff_tbl$abs_diff[position], 2))
+      message("Worst % Diff: ", round(
+        saved_diff_tbl$pct_diff[position] * 100, 2), "%"
+      )
+      message("Difference: ", round(saved_diff_tbl$diff[position], 2))
     }
     utils::flush.console()
   }
@@ -390,7 +421,8 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
         by = "pid"
       )
     
-    # Run the comparison and store it in 'result'
+    # Run the comparison against the original, unscaled targets 
+    # and store in 'result'
     secondary_comp <- compare_results(
       seed, 
       secondary_targets
@@ -658,3 +690,151 @@ scale_targets <- function(targets, verbose = FALSE){
   
   return(targets)
 }
+
+#' Balances secondary targets to primary
+#' 
+#' The average weight per record needed to satisfy targets is computed for both
+#' primary and secondary targets. Often, these can be very different, which leads
+#' to poor performance. The algorithm must use extremely large or small weights
+#' to match the competing goals. The secondary targets are scaled so that they
+#' are consistent with the primary targets on this measurement.
+#' 
+#' If multiple geographies are present in the secondary_target table, then
+#' balancing is done for each geography separately.
+#' 
+#' @inheritParams ipu
+#' 
+#' @return \code{named list} of the secondary targets
+
+balance_secondary_targets <- function(primary_targets, primary_seed,
+                                      secondary_targets, secondary_seed,
+                                      secondary_importance){
+
+  # Extract the first table from the primary target list and geo name
+  pri_target <- primary_targets[[1]]
+  pos <- grep("geo_", colnames(pri_target))
+  pri_geo_colname <- colnames(pri_target)[pos]
+
+  for (name in names(secondary_targets)){
+    sec_target <- secondary_targets[[name]]
+
+    # Get geography field
+    pos <- grep("geo_", colnames(sec_target))
+    sec_geo_colname <- colnames(sec_target)[pos]
+
+    # If the geographies used aren't the same, convert the primary table
+    if (pri_geo_colname != sec_geo_colname) {
+      pri_target <- pri_target %>%
+        dplyr::left_join(
+          primary_seed %>% 
+            dplyr::select(!!pri_geo_colname, sec_geo_colname) %>%
+            dplyr::group_by(!!as.name(pri_geo_colname)) %>%
+            dplyr::slice(1),
+          by = pri_geo_colname
+        ) %>%
+        dplyr::select(-dplyr::one_of(pri_geo_colname))
+    }
+
+    # Summarize the primary and secondary targets by geography
+    pri_target <- pri_target  %>%
+      tidyr::gather(key = cat, value = count, -sec_geo_colname) %>%
+      dplyr::group_by(!!as.name(sec_geo_colname)) %>%
+      dplyr::summarize(total = sum(count))
+    sec_target <- sec_target %>%
+      tidyr::gather(key = cat, value = count, -sec_geo_colname) %>%
+      dplyr::group_by(!!as.name(sec_geo_colname)) %>%
+      dplyr::summarize(total = sum(count))
+
+    # Get primary and secondary record counts
+    pri_rec_count <- primary_seed %>%
+      dplyr::group_by(!!as.name(sec_geo_colname)) %>%
+      dplyr::summarize(recs = n())
+    sec_rec_count <-secondary_seed %>%
+      dplyr::left_join(
+        primary_seed %>% dplyr::select(pid, dplyr::one_of(sec_geo_colname)),
+        by = "pid"
+      ) %>%
+      dplyr::group_by(!!as.name(sec_geo_colname)) %>%
+      dplyr::summarize(recs = n())
+
+    # Calculate average weights and the secondary factor
+    pri_rec_count$avg_weight <- pri_target$total / pri_rec_count$recs
+    sec_rec_count$avg_weight <- sec_target$total / sec_rec_count$recs
+    sec_rec_count$factor <- adjust_factor(
+      pri_rec_count$avg_weight / sec_rec_count$avg_weight,
+      # in this context, high importance means you want the final factor
+      # in this table to be near 1. Must flip the importance variable.
+      1 - secondary_importance
+    )
+
+    # Update the secondary targets by the factor
+    secondary_targets[[name]] <- secondary_targets[[name]] %>%
+      dplyr::left_join(
+        sec_rec_count %>% dplyr::select(!!sec_geo_colname, factor),
+        by = sec_geo_colname
+      ) %>%
+      dplyr::mutate_at(
+        .vars = dplyr::vars(-factor, -dplyr::one_of(sec_geo_colname)),
+        .funs = dplyr::funs(. * factor)
+      ) %>%
+      dplyr::select(-factor)
+  }
+
+  return(secondary_targets)
+}
+
+#' Applies an importance weight to an ipfr factor
+#' 
+#' @description At lower values of importance, the factor is moved closer to 1.
+#' 
+#' @param factor A correction factor that is calculated using target/current.
+#' 
+#' @param importance A \code{real} between 0 and 1 signifying the importance of
+#'   the factor. A importance of 1 does not modify the factor. An importance of
+#'   0.5 would shrink the factor closer to 1.0 by 50 percent.
+#'
+#' @return The adjusted factor.
+#' 
+
+adjust_factor <- function(factor, importance){
+  
+  # return the same factor if importance = 1
+  if (importance == 1) {return(factor)}
+  
+  if (importance > 1 | importance < 0) {
+    stop("`importance` argument must be between 0 and 1")
+  }
+  
+  # Otherwise, return the adjusted factor
+  adjusted <- 1 - ((1 - factor) * (importance + .0001))
+  return(adjusted)
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

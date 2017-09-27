@@ -200,7 +200,7 @@ and households.
   * Both seed tables have the `pid` field
     * The `pid` field in the persons seed table links to the household seed
 
-```{r example 1 inputs}
+```{r arizona inputs}
 hh_seed <- data_frame(
   geo_region = 1,
   pid = c(1:8),
@@ -237,7 +237,7 @@ results match closely to those shown in the paper.
   * The person seed table is the `secondary_seed`
   * The person target list is the `secondary_target`
 
-```{r example 1 ipu}
+```{r arizona ipu}
 result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 30)
 ```
 
@@ -246,7 +246,7 @@ table. Since we added secondary seeds and targets, the output now contains
 a secondary comparison table. Feel free to run the code chunk above for
 400 or more iterations and then look again.
 
-```{r example 1 results}
+```{r arizona results}
 result$weight_tbl %>%
   mutate(weight = round(weight, 2)) %>%
   htmlTable(
@@ -291,7 +291,7 @@ To demonstrate, the Arizona example from example 1 is modified to add two
 different clusters for household controls but to still control the person
 targets at the regional level.
 
-```{r example 2 inputs}
+```{r multigeo inputs}
 # Modifying example 1 for example 2
 
 # Repeat the hh_seed to create cluster 1 and 2 households
@@ -350,14 +350,15 @@ Run the IPU algorithm. Again, for vignette build time, only 30 iterations are
 performed. Run the code yourself with `max_iterations` set to 600 to see the
 converged result.
 
-```{r example 2 ipu}
-result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 30)
+```{r multigeo ipu}
+result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 30,
+              balance_sec_targets = TRUE)
 ```
 
 The tables below show the results compared back to targets. More iterations
 would make a better match.
 
-```{r example 2 results}
+```{r multigeo results}
 result$primary_comp %>%
   mutate(result = round(result, 2)) %>%
   htmlTable(
@@ -399,17 +400,22 @@ table.  As long as other combinations of size-1 households exist (e.g. with 0 wo
 
 See the first IPU example to see how it works.
 
-## Marginal agreement
+## Target agreement
 
-In the above examples, are marginals disagreed on totals (either persons or 
-households). If they disagreed on the total, the standard IPF process could not
-converge.
+`ipfr` handles two separate issues concerning marginal agreement:
 
-Occasionally, marginal distributions might disagree slightly on the totals, 
-particularly if they are derived from different sources.  When that happens, 
-`ipu()` will still converge by scaling all tables to match the total of the
-first table. This eliminates the painful task of ensuring all marginals match
-exactly.
+  * Agreement within primary or secondary targets
+  * Balance between primary and secondary targets
+
+### Agreement within Primary or Secondary Targets
+
+A basic implementation of iterative proportional fitting requires that all 
+targets agree on the total. For example, if the households by size target table
+has a total of 100 households, but the households by income table has a total
+of 120, both cannot be satisfied.
+
+`ipfr` handles this by scaling all tables in the same target list (either
+primary or secondary) to match the total of the first table.
 
 In the example below, the size marginal sums to a total of 100 households.
 The vehicle marginal sums to 300. With the `verbose` option set to `TRUE`,
@@ -451,6 +457,108 @@ result$primary_comp %>%
   htmlTable(
     rnames = FALSE, caption = "Scaled Results"
   )
+```
+
+### Balance Between Primary and Secondary Targets
+
+In population synthesis or survey expansion, adding a secondary set of person-
+level targets can lead to a different issue: target balance. Naturally, the total
+number of households and the total number of persons will be very different.
+A balance issue arises when the *average* weight for household records and
+person records are very different.
+
+In the Arizona example, note that the average weights for household and person
+records are similar.
+
+```{r balance example inputs, include=FALSE}
+hh_seed <- data_frame(
+  geo_region = 1,
+  pid = c(1:8),
+  hhtype = c(1, 1, 1, 2, 2, 2, 2, 2)
+)
+
+per_seed <- data_frame(
+  pid = c(1, 1, 1, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 7, 7, 7, 7, 7, 8, 8),
+  pertype = c(1, 2, 3, 1, 3, 1, 1, 2, 1, 3, 3, 2, 2, 3, 1, 2, 1, 1, 2, 3, 3, 1, 2)
+)
+
+hh_targets <- list()
+hh_targets$hhtype <- data_frame(
+  geo_region = 1,
+  `1` = 35,
+  `2` = 65
+)
+
+per_targets <- list()
+per_targets$pertype <- data_frame(
+  geo_region = 1,
+  `1` = 91,
+  `2` = 65,
+  `3` = 104
+)
+```
+
+```{r}
+avg_hh_weight <- (rowSums(hh_targets$hhtype) - 1) / nrow(hh_seed)
+avg_per_weight <- (rowSums(per_targets$pertype) - 1) / nrow(per_seed)
+```
+
+  * Average household weight = `r avg_hh_weight`
+  * Average person weight = `r round(avg_per_weight, 2)`
+
+In real applications, this is often not true. The example below demonstrates the
+consequences by modifying the Arizona to double the person targets.
+
+```{r}
+per_targets$pertype <- per_targets$pertype %>%
+  mutate_at(
+    .vars = vars(`1`, `2`, `3`),
+    .funs = funs(. * 2)
+  )
+
+result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 30)
+```
+
+The resulting weights tend towards the extreme as the algorithm attempts to match
+unbalanced primary and secondary targets. In effect, the algorithm is making a
+large shift to the basic persons-per-household metric found in the seed table.
+Households with mutiple people get high weights, while households with a single
+person get small weights.
+
+```{r}
+result$weight_dist
+```
+
+`ipu` can fix the underlying problem using the `secondary_importance` argument.
+It is `1` by default, which means the algorithm will attempt to match the
+absolute values of the secondary targets (as above). At `0`, the secondary
+target tables are scaled so that the average weight matches the primary average.
+In effect, this means that only the percentage distribution of the secondary
+tarets is important.
+
+The examples below set `secondary_importance` to `0.80`, `0.20`, and `0.00` to
+show the effect on results. With each decrease in importance, the match to
+person targets gets worse, but weight extremes are reduced.
+
+```{r}
+result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 30,
+              secondary_importance = .80)
+
+result
+```
+
+```{r}
+result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 30,
+              secondary_importance = .20)
+
+result
+```
+
+```{r}
+result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 30,
+              secondary_importance = 0)
+
+result
 ```
 
 ## Extreme Weights
