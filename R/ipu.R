@@ -795,10 +795,6 @@ balance_secondary_targets <- function(primary_targets, primary_seed,
 #'
 #' @return The adjusted factor.
 #' 
-#' @examples
-#' adjust_factor(1.8, 1)  
-#' adjust_factor(1.8, 0.5)
-#' 
 
 adjust_factor <- function(factor, importance){
   

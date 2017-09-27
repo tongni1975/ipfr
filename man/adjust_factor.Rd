@@ -19,8 +19,3 @@ The adjusted factor.
 \description{
 At lower values of importance, the factor is moved closer to 1.
 }
-\examples{
-adjust_factor(1.8, 1)  
-adjust_factor(1.8, 0.5)
-
-}
