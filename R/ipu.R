@@ -138,6 +138,12 @@ ipu <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_
     secondary_targets <- scale_targets(secondary_targets, verbose) 
   }
   
+  # Balance secondary targets to primary
+  secondary_targets_mod <- balance_secondary_targets(
+    primary_targets, primary_seed,
+    secondary_targets, secondary_seed
+  )
+  
   # Pull off the geo information into a separate equivalency table
   # to be used as needed.
   geo_equiv <- primary_seed %>%
@@ -657,4 +663,89 @@ scale_targets <- function(targets, verbose = FALSE){
   }
   
   return(targets)
+}
+
+#' Balances secondary targets to primary
+#' 
+#' The average weight per record needed to satisfy targets is computed for both
+#' primary and secondary targets. Often, these can be very different, which leads
+#' to poor performance. The algorithm must use extremely large or small weights
+#' to match the competing goals. The secondary targets are scaled so that they
+#' are consistent with the primary targets on this measurement.
+#' 
+#' If multiple geographies are present in the secondary_target table, then
+#' balancing is done for each geography separately.
+#' 
+#' @param primary_targets Input from \link{ipu} after scaling.
+#' 
+#' @param secondary_targets Input from \link(ipu) after scaling.
+#' 
+#' @return \code{named list} of the secondary targets
+
+balance_secondary_targets <- function(primary_targets, primary_seed, 
+                                      secondary_targets, secondary_seed) {
+  
+  # Extract the first table from the primary target list and geo name
+  pri_target <- primary_targets[[1]]
+  pos <- grep("geo_", colnames(pri_target))
+  pri_geo_colname <- colnames(pri_target)[pos]
+  
+  for (name in names(secondary_targets)){
+    sec_target <- secondary_targets[[name]]
+    
+    # Get geography field
+    pos <- grep("geo_", colnames(sec_target))
+    sec_geo_colname <- colnames(sec_target)[pos]
+    
+    # If the geographies used aren't the same, convert the primary table
+    if (pri_geo_colname != sec_geo_colname) {
+      pri_target <- pri_target %>%
+        left_join(
+          primary_seed %>% select(!!pri_geo_colname, sec_geo_colname),
+          by = pri_geo_colname
+        ) %>%
+        select(-one_of(pri_geo_colname))
+    }
+  
+    # Summarize the primary and secondary targets by geography
+    pri_target <- pri_target  %>%
+        gather(key = cat, value = count, -sec_geo_colname) %>%
+        group_by(!!as.name(sec_geo_colname)) %>%
+        summarize(total = sum(count))
+    sec_target <- sec_target %>%
+      gather(key = cat, value = count, -sec_geo_colname) %>%
+      group_by(!!as.name(sec_geo_colname)) %>%
+      summarize(total = sum(count))
+  
+    # Get primary and secondary record counts
+    pri_rec_count <- primary_seed %>%
+      group_by(!!as.name(sec_geo_colname)) %>%
+      summarize(recs = n())
+    sec_rec_count <-secondary_seed %>%
+      left_join(
+        primary_seed %>% select(pid, one_of(sec_geo_colname)),
+        by = "pid"
+      ) %>%
+      group_by(!!as.name(sec_geo_colname)) %>%
+      summarize(recs = n())
+    
+    # Calculate average weights and the secondary factor
+    pri_rec_count$avg_weight <- pri_target$total / pri_rec_count$recs
+    sec_rec_count$avg_weight <- sec_target$total / sec_rec_count$recs
+    sec_rec_count$factor <- pri_rec_count$avg_weight / sec_rec_count$avg_weight
+    
+    # Update the secondary targets by the factor
+    secondary_targets[[name]] <- secondary_targets[[name]] %>%
+      left_join(
+        sec_rec_count %>% select(!!sec_geo_colname, factor),
+        by = sec_geo_colname
+      ) %>%
+      mutate_at(
+        .vars = vars(-factor, -one_of(sec_geo_colname)),
+        .funs = dplyr::funs(. * factor)
+      ) %>%
+      select(-factor)
+  }
+  
+  return(secondary_targets)
 }
