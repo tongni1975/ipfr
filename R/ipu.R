@@ -150,9 +150,9 @@ ipu <- function(primary_seed, primary_targets,
   # Balance secondary targets to primary so that both have the same average
   # weight per record.
   if (balance_sec_targets & !is.null(secondary_seed)){
+    if (verbose) {message("Balancing secondary targets to primary")}
     secondary_targets_mod <- balance_secondary_targets(
-      primary_targets, primary_seed,
-      secondary_targets, secondary_seed
+      primary_targets, primary_seed, secondary_targets, secondary_seed
     )
   } else {
     secondary_targets_mod <- secondary_targets
