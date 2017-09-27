@@ -13,6 +13,7 @@
 #' Use \code{ipu}
 #' 
 #' @docType package
+#' 
 #' @name ipfr
 NULL
 #> NULL
@@ -279,7 +280,6 @@ ipu <- function(primary_seed, primary_targets,
   
   iter <- 1
   converged <- FALSE
-browser()  
   while (!converged & iter <= max_iterations) {
     # Loop over each target and upate weights
     for (seed_attribute in seed_attribute_cols) {
@@ -302,8 +302,9 @@ browser()
         ) %>%
         dplyr::group_by(geo) %>%
         dplyr::mutate(
-          factor = target / sum(attr * weight),
-          weight = ifelse(attr > 0, weight * factor, weight),
+          total_weight = sum(attr * weight),
+          factor = ifelse(attr > 0, target / total_weight, 1),
+          weight = weight * factor,
           # Implement the floor on zero weights
           weight = pmax(weight, weight_floor),
           # Cap weights to to multiples of the average weight.
@@ -336,8 +337,10 @@ browser()
         ) %>%
         dplyr::group_by(geo) %>%
         dplyr::mutate(
-          abs_diff = abs((target - sum(attr * weight))),
-          pct_diff = abs_diff / (target + .0000001) # avoid dividing by zero
+          total_weight = sum(attr * weight),
+          diff = total_weight - target,
+          abs_diff = abs(diff),
+          pct_diff = diff / (target + .0000001) # avoid dividing by zero
         ) %>%
         # Removes rows where the absolute gap is smaller than 'absolute_diff'
         dplyr::filter(abs_diff > absolute_diff) %>%
@@ -347,8 +350,8 @@ browser()
       # If any records are left in the diff_tbl, record worst percent difference 
       # and save that percent difference table for reporting.
       if (nrow(diff_tbl) > 0) {
-        if (max(diff_tbl$pct_diff) > pct_diff) {
-          pct_diff <- max(diff_tbl$pct_diff)
+        if (max(abs(diff_tbl$pct_diff)) > pct_diff) {
+          pct_diff <- max(abs(diff_tbl$pct_diff))
           saved_diff_tbl <- diff_tbl
           saved_category <- seed_attribute
           saved_geo <- geo_colname
@@ -369,18 +372,20 @@ browser()
     prev_weights <- seed$weight
     iter <- iter + 1
   }
-  
+
   if (verbose) {
     message(ifelse(converged, "IPU converged", "IPU did not converge"))
     if (is.null(saved_diff_tbl)) {
       message("All targets matched within the absolute_diff of ", absolute_diff)
     } else {
       message("Worst marginal stats:")
-      position <- which(saved_diff_tbl$pct_diff == pct_diff)[1]
+      position <- which(abs(saved_diff_tbl$pct_diff) == pct_diff)[1]
       message("Category: ", saved_category)
       message(saved_geo, ": ", saved_diff_tbl$geo[position])
-      message("Max % Diff: ", round(pct_diff * 100, 2), "%")
-      message("Absolute Diff: ", round(saved_diff_tbl$abs_diff[position], 2))
+      message("Worst % Diff: ", round(
+        saved_diff_tbl$pct_diff[position] * 100, 2), "%"
+      )
+      message("Difference: ", round(saved_diff_tbl$diff[position], 2))
     }
     utils::flush.console()
   }
