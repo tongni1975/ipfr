@@ -767,3 +767,58 @@ balance_secondary_targets <- function(primary_targets, primary_seed,
 
   return(secondary_targets)
 }
+
+#' Applies an importance weight to an ipfr factor
+#' 
+#' @param factor A correction factor that is calculated using target/current.
+#' 
+#' @param importance A \code{real} between 0 and 1 signifying the importance of
+#'   the factor. A importance of 1 does not modify the factor. An importance of
+#'   0.5 would shrink the factor closer to 1.0 by 50%.
+#'
+#' @examples 
+#'   adjust_factor(1.8, 1)
+#'   adjust_factor(1.8, 0.5)
+
+adjust_factor <- function(factor, importance){
+  
+  # return the same factor if importance = 1
+  if (importance == 1) {return(factor)}
+  
+  if (importance > 1 | importance < 0) {
+    stop("`importance` argument must be between 0 and 1")
+  }
+  
+  # Otherwise, return the adjusted factor
+  adjusted <- 1 - ((1 - factor) * (importance + .00000000001))
+  return(adjusted)
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
