@@ -5,10 +5,9 @@
 \title{Iterative Proportional Updating}
 \usage{
 ipu(primary_seed, primary_targets, secondary_seed = NULL,
-  secondary_targets = NULL, balance_sec_targets = FALSE,
-  relative_gap = 0.01, max_iterations = 100, absolute_diff = 10,
-  weight_floor = 0.00001, verbose = FALSE, max_factor = 10000,
-  min_factor = 0.0001)
+  secondary_targets = NULL, secondary_importance = 1, relative_gap = 0.01,
+  max_iterations = 100, absolute_diff = 10, weight_floor = 0.00001,
+  verbose = FALSE, max_factor = 10000, min_factor = 0.0001)
 }
 \arguments{
 \item{primary_seed}{In population synthesis or household survey expansion, 
@@ -35,10 +34,10 @@ fields (starting with "geo_").}
 \item{secondary_targets}{Same format as \code{primary_targets}, but they constrain 
 the \code{secondary_seed} table.}
 
-\item{balance_sec_targets}{If true, the secondary targets will be modifed
-such that they have the same average weight per record as the primary
-target. This can be used to prevent large imbalances between the targets.
-Defaults to \code{FALSE}.}
+\item{secondary_importance}{A \code{real} between 0 and 1 signifying the 
+importance of the secondary targets. At an importance of 1, the function
+will try to match the secondary tarets exactly. At 0, only the percentage
+distributions are used (see the vignette section "Target Agreement".)}
 
 \item{relative_gap}{After each iteration, the weights are compared to the
 previous weights and the %RMSE is calculated. If the %RMSE is less than

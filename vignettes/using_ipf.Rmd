@@ -529,24 +529,36 @@ person get small weights.
 result$weight_dist
 ```
 
-`ipu` can fix the underlying problem by setting the `balance_sec_targets`
-argument to `TRUE` (it is `FALSE` by default). This will scale down each
-person-target table to match the average weight implied by the household
-targets. The resulting weight distribution returns to a reasonable range.
+`ipu` can fix the underlying problem using the `secondary_importance` argument.
+It is `1` by default, which means the algorithm will attempt to match the
+absolute values of the secondary targets (as above). At `0`, the secondary
+target tables are scaled so that the average weight matches the primary average.
+In effect, this means that only the percentage distribution of the secondary
+tarets is important.
+
+The examples below set `secondary_importance` to `0.80`, `0.20`, and `0.00` to
+show the effect on results. With each decrease in importance, the match to
+person targets gets worse, but weight extremes are reduced.
 
 ```{r}
 result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 30,
-              balance_sec_targets = TRUE)
+              secondary_importance = .80)
 
-result$weight_dist
+result
 ```
 
-When comparing back to the original person targets, the results will not
-match. (Note that with more iterations, the percent difference will approach
--50%.)
+```{r}
+result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 30,
+              secondary_importance = .20)
+
+result
+```
 
 ```{r}
-result$secondary_comp
+result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 30,
+              secondary_importance = 0)
+
+result
 ```
 
 ## Extreme Weights

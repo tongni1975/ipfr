@@ -54,10 +54,10 @@ NULL
 #' @param secondary_targets Same format as \code{primary_targets}, but they constrain 
 #'   the \code{secondary_seed} table.
 #'   
-#' @param balance_sec_targets If true, the secondary targets will be modifed
-#'   such that they have the same average weight per record as the primary
-#'   target. This can be used to prevent large imbalances between the targets.
-#'   Defaults to \code{FALSE}.
+#' @param secondary_importance A \code{real} between 0 and 1 signifying the 
+#'   importance of the secondary targets. At an importance of 1, the function
+#'   will try to match the secondary tarets exactly. At 0, only the percentage
+#'   distributions are used (see the vignette section "Target Agreement".)
 #' 
 #' @param relative_gap After each iteration, the weights are compared to the
 #' previous weights and the %RMSE is calculated. If the %RMSE is less than
@@ -123,7 +123,7 @@ NULL
 
 ipu <- function(primary_seed, primary_targets, 
                 secondary_seed = NULL, secondary_targets = NULL,
-                balance_sec_targets = FALSE,
+                secondary_importance = 1,
                 relative_gap = 0.01, max_iterations = 100, absolute_diff = 10,
                 weight_floor = .00001, verbose = FALSE,
                 max_factor = 10000, min_factor = .0001){
@@ -131,6 +131,11 @@ ipu <- function(primary_seed, primary_targets,
   # If person data is provided, both seed and targets must be
   if (xor(!is.null(secondary_seed), !is.null(secondary_targets))) {
     stop("You provided either secondary_seed or secondary_targets, but not both.")
+  }
+  
+  # Check for valid values of secondary_importance.
+  if (secondary_importance > 1 | secondary_importance < 0) {
+    stop("`secondary_importance` argument must be between 0 and 1")
   }
   
   # Check hh and person tables
@@ -147,12 +152,12 @@ ipu <- function(primary_seed, primary_targets,
     secondary_targets <- scale_targets(secondary_targets, verbose) 
   }
   
-  # Balance secondary targets to primary so that both have the same average
-  # weight per record.
-  if (balance_sec_targets & !is.null(secondary_seed)){
+  # Balance secondary targets to primary.
+  if (secondary_importance != 1 & !is.null(secondary_seed)){
     if (verbose) {message("Balancing secondary targets to primary")}
     secondary_targets_mod <- balance_secondary_targets(
-      primary_targets, primary_seed, secondary_targets, secondary_seed
+      primary_targets, primary_seed, secondary_targets, secondary_seed,
+      secondary_importance
     )
   } else {
     secondary_targets_mod <- secondary_targets
@@ -274,6 +279,7 @@ ipu <- function(primary_seed, primary_targets,
   
   iter <- 1
   converged <- FALSE
+browser()  
   while (!converged & iter <= max_iterations) {
     # Loop over each target and upate weights
     for (seed_attribute in seed_attribute_cols) {
@@ -691,14 +697,13 @@ scale_targets <- function(targets, verbose = FALSE){
 #' If multiple geographies are present in the secondary_target table, then
 #' balancing is done for each geography separately.
 #' 
-#' @param primary_targets Input from \link{ipu} after scaling.
-#' 
-#' @param secondary_targets Input from \link{ipu} after scaling.
+#' @inheritParams ipu
 #' 
 #' @return \code{named list} of the secondary targets
 
 balance_secondary_targets <- function(primary_targets, primary_seed,
-                                      secondary_targets, secondary_seed){
+                                      secondary_targets, secondary_seed,
+                                      secondary_importance){
 
   # Extract the first table from the primary target list and geo name
   pri_target <- primary_targets[[1]]
@@ -715,54 +720,59 @@ balance_secondary_targets <- function(primary_targets, primary_seed,
     # If the geographies used aren't the same, convert the primary table
     if (pri_geo_colname != sec_geo_colname) {
       pri_target <- pri_target %>%
-        left_join(
+        dplyr::left_join(
           primary_seed %>% 
-            select(!!pri_geo_colname, sec_geo_colname) %>%
-            group_by(!!as.name(pri_geo_colname)) %>%
-            slice(1),
+            dplyr::select(!!pri_geo_colname, sec_geo_colname) %>%
+            dplyr::group_by(!!as.name(pri_geo_colname)) %>%
+            dplyr::slice(1),
           by = pri_geo_colname
         ) %>%
-        select(-one_of(pri_geo_colname))
+        dplyr::select(-dplyr::one_of(pri_geo_colname))
     }
 
     # Summarize the primary and secondary targets by geography
     pri_target <- pri_target  %>%
-        gather(key = cat, value = count, -sec_geo_colname) %>%
-        group_by(!!as.name(sec_geo_colname)) %>%
-        summarize(total = sum(count))
+      tidyr::gather(key = cat, value = count, -sec_geo_colname) %>%
+      dplyr::group_by(!!as.name(sec_geo_colname)) %>%
+      dplyr::summarize(total = sum(count))
     sec_target <- sec_target %>%
-      gather(key = cat, value = count, -sec_geo_colname) %>%
-      group_by(!!as.name(sec_geo_colname)) %>%
-      summarize(total = sum(count))
+      tidyr::gather(key = cat, value = count, -sec_geo_colname) %>%
+      dplyr::group_by(!!as.name(sec_geo_colname)) %>%
+      dplyr::summarize(total = sum(count))
 
     # Get primary and secondary record counts
     pri_rec_count <- primary_seed %>%
-      group_by(!!as.name(sec_geo_colname)) %>%
-      summarize(recs = n())
+      dplyr::group_by(!!as.name(sec_geo_colname)) %>%
+      dplyr::summarize(recs = n())
     sec_rec_count <-secondary_seed %>%
-      left_join(
-        primary_seed %>% select(pid, one_of(sec_geo_colname)),
+      dplyr::left_join(
+        primary_seed %>% dplyr::select(pid, dplyr::one_of(sec_geo_colname)),
         by = "pid"
       ) %>%
-      group_by(!!as.name(sec_geo_colname)) %>%
-      summarize(recs = n())
+      dplyr::group_by(!!as.name(sec_geo_colname)) %>%
+      dplyr::summarize(recs = n())
 
     # Calculate average weights and the secondary factor
     pri_rec_count$avg_weight <- pri_target$total / pri_rec_count$recs
     sec_rec_count$avg_weight <- sec_target$total / sec_rec_count$recs
-    sec_rec_count$factor <- pri_rec_count$avg_weight / sec_rec_count$avg_weight
+    sec_rec_count$factor <- adjust_factor(
+      pri_rec_count$avg_weight / sec_rec_count$avg_weight,
+      # in this context, high importance means you want the final factor
+      # in this table to be near 1. Must flip the importance variable.
+      1 - secondary_importance
+    )
 
     # Update the secondary targets by the factor
     secondary_targets[[name]] <- secondary_targets[[name]] %>%
-      left_join(
-        sec_rec_count %>% select(!!sec_geo_colname, factor),
+      dplyr::left_join(
+        sec_rec_count %>% dplyr::select(!!sec_geo_colname, factor),
         by = sec_geo_colname
       ) %>%
-      mutate_at(
-        .vars = vars(-factor, -one_of(sec_geo_colname)),
+      dplyr::mutate_at(
+        .vars = dplyr::vars(-factor, -dplyr::one_of(sec_geo_colname)),
         .funs = dplyr::funs(. * factor)
       ) %>%
-      select(-factor)
+      dplyr::select(-factor)
   }
 
   return(secondary_targets)
@@ -770,15 +780,20 @@ balance_secondary_targets <- function(primary_targets, primary_seed,
 
 #' Applies an importance weight to an ipfr factor
 #' 
+#' @description At lower values of importance, the factor is moved closer to 1.
+#' 
 #' @param factor A correction factor that is calculated using target/current.
 #' 
 #' @param importance A \code{real} between 0 and 1 signifying the importance of
 #'   the factor. A importance of 1 does not modify the factor. An importance of
-#'   0.5 would shrink the factor closer to 1.0 by 50%.
+#'   0.5 would shrink the factor closer to 1.0 by 50 percent.
 #'
-#' @examples 
-#'   adjust_factor(1.8, 1)
-#'   adjust_factor(1.8, 0.5)
+#' @return The adjusted factor.
+#' 
+#' @examples
+#' adjust_factor(1.8, 1)  
+#' adjust_factor(1.8, 0.5)
+#' 
 
 adjust_factor <- function(factor, importance){
   
@@ -790,7 +805,7 @@ adjust_factor <- function(factor, importance){
   }
   
   # Otherwise, return the adjusted factor
-  adjusted <- 1 - ((1 - factor) * (importance + .00000000001))
+  adjusted <- 1 - ((1 - factor) * (importance + .0001))
   return(adjusted)
 }
 
