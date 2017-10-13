@@ -351,8 +351,7 @@ performed. Run the code yourself with `max_iterations` set to 600 to see the
 converged result.
 
 ```{r multigeo ipu}
-result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 30,
-              balance_sec_targets = TRUE)
+result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 30)
 ```
 
 The tables below show the results compared back to targets. More iterations
@@ -461,11 +460,11 @@ result$primary_comp %>%
 
 ### Balance Between Primary and Secondary Targets
 
-In population synthesis or survey expansion, adding a secondary set of person-
-level targets can lead to a different issue: target balance. Naturally, the total
-number of households and the total number of persons will be very different.
-A balance issue arises when the *average* weight for household records and
-person records are very different.
+In population synthesis or survey expansion, adding a secondary set of person- 
+level targets can lead to a different issue: target balance. Naturally, the
+total number of households and the total number of persons will be very
+different. A balance issue arises when the *average* weight for household
+records and person records are very different.
 
 In the Arizona example, note that the average weights for household and person
 records are similar.
@@ -519,11 +518,11 @@ per_targets$pertype <- per_targets$pertype %>%
 result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 30)
 ```
 
-The resulting weights tend towards the extreme as the algorithm attempts to match
-unbalanced primary and secondary targets. In effect, the algorithm is making a
-large shift to the basic persons-per-household metric found in the seed table.
-Households with mutiple people get high weights, while households with a single
-person get small weights.
+The resulting weights tend towards the extreme as the algorithm attempts to
+match unbalanced primary and secondary targets. In effect, the algorithm is
+making a large shift to the basic persons-per-household metric found in the seed
+table. Households with mutiple people get large weights, while households with a
+single person get small weights.
 
 ```{r}
 result$weight_dist
