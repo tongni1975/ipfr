@@ -709,14 +709,16 @@ target_priority <- list()
 target_priority$hhtype <- 10000
 target_priority$pertype <- 10
 
-result <- ipu_nr(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 100,
+result <- ipu_nr(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 30,
               target_priority = target_priority)
 ```
 
 As `ipu_nr` runs, it relaxes the target constraints on `pertype` much faster than
 on `hhtype`. As a result, the final weights will match the household type much
-closer. Because of the iterative relaxation, `ipu_nr` generally takes longer
-to reach convergence.
+closer. The two methods generally match targets to the same degree, but often
+lead to very different distributions of weight ratios. In addition, `ipu` tends
+to reach convergence levels around .1 %RMSE faster than `ipu_nr`, but for levels
+below that, `ipu_nr` tends to be faster.
 
 ```{r}
 result
