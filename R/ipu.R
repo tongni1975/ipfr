@@ -55,10 +55,22 @@ NULL
 #' @param secondary_targets Same format as \code{primary_targets}, but they constrain 
 #'   the \code{secondary_seed} table.
 #'   
-#' @param secondary_importance A \code{real} between 0 and 1 signifying the 
-#'   importance of the secondary targets. At an importance of 1, the function
-#'   will try to match the secondary tarets exactly. At 0, only the percentage
-#'   distributions are used (see the vignette section "Target Agreement".)
+#' @param target_priority This argument controls how quickly each set of 
+#'   targets is relaxed. In other words: how important it is to match the target
+#'   exactly. Defaults to \code{10,000,000}, which means that all targets should
+#'   be matched exactly.
+#' 
+#' \describe{
+#'   \item{\code{real}}{This priority value will be used for each target table.}
+#'   \item{\code{named list}}{Each named entry must match an entry in either
+#'   \code{primary_targets} or \code{secondary_targets} and have a \code{real}.
+#'   This priority will be applied to that target table. Any targets not in the
+#'   list will default to \code{10,000,000}.}
+#'   \item{\code{data.frame}}{The first column must have values that match an
+#'   entry in either \code{primary_targets} or \code{secondary_targets}. The
+#'   second column contains the values to use for priority. Any targets not in
+#'   the table will default to \code{10,000,000}.}
+#' }
 #' 
 #' @param relative_gap After each iteration, the weights are compared to the
 #' previous weights and the %RMSE is calculated. If the %RMSE is less than
@@ -124,22 +136,17 @@ NULL
 
 ipu <- function(primary_seed, primary_targets, 
                 secondary_seed = NULL, secondary_targets = NULL,
-                secondary_importance = 1,
+                target_priority = 10000000,
                 relative_gap = 0.01, max_iterations = 100, absolute_diff = 10,
                 weight_floor = .00001, verbose = FALSE,
                 max_factor = 10000, min_factor = .0001){
 
-  # If person data is provided, both seed and targets must be
+  # If secondary data is provided, both seed and targets must be
   if (xor(!is.null(secondary_seed), !is.null(secondary_targets))) {
     stop("You provided either secondary_seed or secondary_targets, but not both.")
   }
   
-  # Check for valid values of secondary_importance.
-  if (secondary_importance > 1 | secondary_importance < 0) {
-    stop("`secondary_importance` argument must be between 0 and 1")
-  }
-  
-  # Check hh and person tables
+  # Check primary and secondary tables
   if (!is.null(secondary_seed)) {
     check_tables(primary_seed, primary_targets, secondary_seed, secondary_targets)
   } else {
@@ -151,17 +158,6 @@ ipu <- function(primary_seed, primary_targets,
   primary_targets <- scale_targets(primary_targets, verbose)
   if (!is.null(secondary_seed)) {
     secondary_targets <- scale_targets(secondary_targets, verbose) 
-  }
-  
-  # Balance secondary targets to primary.
-  if (secondary_importance != 1 & !is.null(secondary_seed)){
-    if (verbose) {message("Balancing secondary targets to primary")}
-    secondary_targets_mod <- balance_secondary_targets(
-      primary_targets, primary_seed, secondary_targets, secondary_seed,
-      secondary_importance
-    )
-  } else {
-    secondary_targets_mod <- secondary_targets
   }
   
   # Pull off the geo information into a separate equivalency table
@@ -202,7 +198,7 @@ ipu <- function(primary_seed, primary_targets,
   
   if (!is.null(secondary_seed)) {
     # Modify the person seed table the same way, but sum by primary ID
-    col_names <- names(secondary_targets_mod)
+    col_names <- names(secondary_targets)
     secondary_seed_mod <- secondary_seed %>%
       # Keep only the fields of interest
       dplyr::select(dplyr::one_of(c(col_names, "pid"))) %>%
@@ -238,7 +234,7 @@ ipu <- function(primary_seed, primary_targets,
   # modify the targets to match the new seed column names and
   # join them to the seed table. Also create a relaxation factor for each.
   if (!is.null(secondary_seed)) {
-    targets <- c(primary_targets, secondary_targets_mod)
+    targets <- c(primary_targets, secondary_targets)
   } else {
     targets <- primary_targets
   }
@@ -721,146 +717,13 @@ scale_targets <- function(targets, verbose = FALSE){
   return(targets)
 }
 
-#' Balances secondary targets to primary
+
+#' Create a named list of target importance levels
 #' 
-#' The average weight per record needed to satisfy targets is computed for both
-#' primary and secondary targets. Often, these can be very different, which leads
-#' to poor performance. The algorithm must use extremely large or small weights
-#' to match the competing goals. The secondary targets are scaled so that they
-#' are consistent with the primary targets on this measurement.
 #' 
-#' If multiple geographies are present in the secondary_target table, then
-#' balancing is done for each geography separately.
-#' 
-#' @inheritParams ipu
-#' 
-#' @return \code{named list} of the secondary targets
 
-balance_secondary_targets <- function(primary_targets, primary_seed,
-                                      secondary_targets, secondary_seed,
-                                      secondary_importance){
-
-  # Extract the first table from the primary target list and geo name
-  pri_target <- primary_targets[[1]]
-  pos <- grep("geo_", colnames(pri_target))
-  pri_geo_colname <- colnames(pri_target)[pos]
-
-  for (name in names(secondary_targets)){
-    sec_target <- secondary_targets[[name]]
-
-    # Get geography field
-    pos <- grep("geo_", colnames(sec_target))
-    sec_geo_colname <- colnames(sec_target)[pos]
-
-    # If the geographies used aren't the same, convert the primary table
-    if (pri_geo_colname != sec_geo_colname) {
-      pri_target <- pri_target %>%
-        dplyr::left_join(
-          primary_seed %>% 
-            dplyr::select(!!pri_geo_colname, sec_geo_colname) %>%
-            dplyr::group_by(!!as.name(pri_geo_colname)) %>%
-            dplyr::slice(1),
-          by = pri_geo_colname
-        ) %>%
-        dplyr::select(-dplyr::one_of(pri_geo_colname))
-    }
-
-    # Summarize the primary and secondary targets by geography
-    pri_target <- pri_target  %>%
-      tidyr::gather(key = cat, value = count, -sec_geo_colname) %>%
-      dplyr::group_by(!!as.name(sec_geo_colname)) %>%
-      dplyr::summarize(total = sum(count))
-    sec_target <- sec_target %>%
-      tidyr::gather(key = cat, value = count, -sec_geo_colname) %>%
-      dplyr::group_by(!!as.name(sec_geo_colname)) %>%
-      dplyr::summarize(total = sum(count))
-
-    # Get primary and secondary record counts
-    pri_rec_count <- primary_seed %>%
-      dplyr::group_by(!!as.name(sec_geo_colname)) %>%
-      dplyr::summarize(recs = n())
-    sec_rec_count <-secondary_seed %>%
-      dplyr::left_join(
-        primary_seed %>% dplyr::select(pid, dplyr::one_of(sec_geo_colname)),
-        by = "pid"
-      ) %>%
-      dplyr::group_by(!!as.name(sec_geo_colname)) %>%
-      dplyr::summarize(recs = n())
-
-    # Calculate average weights and the secondary factor
-    pri_rec_count$avg_weight <- pri_target$total / pri_rec_count$recs
-    sec_rec_count$avg_weight <- sec_target$total / sec_rec_count$recs
-    sec_rec_count$factor <- adjust_factor(
-      pri_rec_count$avg_weight / sec_rec_count$avg_weight,
-      # in this context, high importance means you want the final factor
-      # in this table to be near 1. Must flip the importance variable.
-      1 - secondary_importance
-    )
-
-    # Update the secondary targets by the factor
-    secondary_targets[[name]] <- secondary_targets[[name]] %>%
-      dplyr::left_join(
-        sec_rec_count %>% dplyr::select(!!sec_geo_colname, factor),
-        by = sec_geo_colname
-      ) %>%
-      dplyr::mutate_at(
-        .vars = dplyr::vars(-factor, -dplyr::one_of(sec_geo_colname)),
-        .funs = dplyr::funs(. * factor)
-      ) %>%
-      dplyr::select(-factor)
-  }
-
-  return(secondary_targets)
+create_target_importance <- function(target_importance){
+  
 }
-
-#' Applies an importance weight to an ipfr factor
-#' 
-#' @description At lower values of importance, the factor is moved closer to 1.
-#' 
-#' @param factor A correction factor that is calculated using target/current.
-#' 
-#' @param importance A \code{real} between 0 and 1 signifying the importance of
-#'   the factor. A importance of 1 does not modify the factor. An importance of
-#'   0.5 would shrink the factor closer to 1.0 by 50 percent.
-#'
-#' @return The adjusted factor.
-#' 
-
-adjust_factor <- function(factor, importance){
-  
-  # return the same factor if importance = 1
-  if (importance == 1) {return(factor)}
-  
-  if (importance > 1 | importance < 0) {
-    stop("`importance` argument must be between 0 and 1")
-  }
-  
-  # Otherwise, return the adjusted factor
-  adjusted <- 1 - ((1 - factor) * (importance + .0001))
-  return(adjusted)
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
