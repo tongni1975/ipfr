@@ -66,9 +66,9 @@ NULL
 #'   \code{primary_targets} or \code{secondary_targets} and have a \code{real}.
 #'   This priority will be applied to that target table. Any targets not in the
 #'   list will default to \code{10,000,000}.}
-#'   \item{\code{data.frame}}{The first column must have values that match an
-#'   entry in either \code{primary_targets} or \code{secondary_targets}. The
-#'   second column contains the values to use for priority. Any targets not in
+#'   \item{\code{data.frame}}{Column \code{target} must have values that match an
+#'   entry in either \code{primary_targets} or \code{secondary_targets}. Column 
+#'   \code{priority} contains the values to use for priority. Any targets not in
 #'   the table will default to \code{10,000,000}.}
 #' }
 #' 
@@ -153,6 +153,19 @@ ipu <- function(primary_seed, primary_targets,
     check_tables(primary_seed, primary_targets)
   }
   
+  # Check for valid target_priority
+  valid <- FALSE
+  if (is.numeric(target_priority)) {valid <- TRUE}
+  if (inherits(target_priority, "list")) {
+    if (!is.null(names(target_priority))) {valid <- TRUE}
+  }
+  if (inherits(target_priority, "data.frame")) {
+    if ("target" %in% names(target_priority) & "priority" %in% names(target_priority)) {
+      valid <- TRUE
+    }
+  }
+  if (!valid) {stop("'target_priority' is not valid.")}
+  
   # Scale target tables. 
   # All tables in the list will match the totals of the first table.
   primary_targets <- scale_targets(primary_targets, verbose)
@@ -231,13 +244,15 @@ ipu <- function(primary_seed, primary_targets,
   weight_pos <- grep("weight", colnames(seed))
   seed_attribute_cols <- colnames(seed)[-c(geo_pos, pid_pos, weight_pos)]
   
-  # modify the targets to match the new seed column names and
-  # join them to the seed table. Also create a relaxation factor for each.
+  # Combine primary and secondary targets (if present) into a single named list
   if (!is.null(secondary_seed)) {
     targets <- c(primary_targets, secondary_targets)
   } else {
     targets <- primary_targets
   }
+  
+  # modify the targets to match the new seed column names and
+  # join them to the seed table. Also create a relaxation factor for each.
   for (name in names(targets)) {
     # targets[[name]] <- targets[[name]] %>%
     temp <- targets[[name]] %>%
@@ -283,15 +298,19 @@ ipu <- function(primary_seed, primary_targets,
   seed <- seed %>%
     dplyr::left_join(weight_scale, by = geo_colname)
   
+  # Create a standardized list of named target priorities
+  target_priority <- create_target_priority(target_priority, targets)
+  
   iter <- 1
   converged <- FALSE
   while (!converged & iter <= max_iterations) {
     # Loop over each target and upate weights
     for (seed_attribute in seed_attribute_cols) {
       
-      # Create lookups for targets list
+      # Get target info
       target_tbl_name <- strsplit(seed_attribute, ".", fixed = TRUE)[[1]][1]
       target_name <- paste0(seed_attribute, ".", "target")
+      priority <- target_priority[[target_tbl_name]]
       
       # Get the relaxation factor column name
       rel_fac_col <- paste0(seed_attribute, ".", "rel_fac")
@@ -303,14 +322,14 @@ ipu <- function(primary_seed, primary_targets,
     
       # Calculate SUMVAL and SUMVALSQ
       hhagg <- seed %>%
-        tbl_df() %>%
+        dplyr::tbl_df() %>%
         dplyr::mutate(geo = !!as.name(geo_colname)) %>%
-        group_by(geo) %>%
-        summarize(
+        dplyr::group_by(geo) %>%
+        dplyr::summarize(
           SUMVAL = sum((!!as.name(seed_attribute)) * weight, na.rm=TRUE),
           SUMVALSQ = sum((!!as.name(seed_attribute)) * (!!as.name(seed_attribute)) * weight, na.rm = TRUE)
         ) %>%
-        select(geo, SUMVAL, SUMVALSQ)
+        dplyr::select(geo, SUMVAL, SUMVALSQ)
       
       # Update weights and relaxation factors
       seed <- seed %>%
@@ -322,20 +341,20 @@ ipu <- function(primary_seed, primary_targets,
         ) %>%
         # Join sumval info
         dplyr::left_join(hhagg, by = "geo") %>%
-        mutate(
+        dplyr::mutate(
           factor = ifelse(
             SUMVAL > 0 & attr > 0,
-            1 - ((SUMVAL - target * rel_fac) / (SUMVALSQ + target * rel_fac / 10000000)),
+            1 - ((SUMVAL - target * rel_fac) / (SUMVALSQ + target * rel_fac / priority)),
             1
           ),
-          rel_fac = rel_fac * (1 / factor) ^ (1 / 10000000),
+          rel_fac = rel_fac * (1 / factor) ^ (1 / priority),
           # Update weights and cap to multiples of the average weight.
           # Not applicable if target is 0.
           weight = weight * factor,
           weight = ifelse(target > 0, pmax(min_weight, weight), weight),
           weight = ifelse(target > 0, pmin(max_weight, weight), weight)
         ) %>%
-        select(-SUMVAL, -SUMVALSQ)
+        dplyr::select(-SUMVAL, -SUMVALSQ)
       seed[, rel_fac_col] <- seed[, "rel_fac"]
     }
     
@@ -718,12 +737,43 @@ scale_targets <- function(targets, verbose = FALSE){
 }
 
 
-#' Create a named list of target importance levels
+#' Create a named list of target priority levels.
 #' 
+#' @inheritParams 
 #' 
+#' @param targets The complete list of targets (both primary and secondary)
 
-create_target_importance <- function(target_importance){
+create_target_priority <- function(target_priority, targets){
   
+  # If target_priority is a numeric value, then update with that value and 
+  # return.
+  if (is.numeric(target_priority)) {
+    result <- targets
+    for (name in names(targets)) {
+      result[[name]] <- target_priority
+    }
+    return(result)
+  }
+  
+  # For lists and data frames, start by creating a named list with default 
+  # priority.
+  default_priority <- 10000000
+  for (name in names(targets)) {
+    result[[name]] <- default_priority
+  }
+  
+  # If target_priority is a data frame, convert it to a list.
+  if (inherits(target_priority, "data.frame")) {
+    target_priority <- setNames(target_priority$priority, target_priority$target)
+  }
+  
+  # Update result with priorities
+  for (name in names(target_priority)) {
+    if (!name %in% names(result)) {stop(paste(name, "not found in targets"))}
+    result[[name]] <- target_priority[[name]]
+  }
+  
+  return(result)
 }
 
 
