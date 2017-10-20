@@ -236,7 +236,7 @@ ipu <- function(primary_seed, primary_targets,
   seed_attribute_cols <- colnames(seed)[-c(geo_pos, pid_pos, weight_pos)]
   
   # modify the targets to match the new seed column names and
-  # join them to the seed table
+  # join them to the seed table. Also create a relaxation factor for each.
   if (!is.null(secondary_seed)) {
     targets <- c(primary_targets, secondary_targets_mod)
   } else {
@@ -249,12 +249,21 @@ ipu <- function(primary_seed, primary_targets,
       dplyr::mutate(key = paste0(!!name, ".", key, ".target")) %>%
       tidyr::spread(key = key, value = target)
     
+    rfac <- targets[[name]] %>%
+      tidyr::gather(key = "key", value = "rel_fac", -dplyr::starts_with("geo_")) %>%
+      dplyr::mutate(
+        rel_fac = 1,
+        key = paste0(!!name, ".", key, ".rel_fac")
+      ) %>%
+      tidyr::spread(key = key, value = rel_fac)
+    
     # Get the name of the geo column
     pos <- grep("geo_", colnames(temp))
     geo_colname <- colnames(temp)[pos]
     
     seed <- seed %>%
-      dplyr::left_join(temp, by = geo_colname)
+      dplyr::left_join(temp, by = geo_colname) %>%
+      dplyr::left_join(rfac, by = geo_colname)
   }
   
   # Calculate average, min, and max weights and join to seed. If there are
@@ -288,33 +297,54 @@ ipu <- function(primary_seed, primary_targets,
       target_tbl_name <- strsplit(seed_attribute, ".", fixed = TRUE)[[1]][1]
       target_name <- paste0(seed_attribute, ".", "target")
       
+      # Get the relaxation factor column name
+      rel_fac_col <- paste0(seed_attribute, ".", "rel_fac")
+      
       # Get the name of the geo column
       target_tbl <- targets[[target_tbl_name]]
       pos <- grep("geo_", colnames(target_tbl))
       geo_colname <- colnames(target_tbl)[pos]
-
-      # Adjust weights
+    
+      # Calculate SUMVAL and SUMVALSQ
+      hhagg <- seed %>%
+        tbl_df() %>%
+        dplyr::mutate(geo = !!as.name(geo_colname)) %>%
+        group_by(geo) %>%
+        summarize(
+          SUMVAL = sum((!!as.name(seed_attribute)) * weight, na.rm=TRUE),
+          SUMVALSQ = sum((!!as.name(seed_attribute)) * (!!as.name(seed_attribute)) * weight, na.rm = TRUE)
+        ) %>%
+        select(geo, SUMVAL, SUMVALSQ)
+      
+      # Update weights and relaxation factors
       seed <- seed %>%
         dplyr::mutate(
           geo = !!as.name(geo_colname),
           attr = !!as.name(seed_attribute),
-          target = !!as.name(target_name)
+          target = !!as.name(target_name),
+          rel_fac = !!as.name(rel_fac_col)
         ) %>%
-        dplyr::group_by(geo) %>%
-        dplyr::mutate(
-          total_weight = sum(attr * weight),
-          factor = ifelse(attr > 0, target / total_weight, 1),
-          weight = weight * factor,
-          # Implement the floor on zero weights
-          weight = pmax(weight, weight_floor),
-          # Cap weights to to multiples of the average weight.
+        # Join sumval info
+        dplyr::left_join(hhagg, by = "geo") %>%
+        mutate(
+          factor = ifelse(
+            SUMVAL > 0 & attr > 0,
+            1 - ((SUMVAL - target * rel_fac) / (SUMVALSQ + target * rel_fac / 10000000)),
+            1
+          ),
+          rel_fac = rel_fac * (1 / factor) ^ (1 / 10000000),
+          # Update weights and cap to multiples of the average weight.
           # Not applicable if target is 0.
-          weight = ifelse(attr > 0 & target > 0, pmax(min_weight, weight), weight),
-          weight = ifelse(attr > 0 & target > 0, pmin(max_weight, weight), weight)
+          weight = weight * factor,
+          weight = ifelse(target > 0, pmax(min_weight, weight), weight),
+          weight = ifelse(target > 0, pmin(max_weight, weight), weight)
         ) %>%
-        dplyr::ungroup() %>%
-        dplyr::select(-geo, -attr, -target, -factor)
+        select(-SUMVAL, -SUMVALSQ)
+      seed[, rel_fac_col] <- seed[, "rel_fac"]
     }
+    
+    seed <- seed %>%
+      dplyr::select(-geo, -attr, -target, -factor, -rel_fac)
     
     # Determine percent differences (by geo field)
     saved_diff_tbl <- NULL
@@ -809,10 +839,6 @@ adjust_factor <- function(factor, importance){
   adjusted <- 1 - ((1 - factor) * (importance + .0001))
   return(adjusted)
 }
-
-
-
-
 
 
 
