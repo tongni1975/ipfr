@@ -4,13 +4,11 @@
 #' 
 #' \code{\link{ipu}}
 #' 
-#' \code{\link{ipf}}
+#' \code{\link{ipu_nr}}
 #' 
-#' The \code{ipf} function is deprecated. \code{ipu} has a more consistent
-#' input format, can handle primary and secondary marginals, and can use varying
-#' geographical constraints for each set of targets.
-#' 
-#' Use \code{ipu}
+#' Both functions implement list balancing. \code{ipu_nr} implements a
+#' newton-raphson approach to balance primary and secondary targets. \code{ipu}
+#' balances targets directly, which can mean faster convergence.
 #' 
 #' @docType package
 #' 

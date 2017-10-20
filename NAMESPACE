@@ -2,4 +2,5 @@
 
 export(ipf)
 export(ipu)
+export(ipu_nr)
 importFrom(magrittr,"%>%")
