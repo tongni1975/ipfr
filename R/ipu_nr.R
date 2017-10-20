@@ -129,12 +129,12 @@ NULL
 #'   `2` = c(25, 150)
 #' )
 #' 
-#' result <- ipu(hh_seed, hh_targets, max_iterations = 10)
+#' result <- ipu_nr(hh_seed, hh_targets, max_iterations = 10)
 #' }
 #' 
 #' @importFrom magrittr "%>%"
 
-ipu <- function(primary_seed, primary_targets, 
+ipu_nr <- function(primary_seed, primary_targets, 
                 secondary_seed = NULL, secondary_targets = NULL,
                 target_priority = 10000000,
                 relative_gap = 0.01, max_iterations = 100, absolute_diff = 10,
@@ -739,7 +739,7 @@ scale_targets <- function(targets, verbose = FALSE){
 
 #' Create a named list of target priority levels.
 #' 
-#' @inheritParams 
+#' @inheritParams ipu_nr
 #' 
 #' @param targets The complete list of targets (both primary and secondary)
 
