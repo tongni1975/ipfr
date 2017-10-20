@@ -563,7 +563,7 @@ result
 
 Often, it is preferable to constrain weights so that certain, under-sampled
 observations to do not end up with extreme weights. `ipu()` supports this by
-using the `min_factor` and `max_factor` variables.
+using the `min_ratio` and `max_ratio` variables.
 
 First, the average weight is calculated **per geography** based on the total of 
 the target tables divided by the number of records in the seed table. Then, the 
@@ -571,8 +571,8 @@ max and min factors set a cap and floor based on a multiple of that average.
 
 Common values to use are:
 
-  * max_factor = 5 (5x the average weight)
-  * min_factor = .2 (1/5 the average weight)
+  * max_ratio = 5 (5x the average weight)
+  * min_ratio = .2 (1/5 the average weight)
 
 However, care should be taken when moving these variables from their default
 values. These variables impose another constraint on the algorithm and increase
@@ -598,7 +598,7 @@ hh_targets$siz <- data_frame(
 )
 
 result <- ipu(hh_seed, hh_targets, max_iterations = 10,
-              max_factor = 1.2, min_factor = .8)
+              max_ratio = 1.2, min_ratio = .8)
 ```
 
 Consider the effect on geo_cluster 1. With a total target of 100 households and
@@ -627,7 +627,7 @@ hh_targets$siz <- data_frame(
 )
 
 result <- ipu(hh_seed, hh_targets, max_iterations = 10,
-              max_factor = 5, min_factor = .2)
+              max_ratio = 5, min_ratio = .2)
 
 result$primary_comp %>%
   htmlTable(

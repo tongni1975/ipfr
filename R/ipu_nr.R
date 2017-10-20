@@ -95,12 +95,12 @@ NULL
 #' @param verbose Print iteration details and worst marginal stats upon 
 #'   completion? Default \code{FALSE}.
 #'   
-#' @param max_factor \code{real} number. The average weight per seed record is
+#' @param max_ratio \code{real} number. The average weight per seed record is
 #' calculated by dividing the total of the targets by the number of records.
 #' The max_scale caps the maximum weight at a multiple of that average. Defaults
 #' to \code{10000} (basically turned off).
 #' 
-#' @param min_factor \code{real} number. The average weight per seed record is
+#' @param min_ratio \code{real} number. The average weight per seed record is
 #' calculated by dividing the total of the targets by the number of records.
 #' The min_scale caps the minimum weight at a multiple of that average. Defaults
 #' to \code{0.0001} (basically turned off).
@@ -137,7 +137,7 @@ ipu_nr <- function(primary_seed, primary_targets,
                 target_priority = 10000000,
                 relative_gap = 0.01, max_iterations = 100, absolute_diff = 10,
                 weight_floor = .00001, verbose = FALSE,
-                max_factor = 10000, min_factor = .0001){
+                max_ratio = 10000, min_ratio = .0001){
 
   # If secondary data is provided, both seed and targets must be
   if (xor(!is.null(secondary_seed), !is.null(secondary_targets))) {
@@ -290,8 +290,8 @@ ipu_nr <- function(primary_seed, primary_targets,
     dplyr::left_join(recs_by_geo, by = geo_colname) %>%
     dplyr::mutate(
       avg_weight = total / count,
-      min_weight = (!!min_factor) * avg_weight,
-      max_weight = (!!max_factor) * avg_weight
+      min_weight = (!!min_ratio) * avg_weight,
+      max_weight = (!!max_ratio) * avg_weight
     ) 
   seed <- seed %>%
     dplyr::left_join(weight_scale, by = geo_colname)
@@ -448,7 +448,7 @@ ipu_nr <- function(primary_seed, primary_targets,
   ) +
     ggplot2::geom_histogram(bins = 10, fill = "darkblue", color = "gray") +
     ggplot2::labs(
-      x = "Weight Factor = Weight / Average Weight", y = "Count of Seed Records"
+      x = "Weight Ratio = Weight / Average Weight", y = "Count of Seed Records"
     )
   
   # Compare resulting weights to initial targets
