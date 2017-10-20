@@ -528,39 +528,36 @@ single person get small weights.
 result$weight_dist
 ```
 
-`ipu` can fix this problem using the `target_priority` argument. By default, all
-target tables have an equal (and high) priority, which means that the algorithm
-will attempt to match all targets exactly. However, `target_priority` can be
-modified in several ways. In the code below, a data frame is used to assign the
-`hhtype` target a higher priority. If using a data frame, the column names must
-be `target` and `priority`. A simple named list can also be used (both options
-shown below).
+`ipu` can fix the underlying problem using the `secondary_importance` argument.
+It is `1` by default, which means the algorithm will attempt to match the
+absolute values of the secondary targets (as above). As this value is decreased
+to 0, the secondary targets are scaled to match the average weight of the
+primary targets.
+
+The examples below set `secondary_importance` to `0.80`, `0.20`, and `0.00` to
+show the effect on results. With each decrease in importance, the match to
+person targets gets worse, but weight extremes are reduced.
 
 ```{r}
-# Option 1: a data frame
-target_priority <- data_frame(
-  target = c("hhtype", "pertype"),
-  priority = c(10000, 10)
-)
+result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 30,
+              secondary_importance = .80)
 
-# Options 2: use a named list
-target_priority <- list()
-target_priority$hhtype <- 10000
-target_priority$priority <- 10
-
-result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 100,
-              target_priority = target_priority)
-```
-
-As `ipu` runs, it relaxes the target constraints on `pertype` much faster than
-on `hhtype`. As a result, the final weights will match the household type much
-closer.
-
-```{r}
 result
 ```
 
+```{r}
+result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 30,
+              secondary_importance = .20)
 
+result
+```
+
+```{r}
+result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 30,
+              secondary_importance = 0)
+
+result
+```
 
 ## Extreme Weights
 
@@ -645,183 +642,83 @@ the same scale. However, when expanding a through-trip table, it is common to
 have some external stations with large targets and others with small. In these
 cases, it is advisable to leave the scale arguments at their default values.
 
-# IPF
+# IPU_NR
 
-**Note: `ipf()` is being deprecated in favor of `ipu()`.**
+The function `ipu_nr` only differs from `ipu` in one significant way: the method
+used to balance primary and secondary targets.
 
-## Example 1: Basics
+```{r, include=FALSE}
+hh_seed <- data_frame(
+  geo_region = 1,
+  pid = c(1:8),
+  hhtype = c(1, 1, 1, 2, 2, 2, 2, 2)
+)
 
-This section creates a random seed table and target values to illustrate how the
-function is used. The targets are specified for three separate clusters, which 
-could represent model TAZs, survey districts, or some other grouping of 
-geographic areas.
+per_seed <- data_frame(
+  pid = c(1, 1, 1, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 7, 7, 7, 7, 7, 8, 8),
+  pertype = c(1, 2, 3, 1, 3, 1, 1, 2, 1, 3, 3, 2, 2, 3, 1, 2, 1, 1, 2, 3, 3, 1, 2)
+)
 
-Seed table creation.
+hh_targets <- list()
+hh_targets$hhtype <- data_frame(
+  geo_region = 1,
+  `1` = 35,
+  `2` = 65
+)
 
-```{r seed creation}
-seed <- expand.grid(
-  siz = c(1, 2, 3, 4),
-  wrk = c(0, 1, 2, 3),
-  veh = c(0, 1, 2, 3)
-) %>% tbl_df()
-
-set.seed(1)
-seed$weight <- sample(1:10, nrow(seed), replace = TRUE)
-
-seed %>%
-  head() %>%
-  htmlTable(
-  align = "cccr", col.rgroup = c("none", "#F7F7F7"), rnames = FALSE
+per_targets <- list()
+per_targets$pertype <- data_frame(
+  geo_region = 1,
+  `1` = 91,
+  `2` = 65,
+  `3` = 104
 )
 ```
 
-Target creation.
-
-```{r "marginal creation"}
-
-targets <- list()
-targets$siz <- data_frame(
-  cluster = c(1, 2, 3),
-  `1` = c(100, 150, 0),
-  `2` = c(100, 100, 0),
-  `3` = c(150, 100, 0),
-  `4` = c(150, 150, 0)
-)
-targets$wrk <- data_frame(
-  cluster = c(1, 2, 3),
-  `0` = c(100, 100, 0),
-  `1` = c(150, 100, 0),
-  `2` = c(150, 150, 0),
-  `3` = c(100, 150, 0)
-)
-targets$veh <- data_frame(
-  cluster = c(1, 2, 3),
-  `0` = c(75, 175, 0),
-  `1` = c(175, 75, 0),
-  `2` = c(150, 150, 0),
-  `3` = c(100, 100, 0)
-)
-
-targets$siz %>%
-  htmlTable(
-    align = "crr", rnames = FALSE, caption = "Size Targets"
-  )  
-```
-
-Run `ipf()`.
+As in the more detailed `ipu` example above, we modify the Arizona example
+(which is balanced) to double the person targets. This creates a significant
+imbalance that standard approahces struggle with.
 
 ```{r}
-table <- ipf(seed, targets, verbose = TRUE)
+per_targets$pertype <- per_targets$pertype %>%
+  mutate_at(
+    .vars = vars(`1`, `2`, `3`),
+    .funs = funs(. * 2)
+  )
 ```
 
-Results.
+While `ipu` balances the secondary targets directly using `secondary_importance`,
+`ipu_nr` uses an iterative approach and the `target_priority` argument. 
+
+By default, all target tables have an equally high priority, which means that the
+algorithm will attempt to match all targets exactly. However, `target_priority`
+can be modified in several ways. In the code below, a data frame is used to
+assign the `hhtype` target a higher priority. (If using a data frame, the column
+names must be `target` and `priority`.) A simple named list can also be used
+(both options shown below).
 
 ```{r}
-table %>%
-  mutate_all(funs(round(., 2))) %>%
-  head() %>%
-  htmlTable(
-    align = "crr", rnames = FALSE
-  )
-```
-
-```{r}
-table %>%
-  select(-c(wrk, veh)) %>%
-  group_by(cluster, siz) %>%
-  summarize(total = round(sum(weight), 0)) %>%
-  spread(key = siz, value = total) %>%
-  htmlTable(
-    align = "crr", rnames = FALSE, caption = "Size: Result"
-  )
-
-targets$siz %>%
-  htmlTable(
-    align = "crr", rnames = FALSE, caption = "Size: Target"
-  )
-```
-
-Not only does the marginal distribution of size match, but also workers and vehicles.
-```{r, echo=FALSE}
-# Workers
-table %>%
-  select(-c(siz, veh)) %>%
-  group_by(cluster, wrk) %>%
-  summarize(total = round(sum(weight), 0)) %>%
-  spread(key = wrk, value = total) %>%
-  htmlTable(
-    align = "crr", rnames = FALSE, caption = "Workers: Result"
-  )
-
-targets$wrk %>%
-  htmlTable(
-    align = "crr", rnames = FALSE, caption = "Workers: Target"
-  )
-
-# Vehciles
-table %>%
-  select(-c(siz, wrk)) %>%
-  group_by(cluster, veh) %>%
-  summarize(total = round(sum(weight), 0)) %>%
-  spread(key = veh, value = total) %>%
-  htmlTable(
-    align = "crr", rnames = FALSE, caption = "Vehicles: Result"
-  )
-
-targets$veh %>%
-  htmlTable(
-    align = "crr", rnames = FALSE, caption = "Vehciles: Target"
-  )
-```
-
-```{r}
-# Saving seed and target for later examples.
-first_seed <- seed
-first_targets <- targets
-```
-
-## Example 2: Survey Expansion using Geographical Clusters
-
-Seed table creation.
-
-```{r}
-seed <- data_frame(
-  hhid = c(1, 2, 3, 4),
-  siz = c(1, 2, 2, 1),
-  weight = c(1, 1, 1, 1),
-  cluster = c(1, 1, 2, 2)
+# Option 1: a data frame
+target_priority <- data_frame(
+  target = c("hhtype", "pertype"),
+  priority = c(10000, 10)
 )
 
-seed %>%
-  htmlTable(
-    rnames = FALSE, caption = "Seed Table with Cluster Appended"
-  )
+# Options 2: use a named list
+target_priority <- list()
+target_priority$hhtype <- 10000
+target_priority$pertype <- 10
+
+result <- ipu_nr(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 100,
+              target_priority = target_priority)
 ```
 
-Targets for each cluster.
+As `ipu_nr` runs, it relaxes the target constraints on `pertype` much faster than
+on `hhtype`. As a result, the final weights will match the household type much
+closer. Because of the iterative relaxation, `ipu_nr` generally takes longer
+to reach convergence.
 
 ```{r}
-targets <- list()
-targets$siz <- data_frame(
-  cluster = c(1, 2),
-  `1` = c(75, 100),
-  `2` = c(25, 150)
-)
-```
-
-Run `ipf`
-
-```{r}
-result <- ipf(seed = seed, targets = targets)
-```
-
-
-Results.
-
-```{r}
-result %>%
-  htmlTable(
-    rnames = FALSE, caption = "Survey Expansion to Clusters"
-  )
+result
 ```
 
