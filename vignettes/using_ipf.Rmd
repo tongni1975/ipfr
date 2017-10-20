@@ -528,37 +528,39 @@ single person get small weights.
 result$weight_dist
 ```
 
-`ipu` can fix the underlying problem using the `secondary_importance` argument.
-It is `1` by default, which means the algorithm will attempt to match the
-absolute values of the secondary targets (as above). At `0`, the secondary
-target tables are scaled so that the average weight matches the primary average.
-In effect, this means that only the percentage distribution of the secondary
-tarets is important.
-
-The examples below set `secondary_importance` to `0.80`, `0.20`, and `0.00` to
-show the effect on results. With each decrease in importance, the match to
-person targets gets worse, but weight extremes are reduced.
+`ipu` can fix this problem using the `target_priority` argument. By default, all
+target tables have an equal (and high) priority, which means that the algorithm
+will attempt to match all targets exactly. However, `target_priority` can be
+modified in several ways. In the code below, a data frame is used to assign the
+`hhtype` target a higher priority. If using a data frame, the column names must
+be `target` and `priority`. A simple named list can also be used (both options
+shown below).
 
 ```{r}
-result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 30,
-              secondary_importance = .80)
+# Option 1: a data frame
+target_priority <- data_frame(
+  target = c("hhtype", "pertype"),
+  priority = c(10000, 10)
+)
 
+# Options 2: use a named list
+target_priority <- list()
+target_priority$hhtype <- 10000
+target_priority$priority <- 10
+
+result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 100,
+              target_priority = target_priority)
+```
+
+As `ipu` runs, it relaxes the target constraints on `pertype` much faster than
+on `hhtype`. As a result, the final weights will match the household type much
+closer.
+
+```{r}
 result
 ```
 
-```{r}
-result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 30,
-              secondary_importance = .20)
 
-result
-```
-
-```{r}
-result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 30,
-              secondary_importance = 0)
-
-result
-```
 
 ## Extreme Weights
 
