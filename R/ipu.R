@@ -396,6 +396,14 @@ ipu <- function(primary_seed, primary_targets,
   primary_seed$avg_weight <- seed$avg_weight
   primary_seed$weight_factor <- primary_seed$weight / primary_seed$avg_weight
   
+  # If the average weight is 0 (meaning the target was 0) set weight
+  # and weight factor to 0.
+  primary_seed <- primary_seed %>%
+    mutate(
+      weight = ifelse(avg_weight == 0, 0, weight),
+      weight_factor = ifelse(avg_weight == 0, 0, weight_factor)
+    )
+  
   # Create the result list (what will be returned). Add the seed table and a
   # histogram of weight distribution.
   result <- list()
