@@ -1,29 +1,7 @@
-#' ipfr: A package to perform iterative proportional fitting
+#' Iterative Proportional Updating (Newton-Raphson)
 #' 
-#' There are currently two functions 
-#' 
-#' \code{\link{ipu}}
-#' 
-#' \code{\link{ipu_nr}}
-#' 
-#' Both functions implement list balancing. \code{ipu_nr} implements a
-#' newton-raphson approach to balance primary and secondary targets. \code{ipu}
-#' balances targets directly, which can mean faster convergence.
-#' 
-#' @docType package
-#' 
-#' @name ipfr
-NULL
-#> NULL
-
-#' Iterative Proportional Updating
-#' 
-#' @description A general case of iterative proportional fitting. It can satisfy
-#'   two, disparate sets of marginals that do not agree on a single total. A
-#'   common example is balancing population data using household- and person-level
-#'   marginal controls. This could be for survey expansion or synthetic
-#'   population creation. The second set of marginal/seed data is optional, meaning
-#'   it can also be used for more basic IPF tasks.
+#' @description List balancing similar to \code{\link{ipu}}, but using the
+#' Newton-Raphson approach to optimization.
 #'   
 #'   Vignette: \url{http://pbsag.github.io/ipfr/}
 #' 

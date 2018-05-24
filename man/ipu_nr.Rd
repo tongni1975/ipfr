@@ -2,7 +2,7 @@
 % Please edit documentation in R/ipu_nr.R
 \name{ipu_nr}
 \alias{ipu_nr}
-\title{Iterative Proportional Updating}
+\title{Iterative Proportional Updating (Newton-Raphson)}
 \usage{
 ipu_nr(primary_seed, primary_targets, secondary_seed = NULL,
   secondary_targets = NULL, target_priority = 1e+07, relative_gap = 0.01,
@@ -92,12 +92,8 @@ a \code{named list} with the \code{primary_seed} with weight, a
   reporting.
 }
 \description{
-A general case of iterative proportional fitting. It can satisfy
-  two, disparate sets of marginals that do not agree on a single total. A
-  common example is balancing population data using household- and person-level
-  marginal controls. This could be for survey expansion or synthetic
-  population creation. The second set of marginal/seed data is optional, meaning
-  it can also be used for more basic IPF tasks.
+List balancing similar to \code{\link{ipu}}, but using the
+Newton-Raphson approach to optimization.
   
   Vignette: \url{http://pbsag.github.io/ipfr/}
 }
