@@ -493,18 +493,22 @@ check_tables <- function(primary_seed, primary_targets, secondary_seed = NULL, s
     pos <- grep("geo_", colnames(tbl))
     geo_colname <- colnames(tbl)[pos]
     
-    # Get vector of other column names
-    col_names <- colnames(tbl)
-    col_names <- type.convert(col_names[!col_names == geo_colname], as.is = TRUE)
-    
     # Check that at least one observation of the current target is in every geo
     for (geo in unique(unlist(primary_seed[, geo_colname]))){
+      
+      # Get column names for the current geo that have a >0 target
+      non_zero_targets <- tbl[tbl[geo_colname] == geo,
+                              colSums(tbl[tbl[geo_colname] == geo, ]) > 0]
+      col_names <- colnames(non_zero_targets)
+      col_names <- type.convert(col_names[!col_names == geo_colname], as.is = TRUE)
+      
       test <- match(col_names, primary_seed[[name]][primary_seed[, geo_colname] == geo])
       if (any(is.na(test))) {
         prob_cat <- col_names[which(is.na(test))]
         stop(
           "Marginal ", name, ", category ", prob_cat[1], " is missing from ",
-          geo_colname, " ", geo, " in the primary_seed table."
+          geo_colname, " ", geo, " in the primary_seed table but has a target ",
+          "greater than zero."
         )
       }   
     }
@@ -557,18 +561,22 @@ check_tables <- function(primary_seed, primary_targets, secondary_seed = NULL, s
           by = "pid"
         )
       
-      # Get vector of other column names
-      col_names <- colnames(tbl)
-      col_names <- type.convert(col_names[!col_names == geo_colname], as.is = TRUE)
-      
       # Check that at least one observation of the current target is in every geo
       for (geo in unique(unlist(secondary_seed[, geo_colname]))){  
+        
+        # Get column names for the current geo that have a >0 target
+        non_zero_targets <- tbl[tbl[geo_colname] == geo,
+                                colSums(tbl[tbl[geo_colname] == geo, ]) > 0]
+        col_names <- colnames(non_zero_targets)
+        col_names <- type.convert(col_names[!col_names == geo_colname], as.is = TRUE)
+        
         test <- match(col_names, secondary_seed[[name]][secondary_seed[, geo_colname] == geo])
         if (any(is.na(test))) {
           prob_cat <- col_names[which(is.na(test))]
           stop(
             "Marginal ", name, ", category ", prob_cat[1], " is missing from ",
-            geo_colname, " ", geo, " in the secondary_seed table."
+            geo_colname, " ", geo, " in the secondary_seed table but has a target ",
+            "greater than zero."
           )
         }   
       }
