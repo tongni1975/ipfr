@@ -3,4 +3,5 @@
 export(ipf)
 export(ipu)
 export(ipu_nr)
+import(dplyr)
 importFrom(magrittr,"%>%")

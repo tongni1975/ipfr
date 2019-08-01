@@ -1,9 +1,9 @@
 Package: ipfr
-Title: Develop Expansion Weights for a Survey
+Title: List balancing for reweighting and population synthesis
 Version: 1.0.0
-Authors@R: person("Kyle", "Ward", email = "warddk@pbworld.com", 
+Authors@R: person("Kyle", "Ward", email = "kyleward084@gmail.com", 
                   role = c("aut", "cre"))
-Description: Performs iterative proportional fitting given a seed table and
+Description: Performs iterative proportional updating given a seed table and
     and arbitrary number of marginal distributions.
 Depends:
     R (>= 3.2.0)
@@ -20,4 +20,4 @@ Suggests:
     htmlTable,
     rmarkdown
 VignetteBuilder: knitr
-RoxygenNote: 6.0.1
+RoxygenNote: 6.1.1
