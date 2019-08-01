@@ -122,6 +122,7 @@ NULL
 #' }
 #' 
 #' @importFrom magrittr "%>%"
+#' @import dplyr
 
 ipu <- function(primary_seed, primary_targets, 
                 secondary_seed = NULL, secondary_targets = NULL,
@@ -476,7 +477,7 @@ check_tables <- function(primary_seed, primary_targets, secondary_seed = NULL, s
     stop("The primary seed's pid field has duplicate values.")
   }
   
-  # check hh tables for correctness
+  # check primary target tables for correctness
   for (name in names(primary_targets)) {
     tbl <- primary_targets[[name]]
     
@@ -493,25 +494,9 @@ check_tables <- function(primary_seed, primary_targets, secondary_seed = NULL, s
     pos <- grep("geo_", colnames(tbl))
     geo_colname <- colnames(tbl)[pos]
     
-    # Check that at least one observation of the current target is in every geo
-    for (geo in unique(unlist(primary_seed[, geo_colname]))){
-      
-      # Get column names for the current geo that have a >0 target
-      non_zero_targets <- tbl[tbl[geo_colname] == geo,
-                              colSums(tbl[tbl[geo_colname] == geo, ]) > 0]
-      col_names <- colnames(non_zero_targets)
-      col_names <- type.convert(col_names[!col_names == geo_colname], as.is = TRUE)
-      
-      test <- match(col_names, primary_seed[[name]][primary_seed[, geo_colname] == geo])
-      if (any(is.na(test))) {
-        prob_cat <- col_names[which(is.na(test))]
-        stop(
-          "Marginal ", name, ", category ", prob_cat[1], " is missing from ",
-          geo_colname, " ", geo, " in the primary_seed table but has a target ",
-          "greater than zero."
-        )
-      }   
-    }
+    # Check that every non-zero target has at least one observation in
+    # the seed table.
+    check_missing_categories(primary_seed, tbl, name, geo_colname)
   }
   
   
@@ -537,7 +522,7 @@ check_tables <- function(primary_seed, primary_targets, secondary_seed = NULL, s
       stop("Do not include geo fields in the secondary_seed table (primary_seed only).")
     }
     
-    # check the per tables for correctness
+    # check the secondary target tables for correctness
     for (name in names(secondary_targets)) {
       tbl <- secondary_targets[[name]]
       
@@ -561,29 +546,47 @@ check_tables <- function(primary_seed, primary_targets, secondary_seed = NULL, s
           by = "pid"
         )
       
-      # Check that at least one observation of the current target is in every geo
-      for (geo in unique(unlist(secondary_seed[, geo_colname]))){  
-        
-        # Get column names for the current geo that have a >0 target
-        non_zero_targets <- tbl[tbl[geo_colname] == geo,
-                                colSums(tbl[tbl[geo_colname] == geo, ]) > 0]
-        col_names <- colnames(non_zero_targets)
-        col_names <- type.convert(col_names[!col_names == geo_colname], as.is = TRUE)
-        
-        test <- match(col_names, secondary_seed[[name]][secondary_seed[, geo_colname] == geo])
-        if (any(is.na(test))) {
-          prob_cat <- col_names[which(is.na(test))]
-          stop(
-            "Marginal ", name, ", category ", prob_cat[1], " is missing from ",
-            geo_colname, " ", geo, " in the secondary_seed table but has a target ",
-            "greater than zero."
-          )
-        }   
-      }
+      # Check that every non-zero target has at least one observation in
+      # the seed table.
+      check_missing_categories(secondary_seed, tbl, name, geo_colname)
     }
   }
 }
 
+#' Check for missing categories in seed
+#' 
+#' Helper function for \code{check_tables}.
+#' 
+#' @param seed seed table to check
+#' @param target data.frame of a single target table
+#' @param target_name the name of the target (e.g. size)
+#' @param geo_colname the name of the geo column in both the \code{seed} and
+#'   \code{target} (e.g. geo_taz)
+#' @keywords internal
+#' @return Nothing. Throws an error if one is found.
+
+check_missing_categories <- function(seed, target, target_name, geo_colname) {
+  
+  for (geo in unique(unlist(seed[, geo_colname]))){  
+    
+    # Get column names for the current geo that have a >0 target
+    non_zero_targets <- target[target[geo_colname] == geo,
+                            colSums(target[target[geo_colname] == geo, ]) > 0]
+    col_names <- colnames(non_zero_targets)
+    col_names <- type.convert(col_names[!col_names == geo_colname], as.is = TRUE)
+    
+    test <- match(col_names, seed[[target_name]][seed[, geo_colname] == geo])
+    if (any(is.na(test))) {
+      prob_cat <- col_names[which(is.na(test))]
+      stop(
+        "Marginal ", target_name, " category ", 
+        paste(prob_cat, collapse = ", "),
+        " missing from ", geo_colname, " ", geo,
+        " in the seed table with a target greater than zero."
+      )
+    }
+  }
+}
 
 #' Compare results to targets
 #'
