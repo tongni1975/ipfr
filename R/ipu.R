@@ -414,6 +414,7 @@ ipu <- function(primary_seed, primary_targets,
   # histogram of weight distribution.
   result <- list()
   result$weight_tbl <- primary_seed
+  result$weight_tbl$geo_all <- NULL
   result$weight_dist <- ggplot2::ggplot(
     data = primary_seed, ggplot2::aes(primary_seed$weight_factor)
   ) +
@@ -491,15 +492,10 @@ check_tables <- function(primary_seed, primary_targets, secondary_seed = NULL, s
   # check primary target tables for correctness
   for (name in names(primary_targets)) {
     tbl <- primary_targets[[name]]
-    
-    # Check that each target table has a geo field
-    check <- grepl("geo_", colnames(tbl))
-    if (!any(check)) {
-      stop("primary_target table '", name, "' does not have a geo column (must start with 'geo_')")
-    }
-    if (sum(check) > 1) {
-      stop("primary_target table '", name, "' has more than one geo column (starts with 'geo_'")
-    }
+
+    result <- check_geo_fields(primary_seed, tbl, name)
+    primary_seed <- result[[1]]
+    primary_targets[[name]] <- result[[2]]
     
     # Get the name of the geo field
     pos <- grep("geo_", colnames(tbl))
@@ -537,14 +533,9 @@ check_tables <- function(primary_seed, primary_targets, secondary_seed = NULL, s
     for (name in names(secondary_targets)) {
       tbl <- secondary_targets[[name]]
       
-      # Check that each target table has a geo field
-      check <- grepl("geo_", colnames(tbl))
-      if (!any(check)) {
-        stop("secondary_target table '", name, "' does not have a geo column (must start with 'geo_')")
-      }
-      if (sum(check) > 1) {
-        stop("secondary_target table '", name, "' has more than one geo column (starts with 'geo_'")
-      }
+      result <- check_geo_fields(secondary_seed, tbl, name)
+      secondary_seed <- result[[1]]
+      secondary_targets[[name]] <- result[[2]]
       
       # Get the name of the geo field
       pos <- grep("geo_", colnames(tbl))
@@ -607,6 +598,38 @@ check_missing_categories <- function(seed, target, target_name, geo_colname) {
   }
 }
 
+#' Check geo fields
+#' 
+#' Helper function for \code{\link{check_tables}}. Makes sure that geographies
+#' in a seed and target table line up properly.
+#' 
+#' @inheritParams check_missing_categories
+#' @return The seed and target table (which may be modified)
+#' @keywords internal
+
+check_geo_fields <- function(seed, target, target_name) {
+
+  # Require a geo field if >1 row
+  check <- grepl("geo_", colnames(target))
+  if (nrow(target) > 1) {
+    if (!any(check)) {
+      stop("target table '", target_name, "' has >1 row but does not have a",
+           "geo column (must start with 'geo_')")
+    }
+    # If the table has 1 row and no geo field, add one.
+  } else {
+    if (!any(check)) {
+      target$geo_all <- 1
+      seed$geo_all <- 1
+    }
+  }
+  if (sum(check) > 1) {
+    stop("target table '", target_name, "' has more than one geo column (starts with 'geo_'")
+  }
+  
+  return(list(seed, target))
+}
+
 #' Compare results to targets
 #'
 #' @param seed \code{data.frame} Seed table with a weight column in the same
@@ -663,7 +686,10 @@ compare_results <- function(seed, targets){
       pct_diff = round(diff / target * 100, 2),
       diff = round(diff, 2)
     ) %>%
-    dplyr::arrange(geo, category)
+    dplyr::arrange(geo, category) %>%
+    # If the temporary geo field geo_all was created, clean it up
+    dplyr::mutate(geo = gsub("geo_all.*", "geo_all", geo)) %>%
+    rename(geography = geo)
   
   return(comparison_tbl)
 }
