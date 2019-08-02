@@ -121,3 +121,4 @@ result <- ipu_nr(hh_seed, hh_targets, max_iterations = 10)
 \references{
 \url{http://www.scag.ca.gov/Documents/PopulationSynthesizerPaper_TRB.pdf}
 }
+\keyword{internal}

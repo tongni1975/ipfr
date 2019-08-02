@@ -87,7 +87,7 @@
 #'   histogram of the weight distribution, and two comparison tables to aid in
 #'   reporting.
 #' 
-#' @export
+#' @keywords internal
 #' 
 #' @examples
 #' \dontrun{

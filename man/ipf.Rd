@@ -48,3 +48,4 @@ the seed \code{data frame} with a column of weights appended for each
 \description{
 Reweight a Seed Table to Marginal Controls
 }
+\keyword{internal}

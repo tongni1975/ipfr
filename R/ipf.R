@@ -36,7 +36,7 @@
 #' @return the seed \code{data frame} with a column of weights appended for each
 #'    row in the target dataframes
 #' 
-#' @export
+#' @keywords internal
 #' 
 #' @importFrom magrittr "%>%"
 #' 
@@ -44,7 +44,7 @@ ipf <- function(seed, targets,
                 relative_gap = 0.01, absolute_gap = 1, max_iterations = 50,
                 min_weight = .0001, verbose = FALSE){
 
-  stop("ipf is deprecated. Use ipu() or ipu_nr() instead.")
+  stop("ipf is deprecated. Use ipu() instead.")
   
   # Check check that seed and target are provided
   if (is.null(seed)) {
