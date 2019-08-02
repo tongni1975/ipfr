@@ -10,7 +10,7 @@ adjust_factor(factor, importance)
 \item{factor}{A correction factor that is calculated using target/current.}
 
 \item{importance}{A \code{real} between 0 and 1 signifying the importance of
-the factor. A importance of 1 does not modify the factor. An importance of
+the factor. An importance of 1 does not modify the factor. An importance of
 0.5 would shrink the factor closer to 1.0 by 50 percent.}
 }
 \value{

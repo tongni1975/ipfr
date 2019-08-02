@@ -810,7 +810,7 @@ balance_secondary_targets <- function(primary_targets, primary_seed,
 #' @param factor A correction factor that is calculated using target/current.
 #' 
 #' @param importance A \code{real} between 0 and 1 signifying the importance of
-#'   the factor. A importance of 1 does not modify the factor. An importance of
+#'   the factor. An importance of 1 does not modify the factor. An importance of
 #'   0.5 would shrink the factor closer to 1.0 by 50 percent.
 #'
 #' @return The adjusted factor.
@@ -830,31 +830,41 @@ adjust_factor <- function(factor, importance){
   return(adjusted)
 }
 
+#' Balance a matrix given row and column targets
+#' 
+#' This function simplifies the call to `ipu()` for the simple case of a matrix
+#' and row/column targets.
+#' 
+#' @param mtx a \code{matrix}
+#' @param row_targets a vector of targets that the row sums must match
+#' @param column_targets a vector of targets that the column sums must match
+#' @param ... additional arguments that are passed to `ipu()`. See
+#'   \code{\link{ipu}} for details.
+#' @return A \code{matrix} that matches row and column targets
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+ipu_matrix <- function(mtx, row_targets, column_targets, ...) {
+  tbl <- as.table(mtx)
+  seed <- as.data.frame(tbl)
+  colnames(seed) <- c("row", "col", "weight")
+  seed <- seed %>%
+    dplyr::mutate(
+      geo_all = 1,
+      pid = seq(1, n())
+    )
+  targets <- list()
+  targets$row <- data.frame(label = rownames(tbl), target = row_targets) %>%
+    tidyr::spread(label, target) %>%
+    dplyr::mutate(geo_all = 1)
+  targets$col <- data.frame(label = colnames(tbl), target = column_targets) %>%
+    tidyr::spread(label, target) %>%
+    dplyr::mutate(geo_all = 1)
+  ipu_result <- ipu(seed, targets, ...)
+  final <- matrix(
+    ipu_result$weight_tbl$weight, nrow = nrow(mtx), ncol = ncol(mtx)
+  )
+  rownames(final) <- rownames(mtx)
+  colnames(final) <- colnames(mtx)
+  return(final)
+}
 
 
