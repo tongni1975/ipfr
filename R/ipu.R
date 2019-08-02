@@ -35,23 +35,24 @@ NULL
 #' @param primary_seed In population synthesis or household survey expansion, 
 #'   this would be the household seed table (each record would represent a 
 #'   household). It could also be a trip table, where each row represents an 
-#'   origin-destination pair. Must contain a \code{pid} ("primary ID") field
-#'   that is unique for each row. Must also contain a geography field that
-#'   starts with "geo_".
+#'   origin-destination pair.
 #' 
-#' @param primary_targets A \code{named list} of data frames.  Each name in the 
-#'   list defines a marginal dimension and must match a column from the 
+#' @param primary_targets A \code{named list} of data frames.  Each name in the
+#'   list defines a marginal dimension and must match a column from the
 #'   \code{primary_seed} table. The data frame associated with each named list
-#'   element must contain a geography field (starts with "geo_"). Each row in
-#'   the target table defines a new geography (these could be TAZs, tracts,
-#'   clusters, etc.). The other column names define the marginal categories that
-#'   targets are provided for. The vignette provides more detail.
+#'   element can contain a geography field (starting with "geo_"). If so, each
+#'   row in the target table defines a new geography (these could be TAZs,
+#'   tracts, clusters, etc.). The other column names define the marginal
+#'   categories that targets are provided for. The vignette provides more
+#'   detail.
 #' 
-#' @param secondary_seed Most commonly, if the primary_seed describes households, the 
-#'   secondary seed table would describe a unique person with each row. Must
-#'   also contain the \code{pid} column that links each person to their 
-#'   respective household in \code{primary_seed}. Must not contain any geography
-#'   fields (starting with "geo_").
+#' @param primary_id The field used to join the primary and secondary seed
+#'   tables. Only necessary if \code{secondary_seed} is provided.
+#' 
+#' @param secondary_seed Most commonly, if the primary_seed describes
+#'   households, the secondary seed table would describe the persons in each
+#'   household. Must contain the same \code{primary_id} column that links each
+#'   person to their respective household in \code{primary_seed}.
 #' 
 #' @param secondary_targets Same format as \code{primary_targets}, but they constrain 
 #'   the \code{secondary_seed} table.
@@ -126,6 +127,7 @@ NULL
 
 ipu <- function(primary_seed, primary_targets, 
                 secondary_seed = NULL, secondary_targets = NULL,
+                primary_id = "pid",
                 secondary_importance = 1,
                 relative_gap = 0.01, max_iterations = 100, absolute_diff = 10,
                 weight_floor = .00001, verbose = FALSE,
@@ -144,9 +146,12 @@ ipu <- function(primary_seed, primary_targets,
   # Check hh and person tables
   if (!is.null(secondary_seed)) {
     result <- check_tables(
-      primary_seed, primary_targets, secondary_seed, secondary_targets)
+      primary_seed, primary_targets, primary_id = primary_id,
+      secondary_seed, secondary_targets
+    )
   } else {
-    result <- check_tables(primary_seed, primary_targets)
+    result <- check_tables(
+      primary_seed, primary_targets, primary_id = primary_id)
   }
   primary_seed <- result[[1]]
   primary_targets <- result[[2]]
@@ -174,16 +179,16 @@ ipu <- function(primary_seed, primary_targets,
   # Pull off the geo information into a separate equivalency table
   # to be used as needed.
   geo_equiv <- primary_seed %>%
-    dplyr::select(dplyr::starts_with("geo_"), "pid", "weight")
+    dplyr::select(dplyr::starts_with("geo_"), primary_id, "weight")
   primary_seed_mod <- primary_seed %>%
     dplyr::select(-dplyr::starts_with("geo_"))
-  
+
   # Remove any fields that aren't in the target list and change the ones
   # that are to factors.
   col_names <- names(primary_targets)
   primary_seed_mod <- primary_seed_mod %>%
-    # Keep only the fields of interest (marginal columns and pid)
-    dplyr::select(dplyr::one_of(c(col_names, "pid"))) %>%
+    # Keep only the fields of interest (marginal columns and id)
+    dplyr::select(dplyr::one_of(c(col_names, primary_id))) %>%
     # Convert to factors and then to dummy columns if the column has more
     # than one category.
     dplyr::mutate_at(
@@ -212,32 +217,32 @@ ipu <- function(primary_seed, primary_targets,
     col_names <- names(secondary_targets_mod)
     secondary_seed_mod <- secondary_seed %>%
       # Keep only the fields of interest
-      dplyr::select(dplyr::one_of(c(col_names, "pid"))) %>%
+      dplyr::select(dplyr::one_of(col_names), primary_id) %>%
       dplyr::mutate_at(
         .vars = col_names,
         .funs = dplyr::funs(as.factor(.))
       ) %>%
       mlr::createDummyFeatures() %>%
-      dplyr::group_by(pid) %>%
+      dplyr::group_by(!!as.name(primary_id)) %>%
       dplyr::summarize_all(
         .funs = sum
       )
     
     # combine the hh and per seed tables into a single table
     seed <- primary_seed_mod %>%
-      dplyr::left_join(secondary_seed_mod, by = "pid")
+      dplyr::left_join(secondary_seed_mod, by = primary_id)
   } else {
     seed <- primary_seed_mod
   }
   
   # Add the geo information back.
   seed <- seed %>%
-    dplyr::left_join(geo_equiv, by = "pid")
+    dplyr::left_join(geo_equiv, by = primary_id)
   
   # store a vector of attribute column names to loop over later.
-  # don't include 'pid' or 'weight' in the vector.
+  # don't include primary_id or 'weight' in the vector.
   geo_pos <- grep("geo_", colnames(seed))
-  pid_pos <- grep("pid", colnames(seed))
+  pid_pos <- grep(primary_id, colnames(seed))
   weight_pos <- grep("weight", colnames(seed))
   seed_attribute_cols <- colnames(seed)[-c(geo_pos, pid_pos, weight_pos)]
   
@@ -334,11 +339,11 @@ ipu <- function(primary_seed, primary_targets,
       # Get the name of the geo column
       pos <- grep("geo_", colnames(target_tbl))
       geo_colname <- colnames(target_tbl)[pos]
-      
+  
       diff_tbl <- seed %>%
         dplyr::filter((!!as.name(seed_attribute)) > 0) %>%
         dplyr::select(
-          geo = !!geo_colname, pid, attr = !!seed_attribute, weight,
+          geo = !!geo_colname, primary_id, attr = !!seed_attribute, weight,
           target = !!target_name
         ) %>%
         dplyr::group_by(geo) %>%
@@ -432,8 +437,9 @@ ipu <- function(primary_seed, primary_targets,
     geo_cols <- colnames(primary_seed)[pos]
     seed <- secondary_seed %>%
       dplyr::left_join(
-        primary_seed %>% dplyr::select(dplyr::one_of(geo_cols), pid, weight),
-        by = "pid"
+        primary_seed %>%
+          dplyr::select(dplyr::one_of(geo_cols), primary_id, weight),
+        by = primary_id
       )
     
     # Run the comparison against the original, unscaled targets 
@@ -458,7 +464,9 @@ ipu <- function(primary_seed, primary_targets,
 #' @return both seed tables and target lists
 #' @keywords internal
 
-check_tables <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_targets = NULL){
+check_tables <- function(primary_seed, primary_targets, 
+                         secondary_seed = NULL, secondary_targets = NULL,
+                         primary_id){
   
   # If person data is provided, both seed and targets must be
   if (xor(!is.null(secondary_seed), !is.null(secondary_targets))) {
@@ -475,18 +483,24 @@ check_tables <- function(primary_seed, primary_targets, secondary_seed = NULL, s
     stop("primary_targets table contains NAs")
   }
   
-  # Check for the pid field and add it if possible.
-  if (!"pid" %in% colnames(primary_seed)) {
-    if (is.null(secondary_seed)) {
-      primary_seed <- primary_seed %>%
-        dplyr::mutate(pid = seq(1, n()))
+  # Ensure that a weight field exists in the primary table.
+  if (!"weight" %in% colnames(primary_seed)) {
+    primary_seed$weight <- 1
+  }
+  
+  # Check the primary_id
+  secondary_seed_exists <- !is.null(secondary_seed)
+  id_field_exists <- primary_id %in% colnames(primary_seed)
+  if (!id_field_exists) {
+    if (secondary_seed_exists) {
+      stop("The primary seed table does not have field, '", primary_id, "'.")
     } else {
-      stop("The primary seed table does not have field 'pid'.")
+      primary_seed[primary_id] <- seq(1, nrow(primary_seed))
     }
   }
-  unique_pids <- unique(primary_seed$pid)
+  unique_pids <- unique(primary_seed[[primary_id]])
   if (length(unique_pids) != nrow(primary_seed)) {
-    stop("The primary seed's pid field has duplicate values.")
+    stop("The primary seed's ", primary_id, " field has duplicate values.")
   }
   
   # check primary target tables for correctness
@@ -496,6 +510,7 @@ check_tables <- function(primary_seed, primary_targets, secondary_seed = NULL, s
     result <- check_geo_fields(primary_seed, tbl, name)
     primary_seed <- result[[1]]
     primary_targets[[name]] <- result[[2]]
+    tbl <- result[[2]]
     
     # Get the name of the geo field
     pos <- grep("geo_", colnames(tbl))
@@ -518,9 +533,9 @@ check_tables <- function(primary_seed, primary_targets, secondary_seed = NULL, s
       stop("secondary_targets table contains NAs")
     }
     
-    # Check that secondary seed table has a pid field
-    if (!"pid" %in% colnames(secondary_seed)) {
-      stop("The primary seed table does not have field 'pid'.")
+    # Check that secondary seed table has a primary_id field
+    if (!primary_id %in% colnames(secondary_seed)) {
+      stop("The primary seed table does not have field '", primary_id, "'.")
     }
     
     # Check that the secondary seed table does not have any geo columns
@@ -535,6 +550,9 @@ check_tables <- function(primary_seed, primary_targets, secondary_seed = NULL, s
       
       result <- check_geo_fields(secondary_seed, tbl, name)
       secondary_seed <- result[[1]]
+      # check_geo_fields may add a geo_all column. Make sure that is removed
+      # for the secondary seed table.
+      secondary_seed$geo_all <- NULL
       secondary_targets[[name]] <- result[[2]]
       
       # Get the name of the geo field
@@ -544,8 +562,8 @@ check_tables <- function(primary_seed, primary_targets, secondary_seed = NULL, s
       # Add the geo field from the primary_seed before checking
       secondary_seed <- secondary_seed %>%
         dplyr::left_join(
-          primary_seed %>% dplyr::select(pid, geo_colname),
-          by = "pid"
+          primary_seed %>% dplyr::select(primary_id, geo_colname),
+          by = primary_id
         )
       
       # Check that every non-zero target has at least one observation in
@@ -816,8 +834,9 @@ balance_secondary_targets <- function(primary_targets, primary_seed,
       dplyr::summarize(recs = n())
     sec_rec_count <-secondary_seed %>%
       dplyr::left_join(
-        primary_seed %>% dplyr::select(pid, dplyr::one_of(sec_geo_colname)),
-        by = "pid"
+        primary_seed %>% 
+          dplyr::select(dplyr::one_of(c(sec_geo_colname, primary_id))),
+        by = primary_id
       ) %>%
       dplyr::group_by(!!as.name(sec_geo_colname)) %>%
       dplyr::summarize(recs = n())
