@@ -1,0 +1,113 @@
+---
+title: "newton_raphson"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{newton_raphson}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+options(scipen=999)
+```
+
+```{r setup}
+suppressPackageStartupMessages({
+  library(ipfr)
+  library(tidyverse)
+})
+```
+
+# IPU_NR
+
+The function `ipu_nr` only differs from `ipu` in one significant way: the method
+used to balance primary and secondary targets.
+
+The following code block re-creates the 
+[Arizona](http://www.scag.ca.gov/Documents/PopulationSynthesizerPaper_TRB.pdf)
+example.
+
+```{r, include=FALSE}
+hh_seed <- tibble(
+  geo_region = 1,
+  pid = c(1:8),
+  hhtype = c(1, 1, 1, 2, 2, 2, 2, 2)
+)
+
+per_seed <- tibble(
+  pid = c(1, 1, 1, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 7, 7, 7, 7, 7, 8, 8),
+  pertype = c(1, 2, 3, 1, 3, 1, 1, 2, 1, 3, 3, 2, 2, 3, 1, 2, 1, 1, 2, 3, 3, 1, 2)
+)
+
+hh_targets <- list()
+hh_targets$hhtype <- tibble(
+  geo_region = 1,
+  `1` = 35,
+  `2` = 65
+)
+
+per_targets <- list()
+per_targets$pertype <- tibble(
+  geo_region = 1,
+  `1` = 91,
+  `2` = 65,
+  `3` = 104
+)
+```
+
+As in the example in the `common_ipf_problems` vignette, we modify the Arizona
+example (which is balanced) to double the person targets. This creates a
+significant imbalance that standard approaches struggle with.
+
+```{r}
+new_per_targets <- per_targets
+new_per_targets$pertype <- per_targets$pertype %>%
+  mutate_at(
+    .vars = vars(`1`, `2`, `3`),
+    .funs = list(~. * 2)
+  )
+```
+
+While `ipu` balances the secondary targets directly using `secondary_importance`,
+`ipu_nr` uses an iterative approach and the `target_priority` argument. 
+
+By default, all target tables have an equally high priority, which means that the
+algorithm will attempt to match all targets exactly. However, `target_priority`
+can be modified in several ways. In the code below, a data frame is used to
+assign the `hhtype` target a higher priority. (If using a data frame, the column
+names must be `target` and `priority`.) A simple named list can also be used
+(both options shown below).
+
+```{r}
+# Option 1: a data frame
+target_priority <- tibble(
+  target = c("hhtype", "pertype"),
+  priority = c(10000, 10)
+)
+
+# Options 2: use a named list
+target_priority <- list()
+target_priority$hhtype <- 10000
+target_priority$pertype <- 10
+
+result <- ipu_nr(hh_seed, hh_targets, per_seed, new_per_targets, max_iterations = 30,
+              target_priority = target_priority)
+```
+
+As `ipu_nr` runs, it relaxes the target constraints on `pertype` much faster
+than on `hhtype`. As a result, the final weights will match the household type
+much closer. The two methods generally match targets to the same degree, but
+often lead to very different distributions of weight ratios. In addition, `ipu`
+tends to reach convergence levels around .1 %RMSE faster than `ipu_nr`, but for
+levels below that, `ipu_nr` tends to be faster. For IPF, convergence below .1
+%RMSE is of questionable utility.
+
+```{r}
+result
+```

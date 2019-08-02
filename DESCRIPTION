@@ -17,7 +17,7 @@ License: MIT + file LICENSE
 LazyData: true
 Suggests:
     knitr,
-    htmlTable,
+    tidyverse,
     rmarkdown
 VignetteBuilder: knitr
 RoxygenNote: 6.1.1

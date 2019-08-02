@@ -170,7 +170,7 @@ ipu <- function(primary_seed, primary_targets,
     if (verbose) {message("Balancing secondary targets to primary")}
     secondary_targets_mod <- balance_secondary_targets(
       primary_targets, primary_seed, secondary_targets, secondary_seed,
-      secondary_importance
+      secondary_importance, primary_id
     )
   } else {
     secondary_targets_mod <- secondary_targets
@@ -385,7 +385,7 @@ ipu <- function(primary_seed, primary_targets,
   }
 
   if (verbose) {
-    message(ifelse(converged, "IPU converged", "IPU did not converge"))
+    message(ifelse(converged, "\nIPU converged", "IPU did not converge"))
     if (is.null(saved_diff_tbl)) {
       message("All targets matched within the absolute_diff of ", absolute_diff)
     } else {
@@ -400,7 +400,7 @@ ipu <- function(primary_seed, primary_targets,
     }
     utils::flush.console()
   }
-  
+
   # Set final weights into primary seed table. Also include average weight
   # and distribution info.
   primary_seed$weight <- seed$weight
@@ -467,7 +467,7 @@ ipu <- function(primary_seed, primary_targets,
 check_tables <- function(primary_seed, primary_targets, 
                          secondary_seed = NULL, secondary_targets = NULL,
                          primary_id){
-  
+
   # If person data is provided, both seed and targets must be
   if (xor(!is.null(secondary_seed), !is.null(secondary_targets))) {
     stop("You provided either secondary_seed or secondary_targets, but not both.")
@@ -524,7 +524,7 @@ check_tables <- function(primary_seed, primary_targets,
   
   ## Secondary checks (if provided) ##
   
-  if (!is.null(secondary_seed)) {
+  if (secondary_seed_exists) {
     # Check for NAs
     if (any(is.na(unlist(secondary_seed)))) {
       stop("secondary_seed table contains NAs")
@@ -557,13 +557,14 @@ check_tables <- function(primary_seed, primary_targets,
         primary_seed$geo_all <- 1
       }
       secondary_targets[[name]] <- result[[2]]
+      tbl <- result[[2]]
       
       # Get the name of the geo field
       pos <- grep("geo_", colnames(tbl))
       geo_colname <- colnames(tbl)[pos]
       
       # Add the geo field from the primary_seed before checking
-      secondary_seed <- secondary_seed %>%
+      temp_seed <- secondary_seed %>%
         dplyr::left_join(
           primary_seed %>% dplyr::select(primary_id, geo_colname),
           by = primary_id
@@ -571,7 +572,7 @@ check_tables <- function(primary_seed, primary_targets,
       
       # Check that every non-zero target has at least one observation in
       # the seed table.
-      check_missing_categories(secondary_seed, tbl, name, geo_colname)
+      check_missing_categories(temp_seed, tbl, name, geo_colname)
     }
   }
   
@@ -794,7 +795,7 @@ scale_targets <- function(targets, verbose = FALSE){
 
 balance_secondary_targets <- function(primary_targets, primary_seed,
                                       secondary_targets, secondary_seed,
-                                      secondary_importance){
+                                      secondary_importance, primary_id){
 
   # Extract the first table from the primary target list and geo name
   pri_target <- primary_targets[[1]]
@@ -908,6 +909,7 @@ adjust_factor <- function(factor, importance){
 #' @param ... additional arguments that are passed to `ipu()`. See
 #'   \code{\link{ipu}} for details.
 #' @return A \code{matrix} that matches row and column targets
+#' @export
 
 ipu_matrix <- function(mtx, row_targets, column_targets, ...) {
   tbl <- as.table(mtx)

@@ -5,7 +5,7 @@
 \title{Balances secondary targets to primary}
 \usage{
 balance_secondary_targets(primary_targets, primary_seed, secondary_targets,
-  secondary_seed, secondary_importance)
+  secondary_seed, secondary_importance, primary_id)
 }
 \arguments{
 \item{primary_targets}{A \code{named list} of data frames.  Each name in the
@@ -34,6 +34,9 @@ person to their respective household in \code{primary_seed}.}
 importance of the secondary targets. At an importance of 1, the function
 will try to match the secondary tarets exactly. At 0, only the percentage
 distributions are used (see the vignette section "Target Agreement".)}
+
+\item{primary_id}{The field used to join the primary and secondary seed
+tables. Only necessary if \code{secondary_seed} is provided.}
 }
 \value{
 \code{named list} of the secondary targets

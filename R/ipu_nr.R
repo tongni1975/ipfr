@@ -117,17 +117,36 @@ ipu_nr <- function(primary_seed, primary_targets,
                 weight_floor = .00001, verbose = FALSE,
                 max_ratio = 10000, min_ratio = .0001){
 
+  # Not updating this function fully as it was only ever meant for
+  # research/comparison.
+  primary_id <- "pid"
+  
   # If secondary data is provided, both seed and targets must be
   if (xor(!is.null(secondary_seed), !is.null(secondary_targets))) {
     stop("You provided either secondary_seed or secondary_targets, but not both.")
   }
   
-  # Check primary and secondary tables
+  # # Check primary and secondary tables
+  # if (!is.null(secondary_seed)) {
+  #   check_tables(primary_seed, primary_targets, secondary_seed, secondary_targets)
+  # } else {
+  #   check_tables(primary_seed, primary_targets)
+  # }
+  
+  # Check hh and person tables
   if (!is.null(secondary_seed)) {
-    check_tables(primary_seed, primary_targets, secondary_seed, secondary_targets)
+    result <- check_tables(
+      primary_seed, primary_targets, primary_id = primary_id,
+      secondary_seed, secondary_targets
+    )
   } else {
-    check_tables(primary_seed, primary_targets)
+    result <- check_tables(
+      primary_seed, primary_targets, primary_id = primary_id)
   }
+  primary_seed <- result[[1]]
+  primary_targets <- result[[2]]
+  secondary_seed <- result[[3]]
+  secondary_targets <- result[[4]]
   
   # Check for valid target_priority
   valid <- FALSE
