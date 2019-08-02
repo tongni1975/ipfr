@@ -551,8 +551,11 @@ check_tables <- function(primary_seed, primary_targets,
       result <- check_geo_fields(secondary_seed, tbl, name)
       secondary_seed <- result[[1]]
       # check_geo_fields may add a geo_all column. Make sure that is removed
-      # for the secondary seed table.
-      secondary_seed$geo_all <- NULL
+      # from the secondary seed table, but that it exists on the primary.
+      if ("geo_all" %in% colnames(secondary_seed)) {
+        secondary_seed$geo_all <- NULL
+        primary_seed$geo_all <- 1
+      }
       secondary_targets[[name]] <- result[[2]]
       
       # Get the name of the geo field
