@@ -8,7 +8,7 @@ Install the package using:
 
 ```r
 library(devtools)
-install_github("pbsag/ipfr", build_vignettes = TRUE)
+install_github("dkyleward/ipfr", build_vignettes = TRUE)
 ```
 
 ## Basic Usage
