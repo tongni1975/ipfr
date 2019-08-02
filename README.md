@@ -1,12 +1,9 @@
 # ipfr
 
-[![Travis-CI Build Status](https://travis-ci.org/pbsag/ipfr.svg?branch=master)](https://travis-ci.org/pbsag/ipfr)
-
-
 A general function for conducting iterative proportional fitting on multiple
 marginal distributions in R.
 
-**Installation**  
+## Installation
 Install the package using:
 
 ```r
@@ -14,6 +11,36 @@ library(devtools)
 install_github("pbsag/ipfr", build_vignettes = TRUE)
 ```
 
-**User's Guide**  
-For instructions on how to use the package, see the vignette here:  
-[http://pbsag.github.io/ipfr/](http://pbsag.github.io/ipfr/)
+## Basic Usage
+
+(More in the vignettes) 
+
+A basic matrix balance task:
+
+```r
+mtx <- matrix(data = runif(9), nrow = 3, ncol = 3)
+row_targets <- c(3, 4, 5)
+column_targets <- c(5, 4, 3)
+result <- ipu_matrix(mtx, row_targets, column_targets)
+```
+
+A basic survey balance task:
+
+```r
+survey <- tibble(
+  size = c(1, 2, 1, 1),
+  autos = c(0, 2, 2, 1),
+  weight = 1
+)
+targets <- list()
+targets$size <- tibble(
+  `1` = 75,
+  `2` = 25
+)
+targets$autos <- tibble(
+  `0` = 25,
+  `1` = 50,
+  `2` = 25
+)
+result <- ipu(survey, targets)
+```
