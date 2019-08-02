@@ -143,10 +143,15 @@ ipu <- function(primary_seed, primary_targets,
   
   # Check hh and person tables
   if (!is.null(secondary_seed)) {
-    check_tables(primary_seed, primary_targets, secondary_seed, secondary_targets)
+    result <- check_tables(
+      primary_seed, primary_targets, secondary_seed, secondary_targets)
   } else {
-    check_tables(primary_seed, primary_targets)
+    result <- check_tables(primary_seed, primary_targets)
   }
+  primary_seed <- result[[1]]
+  primary_targets <- result[[2]]
+  secondary_seed <- result[[3]]
+  secondary_targets <- result[[4]]
   
   # Scale target tables. 
   # All tables in the list will match the totals of the first table.
@@ -449,6 +454,8 @@ ipu <- function(primary_seed, primary_targets,
 #'   ipf/ipu would produce wrong answers without throwing errors.
 #'
 #' @inheritParams ipu
+#' @return both seed tables and target lists
+#' @keywords internal
 
 check_tables <- function(primary_seed, primary_targets, secondary_seed = NULL, secondary_targets = NULL){
   
@@ -467,10 +474,14 @@ check_tables <- function(primary_seed, primary_targets, secondary_seed = NULL, s
     stop("primary_targets table contains NAs")
   }
   
-  # Check that primary_seed table has a pid field and that it has a unique
-  # value on each row.
+  # Check for the pid field and add it if possible.
   if (!"pid" %in% colnames(primary_seed)) {
-    stop("The primary seed table does not have field 'pid'.")
+    if (is.null(secondary_seed)) {
+      primary_seed <- primary_seed %>%
+        dplyr::mutate(pid = seq(1, n()))
+    } else {
+      stop("The primary seed table does not have field 'pid'.")
+    }
   }
   unique_pids <- unique(primary_seed$pid)
   if (length(unique_pids) != nrow(primary_seed)) {
@@ -551,6 +562,14 @@ check_tables <- function(primary_seed, primary_targets, secondary_seed = NULL, s
       check_missing_categories(secondary_seed, tbl, name, geo_colname)
     }
   }
+  
+  # return seeds and targets in case of modifications
+  return(list(
+    primary_seed,
+    primary_targets,
+    secondary_seed,
+    secondary_targets
+  ))
 }
 
 #' Check for missing categories in seed

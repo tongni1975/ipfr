@@ -32,8 +32,12 @@ fields (starting with "geo_").}
 \item{secondary_targets}{Same format as \code{primary_targets}, but they constrain 
 the \code{secondary_seed} table.}
 }
+\value{
+both seed tables and target lists
+}
 \description{
 Given seed and targets, checks to make sure that at least one
   observation of each marginal category exists in the seed table.  Otherwise,
   ipf/ipu would produce wrong answers without throwing errors.
 }
+\keyword{internal}
