@@ -5,7 +5,7 @@
 \title{Iterative Proportional Updating}
 \usage{
 ipu(primary_seed, primary_targets, secondary_seed = NULL,
-  secondary_targets = NULL, primary_id = "pid",
+  secondary_targets = NULL, primary_id = "id",
   secondary_importance = 1, relative_gap = 0.01,
   max_iterations = 100, absolute_diff = 10, weight_floor = 0.00001,
   verbose = FALSE, max_ratio = 10000, min_ratio = 0.0001)
@@ -94,7 +94,7 @@ A general case of iterative proportional fitting. It can satisfy
 \examples{
 \dontrun{
 hh_seed <- data.frame(
-  pid = c(1, 2, 3, 4),
+  id = c(1, 2, 3, 4),
   siz = c(1, 2, 2, 1),
   weight = c(1, 1, 1, 1),
   geo_cluster = c(1, 1, 2, 2)

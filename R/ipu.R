@@ -106,7 +106,7 @@ NULL
 #' @examples
 #' \dontrun{
 #' hh_seed <- data.frame(
-#'   pid = c(1, 2, 3, 4),
+#'   id = c(1, 2, 3, 4),
 #'   siz = c(1, 2, 2, 1),
 #'   weight = c(1, 1, 1, 1),
 #'   geo_cluster = c(1, 1, 2, 2)
@@ -127,7 +127,7 @@ NULL
 
 ipu <- function(primary_seed, primary_targets, 
                 secondary_seed = NULL, secondary_targets = NULL,
-                primary_id = "pid",
+                primary_id = "id",
                 secondary_importance = 1,
                 relative_gap = 0.01, max_iterations = 100, absolute_diff = 10,
                 weight_floor = .00001, verbose = FALSE,
@@ -242,9 +242,9 @@ ipu <- function(primary_seed, primary_targets,
   # store a vector of attribute column names to loop over later.
   # don't include primary_id or 'weight' in the vector.
   geo_pos <- grep("geo_", colnames(seed))
-  pid_pos <- grep(primary_id, colnames(seed))
+  id_pos <- grep(primary_id, colnames(seed))
   weight_pos <- grep("weight", colnames(seed))
-  seed_attribute_cols <- colnames(seed)[-c(geo_pos, pid_pos, weight_pos)]
+  seed_attribute_cols <- colnames(seed)[-c(geo_pos, id_pos, weight_pos)]
   
   # modify the targets to match the new seed column names and
   # join them to the seed table
@@ -498,8 +498,8 @@ check_tables <- function(primary_seed, primary_targets,
       primary_seed[primary_id] <- seq(1, nrow(primary_seed))
     }
   }
-  unique_pids <- unique(primary_seed[[primary_id]])
-  if (length(unique_pids) != nrow(primary_seed)) {
+  unique_ids <- unique(primary_seed[[primary_id]])
+  if (length(unique_ids) != nrow(primary_seed)) {
     stop("The primary seed's ", primary_id, " field has duplicate values.")
   }
   
@@ -913,7 +913,7 @@ ipu_matrix <- function(mtx, row_targets, column_targets, ...) {
   seed <- seed %>%
     dplyr::mutate(
       geo_all = 1,
-      pid = seq(1, n())
+      id = seq(1, n())
     )
   targets <- list()
   targets$row <- data.frame(label = rownames(tbl), target = row_targets) %>%
