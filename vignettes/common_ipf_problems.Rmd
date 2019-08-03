@@ -20,7 +20,7 @@ options(scipen=999)
 ```{r setup}
 suppressPackageStartupMessages({
   library(ipfr)
-  library(tidyverse)
+  library(dplyr)
 })
 ```
 
