@@ -14,8 +14,8 @@ test_that("ipu_matrix works", {
 })
 
 test_that("basic ipu works", {
-  args <- setup_arizona()
-  result <- ipu(args[[1]], args[[2]], args[[3]], args[[4]], max_iterations = 30)
+  setup_arizona()
+  result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 30)
   expect_type(result, "list")
   expect_equal(length(result), 4)
   expect_equal(
@@ -26,10 +26,10 @@ test_that("basic ipu works", {
 })
 
 test_that("weight constraint works", {
-  args <- setup_arizona()
+  setup_arizona()
   min_ratio <- .2
   max_ratio <- 1.2
-  result <- ipu(args[[1]], args[[2]], args[[3]], args[[4]], max_iterations = 30,
+  result <- ipu(hh_seed, hh_targets, per_seed, per_targets, max_iterations = 30,
                 min_ratio = min_ratio, max_ratio = max_ratio)
   expect_true(max(result$weight_tbl$weight_factor) == max_ratio)
   expect_true(min(result$weight_tbl$weight_factor) == min_ratio)

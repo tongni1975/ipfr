@@ -2,5 +2,6 @@
 
 export(ipu)
 export(ipu_matrix)
+export(setup_arizona)
 import(dplyr)
 importFrom(magrittr,"%>%")
