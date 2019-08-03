@@ -1,5 +1,6 @@
 <!-- badges: start -->
 [![Travis build status](https://travis-ci.org/dkyleward/ipfr.svg?branch=master)](https://travis-ci.org/dkyleward/ipfr)
+[![Codecov test coverage](https://codecov.io/gh/dkyleward/ipfr/branch/master/graph/badge.svg)](https://codecov.io/gh/dkyleward/ipfr?branch=master)
 <!-- badges: end -->
 
 # ipfr
