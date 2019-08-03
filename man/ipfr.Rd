@@ -6,17 +6,6 @@
 \alias{ipfr-package}
 \title{ipfr: A package to perform iterative proportional fitting}
 \description{
-There are currently three functions
-}
-\details{
-\code{\link{ipf}} (deprecated)
-
-\code{\link{ipu}}
-
-\code{\link{ipu_nr}}
-
-Both \code{ipu} and \code{ipu_nr} implement list balancing. \code{ipu_nr}
-implements a newton-raphson approach to balance primary and secondary
-targets. \code{ipu} balances targets directly, which can mean faster
-convergence.
+The main function is \code{\link{ipu}}. For a 2D/matrix problem, the 
+\code{\link{ipu_matrix}} function is easier to use.
 }

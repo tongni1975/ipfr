@@ -17,7 +17,6 @@ License: MIT + file LICENSE
 LazyData: true
 Suggests:
     knitr,
-    tidyverse,
     rmarkdown,
     testthat (>= 2.1.0)
 VignetteBuilder: knitr

@@ -29,7 +29,7 @@ advantage of being able to match household- and person-level marginal targets.
 ```{r setup}
 suppressPackageStartupMessages({
   library(ipfr)
-  library(tidyverse)
+  library(dplyr)
 })
 ```
 

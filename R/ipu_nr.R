@@ -185,8 +185,7 @@ ipu_nr <- function(primary_seed, primary_targets,
     # than one category.
     dplyr::mutate_at(
       .vars = col_names,
-      # .funs = dplyr::funs(ifelse(length(unique(.)) > 1, as.factor(.), .))
-      .funs = dplyr::funs(as.factor(.))
+      .funs = list(~as.factor(.))
     )
   # If one of the columns has only one value, it cannot be a factor. The name
   # must also be changed to match what the rest will be after one-hot encoding.
@@ -212,7 +211,7 @@ ipu_nr <- function(primary_seed, primary_targets,
       dplyr::select(dplyr::one_of(c(col_names, "pid"))) %>%
       dplyr::mutate_at(
         .vars = col_names,
-        .funs = dplyr::funs(as.factor(.))
+        .funs = list(~as.factor(.))
       ) %>%
       mlr::createDummyFeatures() %>%
       dplyr::group_by(pid) %>%
@@ -494,6 +493,7 @@ create_target_priority <- function(target_priority, targets){
   # For lists and data frames, start by creating a named list with default 
   # priority.
   default_priority <- 10000000
+  result <- list()
   for (name in names(targets)) {
     result[[name]] <- default_priority
   }

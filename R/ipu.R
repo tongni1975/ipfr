@@ -1,17 +1,7 @@
 #' ipfr: A package to perform iterative proportional fitting
 #' 
-#' There are currently three functions 
-#' 
-#' \code{\link{ipf}} (deprecated)
-#' 
-#' \code{\link{ipu}}
-#' 
-#' \code{\link{ipu_nr}}
-#' 
-#' Both \code{ipu} and \code{ipu_nr} implement list balancing. \code{ipu_nr}
-#' implements a newton-raphson approach to balance primary and secondary
-#' targets. \code{ipu} balances targets directly, which can mean faster
-#' convergence.
+#' The main function is \code{\link{ipu}}. For a 2D/matrix problem, the 
+#' \code{\link{ipu_matrix}} function is easier to use.
 #' 
 #' @docType package
 #' 
@@ -193,8 +183,7 @@ ipu <- function(primary_seed, primary_targets,
     # than one category.
     dplyr::mutate_at(
       .vars = col_names,
-      # .funs = dplyr::funs(ifelse(length(unique(.)) > 1, as.factor(.), .))
-      .funs = dplyr::funs(as.factor(.))
+      .funs = list(~as.factor(.))
     )
   # If one of the columns has only one value, it cannot be a factor. The name
   # must also be changed to match what the rest will be after one-hot encoding.
@@ -220,7 +209,7 @@ ipu <- function(primary_seed, primary_targets,
       dplyr::select(dplyr::one_of(col_names), primary_id) %>%
       dplyr::mutate_at(
         .vars = col_names,
-        .funs = dplyr::funs(as.factor(.))
+        .funs = list(~as.factor(.))
       ) %>%
       mlr::createDummyFeatures() %>%
       dplyr::group_by(!!as.name(primary_id)) %>%
@@ -863,7 +852,7 @@ balance_secondary_targets <- function(primary_targets, primary_seed,
       ) %>%
       dplyr::mutate_at(
         .vars = dplyr::vars(-factor, -dplyr::one_of(sec_geo_colname)),
-        .funs = dplyr::funs(. * factor)
+        .funs = list(~. * factor)
       ) %>%
       dplyr::select(-factor)
   }
