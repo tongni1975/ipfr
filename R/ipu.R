@@ -4,7 +4,8 @@
 #' \code{\link{ipu_matrix}} function is easier to use.
 #' 
 #' @docType package
-#' 
+#' @importFrom utils type.convert
+#' @importFrom stats setNames
 #' @name ipfr
 NULL
 #> NULL

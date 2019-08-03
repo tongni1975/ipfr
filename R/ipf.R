@@ -193,9 +193,9 @@ ipf <- function(seed, targets,
         dplyr::left_join(totals, by = "cluster") %>%
         dplyr::mutate(
           old = total * weight,
-          new = total * new_weight,
+          new2 = total * new_weight,
           rel_diff = ifelse(weight == 0, 0, abs((new_weight - weight) / weight)),
-          abs_diff = abs(new - old)
+          abs_diff = abs(new2 - old)
         )
             
       # Collect gap information and test if this marginal has converged

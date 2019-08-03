@@ -161,11 +161,11 @@ households). Person type could represent age groups (e.g. under 18, between
 `setup_arizona()` creates the seed and target tables used in the example.
 
 ```{r arizona inputs}
-setup_arizona()
-hh_seed
-hh_targets
-per_seed
-per_targets
+result <- setup_arizona()
+hh_seed <- result$hh_seed
+hh_targets <- result$hh_targets
+per_seed <- result$per_seed
+per_targets <- result$per_targets
 ```
 
   * The household seed table is the `primary_seed`

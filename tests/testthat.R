@@ -1,5 +1,4 @@
 library(testthat)
-library(tidyverse)
 library(ipfr)
 
 test_check("ipfr")

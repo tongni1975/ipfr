@@ -120,11 +120,11 @@ records and person records are very different.
 example.
 
 ```{r balance example inputs}
-setup_arizona()
-# hh_seed
-# hh_targets
-# per_seed
-# per_targets
+result <- setup_arizona()
+hh_seed <- result$hh_seed
+hh_targets <- result$hh_targets
+per_seed <- result$per_seed
+per_targets <- result$per_targets
 
 avg_hh_weight <- (rowSums(hh_targets$hhtype) - 1) / nrow(hh_seed)
 avg_per_weight <- (rowSums(per_targets$pertype) - 1) / nrow(per_seed)
