@@ -1,3 +1,7 @@
+<!-- badges: start -->
+[![Travis build status](https://travis-ci.org/dkyleward/ipfr.svg?branch=master)](https://travis-ci.org/dkyleward/ipfr)
+<!-- badges: end -->
+
 # ipfr
 
 A general function for conducting iterative proportional fitting on multiple
