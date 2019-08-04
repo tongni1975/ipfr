@@ -44,3 +44,51 @@ test_that("weight constraint works", {
   expect_true(max(result$weight_tbl$weight_factor) == max_ratio)
   expect_true(min(result$weight_tbl$weight_factor) == min_ratio)
 })
+
+test_that("common errors are caught", {
+  result <- setup_arizona()
+  hh_seed <- result$hh_seed
+  hh_targets <- result$hh_targets
+  per_seed <- result$per_seed
+  per_targets <- result$per_targets
+  
+  expect_error(
+    ipu(hh_seed, hh_targets, per_seed),
+    "You provided either secondary_seed or secondary_targets, but not both."
+  )
+  expect_error(
+    ipu(hh_seed, hh_targets, per_seed, per_targets, secondary_importance = 10),
+    "`secondary_importance` argument must be between 0 and 1"
+  )
+  missing_id <- hh_seed[, "hhtype"]
+  expect_error(
+    ipu(missing_id, hh_targets, per_seed, per_targets),
+    "The primary seed table does not have field, 'id'."
+  )
+})
+
+test_that("secondary_importance works", {
+  result <- setup_arizona()
+  hh_seed <- result$hh_seed
+  hh_targets <- result$hh_targets
+  per_seed <- result$per_seed
+  per_targets <- result$per_targets
+  
+  result <- ipu(hh_seed, hh_targets, per_seed, per_targets,
+      secondary_importance = .5, max_iterations = 10,
+      verbose = TRUE)
+  expect_equal(round(result$secondary_comp$pct_diff[1], 2), -.41)
+})
+
+test_that("single value marginals work", {
+  result <- setup_arizona()
+  hh_seed <- result$hh_seed
+  hh_targets <- result$hh_targets
+  # per_seed <- result$per_seed
+  # per_targets <- result$per_targets
+  
+  hh_seed$hhtype <- 1
+  hh_targets$hhtype$`2` <- NULL
+  result <- ipu(hh_seed, hh_targets)
+  expect_type(ipu(hh_seed, hh_targets), "list")
+})

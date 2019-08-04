@@ -375,7 +375,7 @@ ipu <- function(primary_seed, primary_targets,
   }
 
   if (verbose) {
-    message(ifelse(converged, "\nIPU converged", "IPU did not converge"))
+    message(ifelse(converged, "\nIPU converged", "\nIPU did not converge"))
     if (is.null(saved_diff_tbl)) {
       message("All targets matched within the absolute_diff of ", absolute_diff)
     } else {
