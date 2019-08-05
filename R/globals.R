@@ -43,5 +43,6 @@ utils::globalVariables(c(
   "min_weight",
   "max_weight",
   "total_weight",
-  "abs_diff"
+  "abs_diff",
+  "new_id"
 ))

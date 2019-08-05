@@ -3,6 +3,7 @@
 export(ipu)
 export(ipu_matrix)
 export(setup_arizona)
+export(synthesize)
 import(dplyr)
 importFrom(magrittr,"%>%")
 importFrom(stats,setNames)

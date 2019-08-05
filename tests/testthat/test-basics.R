@@ -57,7 +57,7 @@ test_that("weight constraint works", {
   expect_true(min(result$weight_tbl$weight_factor) == min_ratio)
 })
 
-test_that("secondary_importance works", {
+test_that("multiple geographies work", {
   result <- setup_arizona()
   hh_seed <- result$hh_seed
   hh_targets <- result$hh_targets
@@ -104,6 +104,11 @@ test_that("secondary_importance works", {
     secondary_importance = .5
   )
   expect_equal(round(result$weight_tbl$weight[1], 2), 8.03)
+  
+  set.seed(42)
+  synth_hh <- synthesize(result$weight_tbl, geo_field = "geo_tract")
+  expect_equal(nrow(synth_hh), 186)
+  expect_equal(synth_hh$id[1:5], c(8, 8, 2, 6, 7))
 })
 
 test_that("single value marginals work", {
