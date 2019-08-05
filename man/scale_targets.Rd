@@ -23,3 +23,4 @@ there are 100k households while another says there are 101k. This function
 solves the problem by scaling all target tables to match the first target
 table provided.
 }
+\keyword{internal}

@@ -29,3 +29,4 @@ create_target_priority(target_priority, targets)
 \description{
 Create a named list of target priority levels.
 }
+\keyword{internal}

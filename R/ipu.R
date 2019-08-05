@@ -648,11 +648,10 @@ check_geo_fields <- function(seed, target, target_name) {
 #'
 #' @param seed \code{data.frame} Seed table with a weight column in the same
 #' format required by \code{ipu()}.
-#' 
 #' @param targets \code{named list} of \code{data.frames} in the same format
 #' required by \code{ipu()}.
-#'
 #' @return \code{data frame} comparing balanced results to targets
+#' @keywords internal
 
 compare_results <- function(seed, targets){
   
@@ -719,12 +718,11 @@ compare_results <- function(seed, targets){
 #' 
 #' @param targets \code{named list} of \code{data.frames} in the same format
 #' required by \link{ipu}. 
-#' 
 #' @param verbose \code{logical} Show a warning for each target scaled?
 #'   Defaults to \code{FALSE}.
-#' 
 #' @return A \code{named list} with the scaled targets
-#' 
+#' @keywords internal
+
 scale_targets <- function(targets, verbose = FALSE){
   
   for (i in c(1:length(names(targets)))) {
@@ -782,8 +780,8 @@ scale_targets <- function(targets, verbose = FALSE){
 #' balancing is done for each geography separately.
 #' 
 #' @inheritParams ipu
-#' 
 #' @return \code{named list} of the secondary targets
+#' @keywords internal
 
 balance_secondary_targets <- function(primary_targets, primary_seed,
                                       secondary_targets, secondary_seed,
@@ -868,13 +866,11 @@ balance_secondary_targets <- function(primary_targets, primary_seed,
 #' @description At lower values of importance, the factor is moved closer to 1.
 #' 
 #' @param factor A correction factor that is calculated using target/current.
-#' 
 #' @param importance A \code{real} between 0 and 1 signifying the importance of
 #'   the factor. An importance of 1 does not modify the factor. An importance of
 #'   0.5 would shrink the factor closer to 1.0 by 50 percent.
-#'
 #' @return The adjusted factor.
-#' 
+#' @keywords internal
 
 adjust_factor <- function(factor, importance){
   

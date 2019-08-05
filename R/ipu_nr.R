@@ -475,8 +475,8 @@ ipu_nr <- function(primary_seed, primary_targets,
 #' Create a named list of target priority levels.
 #' 
 #' @inheritParams ipu_nr
-#' 
 #' @param targets The complete list of targets (both primary and secondary)
+#' @keywords internal
 
 create_target_priority <- function(target_priority, targets){
   

@@ -19,3 +19,4 @@ The adjusted factor.
 \description{
 At lower values of importance, the factor is moved closer to 1.
 }
+\keyword{internal}
