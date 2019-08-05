@@ -17,7 +17,7 @@ by that field before the random sampling is done.}
 tables. Only necessary if \code{secondary_seed} is provided.}
 }
 \value{
-A \code{data.frame} with one record for each synthetized member of
+A \code{data.frame} with one record for each synthesized member of
   the population (e.g. household). A \code{new_id} column is created, but
   the previous \code{primary_id} column is maintained to facilitate joining
   back to other data sources (e.g. a person table).

@@ -7,8 +7,8 @@
 ipu(primary_seed, primary_targets, secondary_seed = NULL,
   secondary_targets = NULL, primary_id = "id",
   secondary_importance = 1, relative_gap = 0.01,
-  max_iterations = 100, absolute_diff = 10, weight_floor = 0.00001,
-  verbose = FALSE, max_ratio = 10000, min_ratio = 0.0001)
+  max_iterations = 100, absolute_diff = 10, weight_floor = 1e-05,
+  verbose = FALSE, max_ratio = 10000, min_ratio = 1e-04)
 }
 \arguments{
 \item{primary_seed}{In population synthesis or household survey expansion, 
@@ -38,14 +38,14 @@ tables. Only necessary if \code{secondary_seed} is provided.}
 
 \item{secondary_importance}{A \code{real} between 0 and 1 signifying the 
 importance of the secondary targets. At an importance of 1, the function
-will try to match the secondary tarets exactly. At 0, only the percentage
+will try to match the secondary targets exactly. At 0, only the percentage
 distributions are used (see the vignette section "Target Agreement".)}
 
 \item{relative_gap}{After each iteration, the weights are compared to the
 previous weights and the %RMSE is calculated. If the %RMSE is less than
 the \code{relative_gap} threshold, then the process terminates.}
 
-\item{max_iterations}{maximimum number of iterations to perform, even if 
+\item{max_iterations}{maximum number of iterations to perform, even if 
 \code{relative_gap} is not reached.}
 
 \item{absolute_diff}{Upon completion, the \code{ipu()} function will report

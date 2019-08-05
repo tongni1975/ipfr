@@ -1,4 +1,4 @@
-#' Reweight a Seed Table to Marginal Controls
+#' Re-weight a Seed Table to Marginal Controls
 #' 
 #' @param targets A \code{named list} of data frames.  Each name in the list 
 #'   defines a marginal dimension and must match a column from the seed table. 
@@ -9,7 +9,7 @@
 #'   define the marginal categories that targets are provided for.
 #'    
 #' @param seed A \code{data frame} including a \code{weight} field and necessary
-#'    colums for matching to marginal targets.
+#'    columns for matching to marginal targets.
 #'
 #' @param relative_gap target for convergence.  Maximum percent change to allow
 #'    any seed weight to move by while considering the process converged.  By 
@@ -23,7 +23,7 @@
 #'    The process is said to be converged if either \code{relative_gap} or 
 #'    \code{absolute_gap} parameters have been met.
 #'
-#' @param max_iterations maximimum number of iterations to perform, even if 
+#' @param max_iterations maximum number of iterations to perform, even if 
 #'    convergence is not reached.
 #'
 #' @param min_weight Minimum weight to allow in any cell to prevent zero weights.
@@ -34,7 +34,7 @@
 #'    iteration? Default \code{FALSE}. 
 #'   
 #' @return the seed \code{data frame} with a column of weights appended for each
-#'    row in the target dataframes
+#'    row in the target \code{data.frames}
 #' 
 #' @keywords internal
 #' 

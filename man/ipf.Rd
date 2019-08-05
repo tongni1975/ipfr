@@ -2,14 +2,14 @@
 % Please edit documentation in R/ipf.R
 \name{ipf}
 \alias{ipf}
-\title{Reweight a Seed Table to Marginal Controls}
+\title{Re-weight a Seed Table to Marginal Controls}
 \usage{
 ipf(seed, targets, relative_gap = 0.01, absolute_gap = 1,
-  max_iterations = 50, min_weight = 0.0001, verbose = FALSE)
+  max_iterations = 50, min_weight = 1e-04, verbose = FALSE)
 }
 \arguments{
 \item{seed}{A \code{data frame} including a \code{weight} field and necessary
-colums for matching to marginal targets.}
+columns for matching to marginal targets.}
 
 \item{targets}{A \code{named list} of data frames.  Each name in the list 
 defines a marginal dimension and must match a column from the seed table. 
@@ -31,7 +31,7 @@ default, if no weights change by more than 10, the process has converged.
 The process is said to be converged if either \code{relative_gap} or 
 \code{absolute_gap} parameters have been met.}
 
-\item{max_iterations}{maximimum number of iterations to perform, even if 
+\item{max_iterations}{maximum number of iterations to perform, even if 
 convergence is not reached.}
 
 \item{min_weight}{Minimum weight to allow in any cell to prevent zero weights.
@@ -43,9 +43,9 @@ iteration? Default \code{FALSE}.}
 }
 \value{
 the seed \code{data frame} with a column of weights appended for each
-   row in the target dataframes
+   row in the target \code{data.frames}
 }
 \description{
-Reweight a Seed Table to Marginal Controls
+Re-weight a Seed Table to Marginal Controls
 }
 \keyword{internal}

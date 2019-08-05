@@ -152,7 +152,7 @@ result <- ipu(hh_seed, hh_targets, per_seed, new_per_targets, max_iterations = 3
 The resulting weights tend towards the extreme as the algorithm attempts to
 match unbalanced primary and secondary targets. In effect, the algorithm is
 making a large shift to the basic persons-per-household metric found in the
-household seed. Households with mutiple people get large weights, while
+household seed. Households with multiple people get large weights, while
 households with a one person get small weights.
 
 ```{r}
@@ -258,7 +258,7 @@ which is shown by looking at the comparison table.
 result$primary_comp
 ```
 
-A second problem can arrise when using these ratios. In the example below, I
+A second problem can arise when using these ratios. In the example below, I
 change the targets so that, for geo_cluster 1, they are very unbalanced. Cluster
 1 now has 100,000 1-person households but only 10 2-person households. This means
 the *average* weight for that cluster will be `r (100000 + 10) / 2` and the

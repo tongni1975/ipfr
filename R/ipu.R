@@ -38,14 +38,14 @@
 #'   
 #' @param secondary_importance A \code{real} between 0 and 1 signifying the 
 #'   importance of the secondary targets. At an importance of 1, the function
-#'   will try to match the secondary tarets exactly. At 0, only the percentage
+#'   will try to match the secondary targets exactly. At 0, only the percentage
 #'   distributions are used (see the vignette section "Target Agreement".)
 #' 
 #' @param relative_gap After each iteration, the weights are compared to the
 #' previous weights and the %RMSE is calculated. If the %RMSE is less than
 #' the \code{relative_gap} threshold, then the process terminates.
 #' 
-#' @param max_iterations maximimum number of iterations to perform, even if 
+#' @param max_iterations maximum number of iterations to perform, even if 
 #'    \code{relative_gap} is not reached.
 #'    
 #' @param absolute_diff Upon completion, the \code{ipu()} function will report

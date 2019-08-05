@@ -52,7 +52,7 @@
 #' previous weights and the %RMSE is calculated. If the %RMSE is less than
 #' the \code{relative_gap} threshold, then the process terminates.
 #' 
-#' @param max_iterations maximimum number of iterations to perform, even if 
+#' @param max_iterations maximum number of iterations to perform, even if 
 #'    \code{relative_gap} is not reached.
 #'    
 #' @param absolute_diff Upon completion, the \code{ipu()} function will report

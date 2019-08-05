@@ -179,7 +179,7 @@ per_targets <- result$per_targets
   * The person seed table is the `secondary_seed`
   * The person target list is the `secondary_target`
   
-In the interst of keeping vignette build time short, the `ipu()` algorithm is 
+In the interest of keeping vignette build time short, the `ipu()` algorithm is 
 only run for 30 iterations. After running for 400 or more iterations, the 
 results match closely to those shown in the paper.
 
@@ -208,7 +208,7 @@ field in each target table tells the algorithm which scale to constrain to. If
 no geography field is present in a target table, it applies to the entire seed
 table (i.e. region).
 
-All of the following rules are checked by the functin and a warning message will
+All of the following rules are checked by the function and a warning message will
 show which (if any) is violated.
 
   * The primary seed table must contain all geography fields used by any

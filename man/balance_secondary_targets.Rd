@@ -32,7 +32,7 @@ person to their respective household in \code{primary_seed}.}
 
 \item{secondary_importance}{A \code{real} between 0 and 1 signifying the 
 importance of the secondary targets. At an importance of 1, the function
-will try to match the secondary tarets exactly. At 0, only the percentage
+will try to match the secondary targets exactly. At 0, only the percentage
 distributions are used (see the vignette section "Target Agreement".)}
 
 \item{primary_id}{The field used to join the primary and secondary seed
