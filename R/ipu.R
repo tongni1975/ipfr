@@ -126,12 +126,12 @@ ipu <- function(primary_seed, primary_targets,
 
   # If person data is provided, both seed and targets must be
   if (xor(!is.null(secondary_seed), !is.null(secondary_targets))) {
-    stop("You provided either secondary_seed or secondary_targets, but not both.")
+    stop("You provided either secondary_seed or secondary_targets, but not both.") # nocov
   }
   
   # Check for valid values of secondary_importance.
   if (secondary_importance > 1 | secondary_importance < 0) {
-    stop("`secondary_importance` argument must be between 0 and 1")
+    stop("`secondary_importance` argument must be between 0 and 1") # nocov
   }
   
   # Check hh and person tables
@@ -460,17 +460,17 @@ check_tables <- function(primary_seed, primary_targets,
 
   # If person data is provided, both seed and targets must be
   if (xor(!is.null(secondary_seed), !is.null(secondary_targets))) {
-    stop("You provided either secondary_seed or secondary_targets, but not both.")
+    stop("You provided either secondary_seed or secondary_targets, but not both.") # nocov
   }
   
   ## Primary checks ##
   
   # Check that there are no NA values in seed or targets
   if (any(is.na(unlist(primary_seed)))) {
-    stop("primary_seed table contains NAs")
+    stop("primary_seed table contains NAs") # nocov
   }
   if (any(is.na(unlist(primary_targets)))) {
-    stop("primary_targets table contains NAs")
+    stop("primary_targets table contains NAs") # nocov
   }
   
   # Ensure that a weight field exists in the primary table.
@@ -482,15 +482,15 @@ check_tables <- function(primary_seed, primary_targets,
   secondary_seed_exists <- !is.null(secondary_seed)
   id_field_exists <- primary_id %in% colnames(primary_seed)
   if (!id_field_exists) {
-    if (secondary_seed_exists) {
+    if (secondary_seed_exists) { # nocov start
       stop("The primary seed table does not have field, '", primary_id, "'.")
     } else {
       primary_seed[primary_id] <- seq(1, nrow(primary_seed))
-    }
+    }  # nocov end
   }
   unique_ids <- unique(primary_seed[[primary_id]])
   if (length(unique_ids) != nrow(primary_seed)) {
-    stop("The primary seed's ", primary_id, " field has duplicate values.")
+    stop("The primary seed's ", primary_id, " field has duplicate values.") # nocov
   }
   
   # check primary target tables for correctness
@@ -517,21 +517,21 @@ check_tables <- function(primary_seed, primary_targets,
   if (secondary_seed_exists) {
     # Check for NAs
     if (any(is.na(unlist(secondary_seed)))) {
-      stop("secondary_seed table contains NAs")
+      stop("secondary_seed table contains NAs") # nocov
     }
     if (any(is.na(unlist(secondary_targets)))) {
-      stop("secondary_targets table contains NAs")
+      stop("secondary_targets table contains NAs") # nocov
     }
     
     # Check that secondary seed table has a primary_id field
     if (!primary_id %in% colnames(secondary_seed)) {
-      stop("The primary seed table does not have field '", primary_id, "'.")
+      stop("The primary seed table does not have field '", primary_id, "'.") # nocov
     }
     
     # Check that the secondary seed table does not have any geo columns
     check <- grepl("geo_", colnames(secondary_seed))
     if (any(check)) {
-      stop("Do not include geo fields in the secondary_seed table (primary_seed only).")
+      stop("Do not include geo fields in the secondary_seed table (primary_seed only).") # nocov
     }
     
     # check the secondary target tables for correctness
@@ -624,9 +624,9 @@ check_geo_fields <- function(seed, target, target_name) {
   # Require a geo field if >1 row
   check <- grepl("geo_", colnames(target))
   if (nrow(target) > 1) {
-    if (!any(check)) {
+    if (!any(check)) { # nocov start
       stop("target table '", target_name, "' has >1 row but does not have a",
-           "geo column (must start with 'geo_')")
+           "geo column (must start with 'geo_')") # nocov end
     }
     # If the table has 1 row and no geo field, add one.
   } else {
@@ -636,7 +636,7 @@ check_geo_fields <- function(seed, target, target_name) {
     }
   }
   if (sum(check) > 1) {
-    stop("target table '", target_name, "' has more than one geo column (starts with 'geo_'")
+    stop("target table '", target_name, "' has more than one geo column (starts with 'geo_'")  # nocov
   }
   
   return(list(seed, target))
@@ -750,8 +750,8 @@ scale_targets <- function(targets, verbose = FALSE){
       fac <- global_total / total
       # Write out warning
       if (fac != 1 & verbose) {
-        show_warning <- TRUE
-        warning_msg <- paste0(warning_msg, " ", name)
+        show_warning <- TRUE # nocov
+        warning_msg <- paste0(warning_msg, " ", name) # nocov
       }
       target <- target %>%
         dplyr::mutate(count = count * !!fac) %>%
@@ -761,8 +761,8 @@ scale_targets <- function(targets, verbose = FALSE){
   }
   
   if (show_warning) {
-    message(warning_msg)
-    utils::flush.console()
+    message(warning_msg) # nocov
+    utils::flush.console() # nocov
   }
   
   return(targets)
@@ -877,10 +877,10 @@ balance_secondary_targets <- function(primary_targets, primary_seed,
 adjust_factor <- function(factor, importance){
   
   # return the same factor if importance = 1
-  if (importance == 1) {return(factor)}
+  if (importance == 1) {return(factor)} # nocov
   
   if (importance > 1 | importance < 0) {
-    stop("`importance` argument must be between 0 and 1")
+    stop("`importance` argument must be between 0 and 1") # nocov
   }
   
   # Otherwise, return the adjusted factor
