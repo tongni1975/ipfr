@@ -2,7 +2,10 @@ Package: ipfr
 Title: List balancing for reweighting and population synthesis
 Version: 1.0.0
 Authors@R: c(
-  person("Kyle", "Ward", email = "kyleward084@gmail.com", role = c("aut", "cre")),
+  person(
+    "Kyle", "Ward", email = "kyleward084@gmail.com",
+    role = c("aut", "cre", "cph")
+  ),
   person("Greg", "MacFarlane", email = "gregmacfarlane@byu.edu", role = c("ctb")))
 Description: Performs iterative proportional updating given a seed table and
     and arbitrary number of marginal distributions.
@@ -14,7 +17,7 @@ Imports:
     magrittr (>= 1.5),
     tidyr (>= 0.5.1),
     mlr (>= 2.11)
-License: MIT + file LICENSE
+License: Apache License (== 2.0)
 LazyData: true
 Suggests:
     knitr,
