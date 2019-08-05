@@ -14,4 +14,9 @@ to generate a synthetic population
 \author{
 \strong{Maintainer}: Kyle Ward \email{kyleward084@gmail.com}
 
+Other contributors:
+\itemize{
+  \item Greg MacFarlane \email{gregmacfarlane@byu.edu} [contributor]
+}
+
 }
