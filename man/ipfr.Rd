@@ -12,7 +12,7 @@ The main function is \code{\link{ipu}}. For a 2D/matrix problem, the
 to generate a synthetic population
 }
 \author{
-\strong{Maintainer}: Kyle Ward \email{kyleward084@gmail.com}
+\strong{Maintainer}: Kyle Ward \email{kyleward084@gmail.com} [copyright holder]
 
 Other contributors:
 \itemize{
