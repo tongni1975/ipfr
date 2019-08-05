@@ -227,7 +227,7 @@ new_hh_seed <- bind_rows(
   new_hh_seed %>% 
     mutate(geo_tract = 2, id = id + 8)
 )
-new_hh_seed$geo_region = 1
+new_hh_seed$geo_region <- 1
 
 new_hh_seed
 
@@ -251,7 +251,8 @@ new_per_seed
 # Double the regional person targets
 new_per_targets <- per_targets
 new_per_targets$pertype <- per_targets$pertype %>%
-  mutate_all(list(~. * 2))
+  mutate_all(list(~. * 2)) %>%
+  mutate(geo_region = 1)
 
 new_per_targets$pertype
 ```

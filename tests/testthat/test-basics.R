@@ -28,6 +28,18 @@ test_that("basic ipu works", {
     c("weight_tbl", "weight_dist", "primary_comp", "secondary_comp")
   )
   expect_equal(round(result$weight_tbl$weight[1], 3), 3.769)
+  
+  expect_message(ipu(
+    hh_seed, hh_targets, per_seed, per_targets, max_iterations = 1,
+    verbose = TRUE
+  ))
+  
+  seed_missing_cat <- hh_seed
+  seed_missing_cat$hhtype <- 1
+  expect_error(
+    ipu(seed_missing_cat, hh_targets),
+    "Marginal hhtype category 2 missing from geo_all 1"
+  )
 })
 
 test_that("weight constraint works", {
@@ -56,6 +68,42 @@ test_that("secondary_importance works", {
       secondary_importance = .5, max_iterations = 10,
       verbose = TRUE)
   expect_equal(round(result$secondary_comp$pct_diff[1], 2), -.41)
+  
+  # This example is taken from the vignette and tests the portion of
+  # balance_secondary_targets that handles multiple geographies.
+  
+  # Repeat the hh_seed to create cluster 1 and 2 households
+  new_hh_seed <- hh_seed %>%
+    mutate(geo_tract = 1)
+  new_hh_seed <- bind_rows(
+    new_hh_seed,
+    new_hh_seed %>% 
+      mutate(geo_tract = 2, id = id + 8)
+  )
+  new_hh_seed$geo_region = 1
+  # Repeat the household targets for two clusters
+  new_hh_targets <- hh_targets
+  new_hh_targets$hhtype <- bind_rows(hh_targets$hhtype, hh_targets$hhtype)
+  new_hh_targets$hhtype <- new_hh_targets$hhtype %>%
+    mutate(geo_tract = c(1, 2))
+  # Repeat the per_seed to create cluster 1 and 2 persons
+  new_per_seed <- bind_rows(
+    per_seed,
+    per_seed %>% 
+      mutate(id = id + 8)
+  )
+  # Double the regional person targets
+  new_per_targets <- per_targets
+  new_per_targets$pertype <- per_targets$pertype %>%
+    mutate_all(list(~. * 2)) %>%
+    mutate(geo_region = 1)
+  result <- ipu(
+    new_hh_seed, new_hh_targets,
+    new_per_seed, new_per_targets,
+    max_iterations = 10,
+    secondary_importance = .5
+  )
+  expect_equal(round(result$weight_tbl$weight[1], 2), 8.03)
 })
 
 test_that("single value marginals work", {
