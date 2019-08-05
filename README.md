@@ -49,3 +49,9 @@ targets$autos <- tibble(
 )
 result <- ipu(survey, targets)
 ```
+
+Creating synthetic households from the `ipu()` result:
+
+```r
+synthesize(result$weight_tbl)
+```
