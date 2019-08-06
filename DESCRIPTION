@@ -9,6 +9,9 @@ Authors@R: c(
   person("Greg", "MacFarlane", email = "gregmacfarlane@byu.edu", role = c("ctb")))
 Description: Performs iterative proportional updating given a seed table and
     an arbitrary number of marginal distributions.
+License: Apache License (== 2.0)
+URL: https://github.com/dkyleward/ipfr
+BugReports: https://github.com/dkyleward/ipfr/issues
 Depends:
     R (>= 3.2.0)
 Imports:
@@ -17,7 +20,6 @@ Imports:
     magrittr (>= 1.5),
     tidyr (>= 0.5.1),
     mlr (>= 2.11)
-License: Apache License (== 2.0)
 LazyData: true
 Suggests:
     knitr,

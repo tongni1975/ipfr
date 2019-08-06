@@ -11,6 +11,14 @@ The main function is \code{\link{ipu}}. For a 2D/matrix problem, the
 \code{weight_tbl} from \code{ipu()} can be fed into \code{\link{synthesize}}
 to generate a synthetic population
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/dkyleward/ipfr}
+  \item Report bugs at \url{https://github.com/dkyleward/ipfr/issues}
+}
+
+}
 \author{
 \strong{Maintainer}: Kyle Ward \email{kyleward084@gmail.com} [copyright holder]
 
