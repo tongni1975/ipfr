@@ -106,7 +106,7 @@ test_that("multiple geographies work", {
   expect_equal(round(result$weight_tbl$weight[1], 2), 8.03)
   
   set.seed(42)
-  synth_hh <- synthesize(result$weight_tbl, geo_field = "geo_tract")
+  synth_hh <- synthesize(result$weight_tbl, group_by = "geo_tract")
   expect_equal(nrow(synth_hh), 186)
   expect_equal(synth_hh$id[1:5], c(8, 8, 2, 6, 7))
 })

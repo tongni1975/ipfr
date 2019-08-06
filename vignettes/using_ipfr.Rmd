@@ -294,13 +294,13 @@ these options appropriately, see the `common_ipf_problems` vignette.
 
 The `weight_tbl` from `ipu()` can be fed into the `synthesize()` function to
 generate a synthetic population. The code block below takes the output from the
-previous example to demonstrate. The `geo_field` option tells the function to
+previous example to demonstrate. The `group_by` option tells the function to
 group by the `geo_tract` field before random sampling takes places. This will
 ensure that the number of sampled records in each tract equals the total weight
 in each tract.
 
 ```{r}
-synthesize(result$weight_tbl, geo_field = "geo_tract") %>%
+synthesize(result$weight_tbl, group_by = "geo_tract") %>%
   head()
 ```
 

@@ -4,14 +4,14 @@
 \alias{synthesize}
 \title{Creates a synthetic population based on ipu results}
 \usage{
-synthesize(weight_tbl, geo_field = NULL, primary_id = "id")
+synthesize(weight_tbl, group_by = NULL, primary_id = "id")
 }
 \arguments{
 \item{weight_tbl}{the \code{data.frame} of the same name output by
 \code{\link{ipu}}.}
 
-\item{geo_field}{if provided, the \code{weight_tbl} will be grouped
-by that field before the random sampling is done.}
+\item{group_by}{if provided, the random sampling will be done within each
+group.}
 
 \item{primary_id}{The field used to join the primary and secondary seed
 tables. Only necessary if \code{secondary_seed} is provided.}
