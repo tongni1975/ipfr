@@ -5,3 +5,4 @@
 ^codecov\.yml$
 .covrignore
 cran-comments.md
+^CRAN-RELEASE$
