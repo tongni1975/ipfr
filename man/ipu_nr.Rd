@@ -95,8 +95,6 @@ a \code{named list} with the \code{primary_seed} with weight, a
 \description{
 List balancing similar to \code{\link{ipu}}, but using the
 Newton-Raphson approach to optimization.
-  
-  Vignette: \url{http://pbsag.github.io/ipfr/}
 }
 \examples{
 \dontrun{
@@ -117,8 +115,5 @@ hh_targets$siz <- data.frame(
 result <- ipu_nr(hh_seed, hh_targets, max_iterations = 10)
 }
 
-}
-\references{
-\url{http://www.scag.ca.gov/Documents/PopulationSynthesizerPaper_TRB.pdf}
 }
 \keyword{internal}

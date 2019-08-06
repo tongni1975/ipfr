@@ -88,8 +88,6 @@ A general case of iterative proportional fitting. It can satisfy
   marginal controls. This could be for survey expansion or synthetic
   population creation. The second set of marginal/seed data is optional, meaning
   it can also be used for more basic IPF tasks.
-  
-  Vignette: \url{http://pbsag.github.io/ipfr/}
 }
 \examples{
 \dontrun{

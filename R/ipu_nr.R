@@ -2,10 +2,6 @@
 #' 
 #' @description List balancing similar to \code{\link{ipu}}, but using the
 #' Newton-Raphson approach to optimization.
-#'   
-#'   Vignette: \url{http://pbsag.github.io/ipfr/}
-#' 
-#' @references \url{http://www.scag.ca.gov/Documents/PopulationSynthesizerPaper_TRB.pdf}
 #' 
 #' @param primary_seed In population synthesis or household survey expansion, 
 #'   this would be the household seed table (each record would represent a 

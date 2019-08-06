@@ -6,8 +6,6 @@
 #'   marginal controls. This could be for survey expansion or synthetic
 #'   population creation. The second set of marginal/seed data is optional, meaning
 #'   it can also be used for more basic IPF tasks.
-#'   
-#'   Vignette: \url{http://pbsag.github.io/ipfr/}
 #' 
 #' @references \url{http://www.scag.ca.gov/Documents/PopulationSynthesizerPaper_TRB.pdf}
 #' 
