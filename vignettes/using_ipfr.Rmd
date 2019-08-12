@@ -299,11 +299,22 @@ group by the `geo_tract` field before random sampling takes places. This will
 ensure that the number of sampled records in each tract equals the total weight
 in each tract.
 
+A `new_id` is created for each synthetic member (usually a household), but the
+old ID is preserved to facilitate joins or other operations where it could be
+useful.
+
 ```{r}
+set.seed(42)
 synthesize(result$weight_tbl, group_by = "geo_tract") %>%
   head()
 ```
 
-A `new_id` is created for each synthetic member (usually a household), but the
-old ID is preserved to facilitate joins or other operations where it could be
-useful.
+A tidyverse-style call also works, as shown below.
+
+```{r}
+set.seed(42)
+result$weight_tbl %>%
+  group_by(geo_tract) %>%
+  synthesize() %>%
+  head()
+```
