@@ -5,7 +5,11 @@
 * Fedora Linux, R-devel, clang, gfortran (R-Hub)
 
 ## R CMD check results
-There were no ERRORs, WARNINGs, or NOTES
+There were no ERRORs or WARNINGs
+
+check_rhub() created a note about possible word mispellings
+(Reweighting, Xin, al, et, rebalancing). I checked each, and they are spelled
+correctly.
 
 ## Downstream dependencies
 There are currently no downstream dependencies for this package

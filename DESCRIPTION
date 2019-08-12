@@ -15,7 +15,7 @@ Description: Performs iterative proportional updating given a seed table and
   destination trip matrix might be balanced to match traffic counts.
   The approach used by this package is based on a paper from
   Arizona State University (Ye, Xin, et. al. (2009)
-  http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.537.723&rep=rep1&type=pdf).
+  <http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.537.723&rep=rep1&type=pdf>).
   Some enhancements have been made to their work, primarily around primary and 
   secondary target balance and general marginal agreement. 
 License: Apache License (== 2.0)
