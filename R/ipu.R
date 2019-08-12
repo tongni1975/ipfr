@@ -98,9 +98,6 @@
 #' 
 #' result <- ipu(hh_seed, hh_targets, max_iterations = 10)
 #' }
-#' 
-#' @importFrom magrittr "%>%"
-#' @import dplyr
 
 ipu <- function(primary_seed, primary_targets, 
                 secondary_seed = NULL, secondary_targets = NULL,

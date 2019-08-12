@@ -37,9 +37,7 @@
 #'    row in the target \code{data.frames}
 #' 
 #' @keywords internal
-#' 
-#' @importFrom magrittr "%>%"
-#' 
+
 ipf <- function(seed, targets,
                 relative_gap = 0.01, absolute_gap = 1, max_iterations = 50,
                 min_weight = .0001, verbose = FALSE){

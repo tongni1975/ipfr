@@ -8,5 +8,7 @@
 #' @docType package
 #' @importFrom utils type.convert
 #' @importFrom stats setNames
+#' @importFrom magrittr "%>%"
+#' @import dplyr
 #' @name ipfr
 "_PACKAGE"
