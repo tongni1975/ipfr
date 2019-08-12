@@ -6,7 +6,7 @@ Authors@R: c(
     "Kyle", "Ward", email = "kyleward084@gmail.com",
     role = c("aut", "cre", "cph")
   ),
-  person("Greg", "MacFarlane", email = "gregmacfarlane@byu.edu", role = c("ctb")))
+  person("Greg", "Macfarlane", email = "gregmacfarlane@byu.edu", role = c("ctb")))
 Description: Performs iterative proportional updating given a seed table and
   an arbitrary number of marginal distributions. This is commonly used in
   population synthesis, survey raking, matrix rebalancing, and other

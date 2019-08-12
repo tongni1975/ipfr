@@ -24,7 +24,7 @@ Useful links:
 
 Other contributors:
 \itemize{
-  \item Greg MacFarlane \email{gregmacfarlane@byu.edu} [contributor]
+  \item Greg Macfarlane \email{gregmacfarlane@byu.edu} [contributor]
 }
 
 }
