@@ -5,10 +5,10 @@
 \title{Iterative Proportional Updating (Newton-Raphson)}
 \usage{
 ipu_nr(primary_seed, primary_targets, secondary_seed = NULL,
-  secondary_targets = NULL, target_priority = 1e+07,
+  secondary_targets = NULL, target_priority = 10000000,
   relative_gap = 0.01, max_iterations = 100, absolute_diff = 10,
-  weight_floor = 1e-05, verbose = FALSE, max_ratio = 10000,
-  min_ratio = 1e-04)
+  weight_floor = 0.00001, verbose = FALSE, max_ratio = 10000,
+  min_ratio = 0.0001)
 }
 \arguments{
 \item{primary_seed}{In population synthesis or household survey expansion, 
@@ -94,26 +94,7 @@ a \code{named list} with the \code{primary_seed} with weight, a
 }
 \description{
 List balancing similar to \code{\link{ipu}}, but using the
-Newton-Raphson approach to optimization.
-}
-\examples{
-\dontrun{
-hh_seed <- data.frame(
-  pid = c(1, 2, 3, 4),
-  siz = c(1, 2, 2, 1),
-  weight = c(1, 1, 1, 1),
-  geo_cluster = c(1, 1, 2, 2)
-)
-
-hh_targets <- list()
-hh_targets$siz <- data.frame(
-  geo_cluster = c(1, 2),
-  `1` = c(75, 100),
-  `2` = c(25, 150)
-)
-
-result <- ipu_nr(hh_seed, hh_targets, max_iterations = 10)
-}
-
+  Newton-Raphson approach to optimization. Created primarily as a point of
+  comparison for \code{ipu}.
 }
 \keyword{internal}

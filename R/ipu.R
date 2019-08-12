@@ -7,7 +7,7 @@
 #'   population creation. The second set of marginal/seed data is optional, meaning
 #'   it can also be used for more basic IPF tasks.
 #' 
-#' @references \url{http://www.scag.ca.gov/Documents/PopulationSynthesizerPaper_TRB.pdf}
+#' @references \url{http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.537.723&rep=rep1&type=pdf}
 #' 
 #' @param primary_seed In population synthesis or household survey expansion, 
 #'   this would be the household seed table (each record would represent a 

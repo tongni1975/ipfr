@@ -8,7 +8,16 @@ Authors@R: c(
   ),
   person("Greg", "MacFarlane", email = "gregmacfarlane@byu.edu", role = c("ctb")))
 Description: Performs iterative proportional updating given a seed table and
-    an arbitrary number of marginal distributions.
+  an arbitrary number of marginal distributions. This is commonly used in
+  population synthesis, survey raking, matrix rebalancing, and other
+  applications. For example, a household survey may be weighted to match the
+  known distribution of households by size from the Census. An origin/
+  destination trip matrix might be balanced to match traffic counts.
+  The approach used by this package is based on the following paper out of
+  Arizona State University (Ye, Xin, et. al. (2009)
+  http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.537.723&rep=rep1&type=pdf).
+  Some enhancements have been made to their work, primarily around primary and 
+  secondary target balance. 
 License: Apache License (== 2.0)
 URL: https://github.com/dkyleward/ipfr
 BugReports: https://github.com/dkyleward/ipfr/issues
