@@ -81,7 +81,6 @@
 #' @export
 #' 
 #' @examples
-#' \dontrun{
 #' hh_seed <- data.frame(
 #'   id = c(1, 2, 3, 4),
 #'   siz = c(1, 2, 2, 1),
@@ -96,8 +95,7 @@
 #'   `2` = c(25, 150)
 #' )
 #' 
-#' result <- ipu(hh_seed, hh_targets, max_iterations = 10)
-#' }
+#' result <- ipu(hh_seed, hh_targets, max_iterations = 5)
 
 ipu <- function(primary_seed, primary_targets, 
                 secondary_seed = NULL, secondary_targets = NULL,
