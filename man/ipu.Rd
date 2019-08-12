@@ -90,8 +90,7 @@ A general case of iterative proportional fitting. It can satisfy
   it can also be used for more basic IPF tasks.
 }
 \examples{
-\dontrun{
-hh_seed <- data.frame(
+hh_seed <- dplyr::tibble(
   id = c(1, 2, 3, 4),
   siz = c(1, 2, 2, 1),
   weight = c(1, 1, 1, 1),
@@ -99,14 +98,13 @@ hh_seed <- data.frame(
 )
 
 hh_targets <- list()
-hh_targets$siz <- data.frame(
+hh_targets$siz <- dplyr::tibble(
   geo_cluster = c(1, 2),
   `1` = c(75, 100),
   `2` = c(25, 150)
 )
 
-result <- ipu(hh_seed, hh_targets, max_iterations = 10)
-}
+result <- ipu(hh_seed, hh_targets, max_iterations = 5)
 }
 \references{
 \url{http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.537.723&rep=rep1&type=pdf}

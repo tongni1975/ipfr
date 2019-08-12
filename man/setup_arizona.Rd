@@ -15,3 +15,6 @@ When run, it creates four variables in the calling environment:
 This code sets up the Arizona example IPU problem and avoids repeating this
 code in multiple places throughout the package (vignettes/tests).
 }
+\examples{
+setup_arizona()
+}

@@ -6,6 +6,8 @@
 #'   hh_seed, hh_targets, per_seed, and per_targets. These can be used directly
 #'   by \code{\link{ipu}}.
 #' @export
+#' @examples
+#' setup_arizona()
 
 setup_arizona <- function() {
   hh_seed <- tibble(

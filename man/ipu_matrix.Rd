@@ -23,3 +23,9 @@ A \code{matrix} that matches row and column targets
 This function simplifies the call to `ipu()` for the simple case of a matrix
 and row/column targets.
 }
+\examples{
+mtx <- matrix(data = runif(9), nrow = 3, ncol = 3)
+row_targets <- c(3, 4, 5)
+column_targets <- c(5, 4, 3)
+ipu_matrix(mtx, row_targets, column_targets)
+}

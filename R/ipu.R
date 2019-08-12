@@ -13,7 +13,6 @@
 #'   this would be the household seed table (each record would represent a 
 #'   household). It could also be a trip table, where each row represents an 
 #'   origin-destination pair.
-#' 
 #' @param primary_targets A \code{named list} of data frames.  Each name in the
 #'   list defines a marginal dimension and must match a column from the
 #'   \code{primary_seed} table. The data frame associated with each named list
@@ -22,30 +21,23 @@
 #'   tracts, clusters, etc.). The other column names define the marginal
 #'   categories that targets are provided for. The vignette provides more
 #'   detail.
-#' 
 #' @param primary_id The field used to join the primary and secondary seed
 #'   tables. Only necessary if \code{secondary_seed} is provided.
-#' 
 #' @param secondary_seed Most commonly, if the primary_seed describes
 #'   households, the secondary seed table would describe the persons in each
 #'   household. Must contain the same \code{primary_id} column that links each
 #'   person to their respective household in \code{primary_seed}.
-#' 
 #' @param secondary_targets Same format as \code{primary_targets}, but they constrain 
 #'   the \code{secondary_seed} table.
-#'   
 #' @param secondary_importance A \code{real} between 0 and 1 signifying the 
 #'   importance of the secondary targets. At an importance of 1, the function
 #'   will try to match the secondary targets exactly. At 0, only the percentage
 #'   distributions are used (see the vignette section "Target Agreement".)
-#' 
 #' @param relative_gap After each iteration, the weights are compared to the
 #' previous weights and the %RMSE is calculated. If the %RMSE is less than
 #' the \code{relative_gap} threshold, then the process terminates.
-#' 
 #' @param max_iterations maximum number of iterations to perform, even if 
 #'    \code{relative_gap} is not reached.
-#'    
 #' @param absolute_diff Upon completion, the \code{ipu()} function will report
 #'   the worst-performing marginal category and geography based on the percent
 #'   difference from the target. \code{absolute_diff} is a threshold below which
@@ -56,32 +48,25 @@
 #'   is only 1.
 #'   
 #'   Defaults to 10.
-#'   
 #' @param weight_floor Minimum weight to allow in any cell to prevent zero
 #'   weights. Set to .0001 by default.  Should be arbitrarily small compared to
 #'   your seed table weights.
-#'   
 #' @param verbose Print iteration details and worst marginal stats upon 
 #'   completion? Default \code{FALSE}.
-#'   
 #' @param max_ratio \code{real} number. The average weight per seed record is
 #' calculated by dividing the total of the targets by the number of records.
 #' The max_scale caps the maximum weight at a multiple of that average. Defaults
 #' to \code{10000} (basically turned off).
-#' 
 #' @param min_ratio \code{real} number. The average weight per seed record is
 #' calculated by dividing the total of the targets by the number of records.
 #' The min_scale caps the minimum weight at a multiple of that average. Defaults
 #' to \code{0.0001} (basically turned off).
-#' 
 #' @return a \code{named list} with the \code{primary_seed} with weight, a 
 #'   histogram of the weight distribution, and two comparison tables to aid in
 #'   reporting.
-#' 
 #' @export
-#' 
 #' @examples
-#' hh_seed <- data.frame(
+#' hh_seed <- dplyr::tibble(
 #'   id = c(1, 2, 3, 4),
 #'   siz = c(1, 2, 2, 1),
 #'   weight = c(1, 1, 1, 1),
@@ -89,7 +74,7 @@
 #' )
 #' 
 #' hh_targets <- list()
-#' hh_targets$siz <- data.frame(
+#' hh_targets$siz <- dplyr::tibble(
 #'   geo_cluster = c(1, 2),
 #'   `1` = c(75, 100),
 #'   `2` = c(25, 150)
@@ -877,6 +862,11 @@ adjust_factor <- function(factor, importance){
 #'   \code{\link{ipu}} for details.
 #' @return A \code{matrix} that matches row and column targets
 #' @export
+#' @examples
+#' mtx <- matrix(data = runif(9), nrow = 3, ncol = 3)
+#' row_targets <- c(3, 4, 5)
+#' column_targets <- c(5, 4, 3)
+#' ipu_matrix(mtx, row_targets, column_targets)
 
 ipu_matrix <- function(mtx, row_targets, column_targets, ...) {
   tbl <- as.table(mtx)
