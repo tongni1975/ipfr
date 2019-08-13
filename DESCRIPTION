@@ -16,8 +16,9 @@ Description: Performs iterative proportional updating given a seed table and
   The approach used by this package is based on a paper from
   Arizona State University (Ye, Xin, et. al. (2009)
   <http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.537.723&rep=rep1&type=pdf>).
-  Some enhancements have been made to their work, primarily around primary and 
-  secondary target balance and general marginal agreement. 
+  Some enhancements have been made to their work including primary and 
+  secondary target balance/importance, general marginal agreement, and weight 
+  restriction.
 License: Apache License (== 2.0)
 URL: https://github.com/dkyleward/ipfr
 BugReports: https://github.com/dkyleward/ipfr/issues
