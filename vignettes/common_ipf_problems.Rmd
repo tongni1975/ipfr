@@ -14,7 +14,6 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
-options(scipen=999)
 ```
 
 ```{r setup}
@@ -109,15 +108,22 @@ result$primary_comp
 
 ## Balance between primary and secondary targets
 
-In population synthesis or survey expansion, adding a secondary set of person-
-level targets can lead to a different issue: target balance. Naturally, the
-total number of households and the total number of persons will be very
-different. A balance issue only arises when the *average* weight for household
-records and person records are very different.
+In population synthesis or survey expansion, adding a secondary set of
+person-level targets can lead to a different issue: target balance. Naturally,
+the total number of households and the total number of persons will be very
+different. A balance issue only arises when the *average weight* for household
+records and person records are very different. That is, when the total of
+household targets divided by household records is very different from the total
+of person targets divided by person records.
 
-`setup_arizona()` re-creates the 
-[Arizona](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.537.723&rep=rep1&type=pdf)
-example.
+This example is taken directly from the Arizona paper on page 20:
+http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.537.723&rep=rep1&type=pdf
+
+In this example, household type could represent size (e.g. 1-person and 2-person
+households). Person type could represent age groups (e.g. under 18, between
+18 and 50, and over 50).
+
+`setup_arizona()` creates the seed and target tables used in the example.
 
 ```{r balance example inputs}
 result <- setup_arizona()
@@ -165,11 +171,16 @@ absolute values of the secondary targets (as above). As this value is decreased
 to 0, the secondary targets are scaled to match the average weight of the
 primary targets.
 
-The examples below set `secondary_importance` to `0.80`, `0.20`, and `0.00` to
-show the effect on results. With each decrease in importance, the match to
+The examples below set `secondary_importance` to `0.80` and `0.20` to
+show the effect on results. As secondary importance decreases, the match to
 person targets gets worse; however, the relative distribution of persons
-still match closely. At `0.00` all person targets are off by the same percent.
-In addition, the weight distribution is much more reasonable.
+still match closely. The distribution of weights also improves.
+
+Note: for package build time, max iterations is capped at 30. While the impact
+of the factor can still be seen, consider running for 100 iterations and
+comparing the results.
+
+### secondary_importance = 0.80
 
 ```{r}
 result_80 <- ipu(
@@ -178,8 +189,12 @@ result_80 <- ipu(
   secondary_importance = .80
 )
 
-result_80
+result_80$weight_dist
+result_80$primary_comp
+result_80$secondary_comp
 ```
+
+### secondary_importance = 0.20
 
 ```{r}
 result_20 <- ipu(
@@ -188,17 +203,9 @@ result_20 <- ipu(
   secondary_importance = .20
 )
 
-result_20
-```
-
-```{r}
-result_00 <- ipu(
-  hh_seed, hh_targets, per_seed, new_per_targets, 
-  max_iterations = 30,
-  secondary_importance = 0
-)
-
-result_00
+result_20$weight_dist
+result_20$primary_comp
+result_20$secondary_comp
 ```
 
 # Extreme Weights
@@ -260,9 +267,11 @@ result$primary_comp
 
 A second problem can arise when using these ratios. In the example below, I
 change the targets so that, for geo_cluster 1, they are very unbalanced. Cluster
-1 now has 100,000 1-person households but only 10 2-person households. This means
-the *average* weight for that cluster will be `r (100000 + 10) / 2` and the
-minimum weight will be `r (100000 + 10) / 2 * .2`
+1 now has 100,000 1-person households but only 10 2-person households. This
+means the *average* weight for that cluster will be `r format((100000 + 10) / 2,
+digits = 2, big.mark = ",")` and the minimum weight will be `r format((100000 +
+10) / 2 * .2, digits = 2, big.mark = ",")`. The minimum weight is larger
+2-person target of 10.
 
 ```{r}
 hh_targets <- list()
@@ -283,7 +292,7 @@ result$primary_comp
 This is an extreme example, and is unlikely to be an issue in applications
 related to housing and population. In these applications, the targets are
 generally on the same order of magnitude. In other applications, like expanding
-a through-trip table to traffic counts, it is common to have some external
+a through-trip table to traffic counts, it is more common to have some external
 stations with large targets (freeways) and others with small (arterials). In
 these cases, it is advisable to leave the scale arguments at their default
 values.

@@ -12,7 +12,6 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
-options(scipen=999)
 ```
 
 # Introduction
@@ -225,7 +224,7 @@ for household controls but to still control the person targets at the regional
 level.
 
 ```{r multigeo inputs}
-# Repeat the hh_seed to create cluster 1 and 2 households
+# Repeat the hh_seed to create tract 1 and 2 households
 new_hh_seed <- hh_seed %>%
   mutate(geo_tract = 1)
 new_hh_seed <- bind_rows(
@@ -237,7 +236,7 @@ new_hh_seed$geo_region <- 1
 
 new_hh_seed
 
-# Repeat the household targets for two clusters
+# Repeat the household targets for two tracts
 new_hh_targets <- hh_targets
 new_hh_targets$hhtype <- bind_rows(hh_targets$hhtype, hh_targets$hhtype)
 new_hh_targets$hhtype <- new_hh_targets$hhtype %>%
@@ -245,7 +244,7 @@ new_hh_targets$hhtype <- new_hh_targets$hhtype %>%
 
 new_hh_targets$hhtype
 
-# Repeat the per_seed to create cluster 1 and 2 persons
+# Repeat the per_seed to create tract 1 and 2 persons
 new_per_seed <- bind_rows(
   per_seed,
   per_seed %>% 

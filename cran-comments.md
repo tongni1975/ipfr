@@ -13,3 +13,7 @@ correctly.
 
 ## Downstream dependencies
 There are currently no downstream dependencies for this package
+
+## Changes from last submission
+I removed the options(scipen=999) line from both vignettes. I also made a few
+revisions to the vignette prose for clarity.
