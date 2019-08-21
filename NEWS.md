@@ -1,3 +1,5 @@
-# ipfr 1.0.0 (2019-08-05)
+# ipfr (development version)
+
+# ipfr 1.0.0 (2019-08-21)
 
   * First release of the package.

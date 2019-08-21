@@ -1,4 +1,6 @@
 <!-- badges: start -->
+[![CRAN
+status](https://www.r-pkg.org/badges/version/ipfr)](https://cran.r-project.org/package=ipfr)
 [![Travis build status](https://travis-ci.org/dkyleward/ipfr.svg?branch=master)](https://travis-ci.org/dkyleward/ipfr)
 [![Codecov test coverage](https://codecov.io/gh/dkyleward/ipfr/branch/master/graph/badge.svg)](https://codecov.io/gh/dkyleward/ipfr?branch=master)
 <!-- badges: end -->
@@ -9,7 +11,13 @@ A general function for conducting iterative proportional fitting on multiple
 marginal distributions in R.
 
 ## Installation
-Install the package using:
+Install the latest official version from CRAN:
+
+```r
+install.packages("ipfr")
+```
+
+Install the development version of the package:
 
 ```r
 library(devtools)
