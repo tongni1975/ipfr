@@ -63,3 +63,7 @@ Creating synthetic households from the `ipu()` result:
 ```r
 synthesize(result$weight_tbl)
 ```
+
+## Vignettes
+Using ipfr: https://cran.r-project.org/web/packages/ipfr/vignettes/using_ipfr.html  
+Common ipf problems: https://cran.r-project.org/web/packages/ipfr/vignettes/common_ipf_problems.html
