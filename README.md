@@ -7,7 +7,7 @@ status](https://www.r-pkg.org/badges/version/ipfr)](https://cran.r-project.org/p
 
 # ipfr
 
-A package for conducting iterative proportional fitting on multiple
+A package for iterative proportional fitting on multiple
 marginal distributions in R.
 
 ## Installation
